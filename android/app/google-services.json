@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "639651754189",
+    "project_id": "crgtransp72app",
+    "storage_bucket": "crgtransp72app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:639651754189:android:5d7185fa20f6905af73984",
+        "android_client_info": {
+          "package_name": "com.example.crgtransp72app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6CsiOLHj9EoNPQ1eOjGoPlQnZtUTwa-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

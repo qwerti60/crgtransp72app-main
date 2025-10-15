@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/ivanov/Library/Developer/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/ivanov/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/ivanov/crgtransp72app/android/app/.cxx/RelWithDebInfo/25504k53/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/ivanov/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/ivanov/crgtransp72app/android/app/.cxx/RelWithDebInfo/25504k53/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}
