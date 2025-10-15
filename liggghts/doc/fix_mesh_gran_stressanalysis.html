@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGEDBY" CONTENT="ckloss ">
+	<META NAME="CHANGED" CONTENT="20110331;15533700">
+	<STYLE TYPE="text/css">
+	<!--
+		H3.western { font-family: "Albany", sans-serif }
+		H3.cjk { font-family: "HG Mincho Light J" }
+		H3.ctl { font-family: "Arial Unicode MS" }
+		PRE.cjk { font-family: "DejaVu Sans", monospace }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<P ALIGN=CENTER STYLE="margin-bottom: 0in"><A HREF="http://www.liggghts.com/"><FONT FACE="Liberation Serif, serif">LIGGGHTS
+WWW Site</FONT></A> <FONT FACE="Liberation Serif, serif">- <A HREF="Manual.html">LIGGGHTS
+Documentation</A></FONT> <FONT FACE="Liberation Serif, serif">-
+<A HREF="Section_commands.html#comm">LIGGGHTS Commands</A></FONT> 
+</P>
+<HR>
+<H3 CLASS="western">fix mesh/gran/stressanalysis command 
+</H3>
+<P><B>Syntax:</B> 
+</P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.2in">fix ID group-ID mesh/gran filename walltype scalefactor xoff yoff zoff phix phiy phiz keyword values</PRE>
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">ID, group-ID are documented in <A HREF="fix.html">fix</A>
+	command 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">mesh/gran/stressanalysis = style
+	name of this fix command 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">filename, walltype, scalefactor,
+	xoff, yoff,zoff , phix, phiy, phiz are documented in <A HREF="fix_mesh_gran.html">fix
+	mesh/gran</A>.</P>
+</UL>
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">zero or more keyword/value pairs
+	may be appended 
+	</P>
+	<LI><P>keyword = <I>finnie</I> 
+	</P>
+	<PRE CLASS="western" STYLE="margin-bottom: 0.2in">  <I>finnie</I> value = <I>yes</I> or <I>no</I> </PRE>
+</UL>
+<P><B>LIGGGHTS vs. LAMMPS Info: </B>
+</P>
+<P STYLE="margin-bottom: 0.2in; font-weight: normal">This command is
+not available in LAMMPS.</P>
+<P><B>Description:</B> 
+</P>
+<P>This fix is identical to <A HREF="fix_mesh_gran.html">fix
+mesh/gran</A> except for the fact that the pressure and shear force
+that the particles in the fix group exert on each triangle of the
+mesh is evaluated (which may cost a little bit in performance). 
+</P>
+<P>The forces can be dumped into VTK format using the following
+command:</P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.2in">dump id group mesh/gran/VTK N file stress</PRE><P>
+which is similar to the <A HREF="dump.html">dump stl</A> command
+except for the fact that a VTK file is written instead of an STL file
+which contains the STL data as well as pressure and shear stress. See
+<A HREF="dump.html">dump mesh/gran/VTK</A> for details.</P>
+<P>The optional finnie keyword activates a simple qualitative wear
+model - for details on the model, see the seperate
+/doc/finnie-wear.pdf. The finnie constant k in 4.23 has to be
+specified as follows: 
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="DejaVu Sans Mono, sans-serif"><FONT SIZE=2>fix
+id all property/global k_finnie peratomtypepair n_atomtypes value_11
+value_12 .. value_21 value_22 .. .</FONT></FONT></P>
+<P STYLE="margin-left: 0.49in"><FONT FACE="DejaVu Sans Mono, sans-serif"><FONT SIZE=2>(value_ij=value
+for the finnie constant between atom type i and j; n_atomtypes is the
+number of atom types you want to use in your simulation) </FONT></FONT>
+</P>
+<P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
+</P>
+<P>This fix stores a global vector with 6 components for access by
+various <A HREF="Section_howto.html#4_15">output commands</A>. The
+first 3 components are equal to the total force on the mesh, the last
+3 components store the total torque on the body exerted by the
+particles. Other info see <A HREF="fix_mesh_gran.html">fix mesh/gran.</A></P>
+<P><B>Related commands:</B> 
+</P>
+<P><A HREF="fix_mesh_gran.html">fix mesh/gran</A> 
+</P>
+<P><B>Default:</B> 
+</P>
+<P>finnie = no 
+</P>
+</BODY>
+</HTML>

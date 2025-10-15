@@ -1,0 +1,2 @@
+/Users/ivanov/crgtransp72app/android/app/.cxx/Debug/r36b3l67/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/ivanov/crgtransp72app/android/app/.cxx/Debug/r36b3l67/armeabi-v7a/CMakeFiles/rebuild_cache.dir
