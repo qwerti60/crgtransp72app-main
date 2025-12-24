@@ -507,34 +507,6 @@ class zprofil_ldForm extends State<zprofil_ld> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fire_truck),
-            label: 'Техника',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.subject),
-            label: 'Заказы',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group),
-            label: 'Водители',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: 'Профиль',
-          ),
-        ],
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentPage,
-        fixedColor: violetColor,
-        onTap: (int intIndex) {
-          setState(() {
-            _currentPage = intIndex;
-          });
-        },
-      ),
     );
   }
 }

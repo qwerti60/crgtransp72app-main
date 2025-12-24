@@ -1,7 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:crgtransp72app/pages/ads2.dart';
+import 'package:crgtransp72app/pages/get_vt.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
+import 'package:crgtransp72app/pages/zprofil_page.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
@@ -14,8 +18,8 @@ import '../pages/history_isp.dart';
 import '../pages/subscription_screen.dart';
 import '../pages/fcm_token.dart';
 
-class HistortScreen extends StatefulWidget {
-  const HistortScreen({
+class MenuzakScreen extends StatefulWidget {
+  const MenuzakScreen({
     Key? key,
     required this.pageProfile,
   }) : super(key: key);
@@ -23,10 +27,10 @@ class HistortScreen extends StatefulWidget {
   final String pageProfile;
 
   @override
-  _HistortScreenState createState() => _HistortScreenState();
+  _MenuzakScreenState createState() => _MenuzakScreenState();
 }
 
-class _HistortScreenState extends State<HistortScreen> {
+class _MenuzakScreenState extends State<MenuzakScreen> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -55,10 +59,10 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget?> _pages = List.filled(4, null, growable: false);
 
   late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
-    () => Ads1App(),
-    () => zprofil_zayavki(nameImg: '', base: 1),
-    () => zprofil_name2(),
+    () => MyAppI1(),
+    () => Ads2App(),
+    () => outputobzlikes(nameImg: '', base: 1),
+    () => zprofil_name(),
   ];
 
   void _selectTab(int index) {
@@ -73,19 +77,10 @@ class _MainScreenState extends State<MainScreen> {
     switch (pageProfile) {
       case 'zprofil_ld':
         return const zprofil_ld();
-      case 'Ads1App':
-        return const Ads1App();
-      case 'zprofil_zayavki':
-        return const zprofil_zayavki(
-          nameImg: '',
-          base: 1,
-        );
-      case 'hist':
-        return history_isp(nameImg: orderId, bd: 1);
-      case 'izbrannoe':
-        return outputobzlikes1(nameImg: '', base: 1);
-      case 'Subscription':
-        return const SubscriptionScreen();
+      case 'Ads2App':
+        return const Ads2App();
+      case 'outputobzlikes':
+        return const outputobzlikes(nameImg: '', base: 1);
       default:
         return const SizedBox.shrink();
     }
@@ -159,9 +154,10 @@ class _MainScreenState extends State<MainScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.fire_truck), label: 'Объявления'),
-          BottomNavigationBarItem(icon: Icon(Icons.subject), label: 'Заявки'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Заказчики'),
+              icon: Icon(Icons.fire_truck), label: 'Услуги'),
+          BottomNavigationBarItem(icon: Icon(Icons.subject), label: 'Заказы'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.group), label: 'Исполнители'),
           BottomNavigationBarItem(
               icon: Icon(Icons.account_circle), label: 'Профиль'),
         ],

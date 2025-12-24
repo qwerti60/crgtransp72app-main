@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/subscription_screen.dart';
@@ -202,8 +203,11 @@ class zprofil_nameForm extends State<zprofil_name> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const zprofil_ld()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MenuzakScreen(
+                                pageProfile: 'zprofil_ld')));
                   },
                   child: const Text('Личные данные')),
             ),
@@ -215,8 +219,11 @@ class zprofil_nameForm extends State<zprofil_name> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const Ads2App()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const MenuzakScreen(pageProfile: 'Ads2App')));
                   },
                   child: const Text('Мои объявления')),
             ),
@@ -228,8 +235,11 @@ class zprofil_nameForm extends State<zprofil_name> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const Ads2App()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const MenuzakScreen(pageProfile: 'Ads2App')));
                   },
                   child: const Text('Статус заказа')),
             ),
@@ -244,8 +254,8 @@ class zprofil_nameForm extends State<zprofil_name> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                const outputobzlikes(nameImg: '', base: 1)));
+                            builder: (_) => const MenuzakScreen(
+                                pageProfile: 'outputobzlikes')));
                   },
                   child: const Text('Избранное')),
             ),

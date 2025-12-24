@@ -753,7 +753,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) => OfferScreenZ(
-                                                userid: truck['id'], bd: bd),
+                                                userid: truck['id'],
+                                                useridobj: truck['iduser'],
+                                                bd: bd),
                                           ),
                                         );
                                       },
@@ -773,6 +775,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+
+      // нужное расположение
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 

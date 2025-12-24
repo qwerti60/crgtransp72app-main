@@ -38,6 +38,7 @@ class MyAppI1z extends StatelessWidget {
           backgroundColor: blueaccentColor,
           child: const Icon(Icons.add), // Цвет фона кнопки
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       ),
     );
   }

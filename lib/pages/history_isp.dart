@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/byty.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
+import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
+import 'package:crgtransp72app/pages/zprofil_page2.dart';
+import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -16,11 +21,11 @@ import '../design/colors.dart';
 import 'changerol_page.dart';
 import 'sendNotification.dart';
 
-class list_predloj_na_zayavki extends StatelessWidget {
+class history_isp extends StatelessWidget {
   final String nameImg;
   final int bd; // добавляем параметр base
 
-  const list_predloj_na_zayavki({
+  const history_isp({
     Key? key,
     required this.nameImg,
     required this.bd, // добавляем обязательное поле
@@ -146,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_predloj_na_obj_isp.php',
+        path: '/api/list_history_isp.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
@@ -177,111 +182,45 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-// 1. Обновлённая сигнатура
-  Future<void> uploadData(int bd, String nameImg, int userID) async {
-    final uri = Uri.parse('http://ivnovav.ru/api/updatePriemZak.php');
-
-    try {
-      final response = await http.post(uri,
-          body: {'idusers': userID.toString(), 'nameImg': nameImg, 'bd': bd});
-
-      if (response.statusCode == 200) {
-        print(userId.toString());
-        print(widget.nameImg);
-        print(idUser);
-        print(bd);
-        _showSnack(context, 'Данные успешно загружены!!!');
-        // _showDialog(context, 'Успех', 'Данные успешно загружены!');
-      } else {
-        _showSnack(context,
-            'Ошибка загрузки: ${response.statusCode}\n${response.body}');
-        // _showDialog(context, 'Ошибка',
-        //     'Код: ${response.statusCode}\n${response.body}');
-      }
-    } catch (err) {
-      _showSnack(context, 'Ошибка сети: $err');
-      // _showDialog(context, 'Ошибка сети', err.toString());
-    }
-  }
-
-  Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
-    final uri =
-        Uri.parse('http://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
-
-    try {
-      final response = await http.post(uri, body: {
-        'idusers': widget.nameImg, // Пользовательский ID
-        'bd': bd.toString(), // Поле bd
-        'iduserp': iduserp.toString() // Поле bd
-      });
-      print('ttt');
-      print(userId.toString());
-      print(widget.nameImg);
-      //       print(idUser);
-      print(iduserp);
-      //  print(id);
-      if (response.statusCode == 200) {
-        _showSnack(context, 'Данные успешно загружены!!!');
-        setState(() {
-          //raw = data['isp']; // что-то, приходящее с сервера
-        });
-      } else {
-        _showSnack(context,
-            'Ошибка обновления: ${response.statusCode}\n${response.body}');
-      }
-    } catch (err) {
-      _showSnack(context, 'Ошибка сети: $err');
-    }
-  }
-
 // SnackBar
   void _showSnack(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
-  //Future<bool> checkIsp(String userId, Db bd, String idUserP) async {
 
-  Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
-    final response = await http.post(
-      Uri.parse('http://ivnovav.ru/api/check_isp.php'),
-      body: {
-        'idusers': idUser.toString(),
-        'bd': bd.toString(),
-        'iduserp': idUserP.toString(),
-      },
-    );
+  Map<String, dynamic>? orderInfo; // Информация о заказе
+  int _currentPage = 0; // Текущая открытая страница
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load data');
+  // Логика переключения экрана в зависимости от выбора
+  Widget _getCurrentScreen() {
+    switch (_currentPage) {
+      case 0:
+        return const MyAppI1z();
+      case 1:
+        if (orderInfo != null && orderInfo?['result'] == true) {
+          return OrderExecutionScreen(
+            userId: orderInfo?['user_id'],
+            orderId: orderInfo?['order_id'],
+          );
+        } else {
+          return const Ads1App();
+        }
+      case 2:
+        return const zprofil_zayavki(nameImg: '', base: 1);
+      case 3:
+        return const zprofil_name2();
+      default:
+        return const MyAppI1z();
     }
-
-    final data = json.decode(response.body); // Map<String, dynamic>
-
-    final dynamic raw = data['isp']; // что-то, приходящее с сервера
-    print(raw);
-    print('Это текст idUser.toString(): ${idUser.toString()}');
-    print('Это текст bd.toString(): ${bd.toString()}');
-    print('Это текст idUserP.toString(): ${idUserP.toString()}');
-    print('Это текст api: ${raw}');
-
-    // Приводим к bool
-    if (raw is bool) return raw; // true / false
-    if (raw is int) return raw != 0; // 1 / 0
-    if (raw is String) return raw == '1' || raw.toLowerCase() == 'true';
-
-    // Если формат неожиданный – сигнализируем об ошибке
-    throw Exception('Unexpected value of "isp": $raw');
   }
-
-// Функция для отправки пуш-уведомления пользователю
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Предложения заказчиков',
+          'История заказов',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -641,286 +580,58 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ],
                                 ),
                               ),
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20.0),
-                              margin: const EdgeInsets.only(top: 20.0),
-                              child: FutureBuilder<bool>(
-                                future: checkIsp(
-                                    widget.nameImg,
-                                    widget.bd,
-                                    truck[
-                                        'iduserp']), // Функция проверки наличия оферты
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const SizedBox(
-                                        height: 50,
-                                        child: Center(
-                                            child:
-                                                CircularProgressIndicator()));
-                                  }
-
-                                  final bool hasOffer = snapshot.data ?? false;
-
-                                  Widget buttonWidget = SizedBox(
-                                    width: double
-                                        .infinity, // Кнопка растянута на всю доступную ширину
-                                    child: TextButton(
-                                      style: TextButton.styleFrom(
-                                        fixedSize:
-                                            const Size(double.infinity, 50),
-                                        foregroundColor: whiteprColor,
-                                        backgroundColor: blueaccentColor,
-                                        disabledForegroundColor: grayprprColor,
-                                        shape: const BeveledRectangleBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(3))),
-                                      ),
-                                      onPressed: () async {
-                                        if (hasOffer) {
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString(),
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded', // явно указываем тип данных
-                                              },
-                                            );
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                            debugPrint(
-                                                'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                            if (response.statusCode == 200) {
-                                              final Map data =
-                                                  jsonDecode(response.body)
-                                                      as Map;
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    //'', // первый позиционный параметр data
-                                                    deviceToken: data[
-                                                        'fcm_token'], // обязательный именованный параметр
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'Исполнитель откакзался от предложения!',
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e, s) {
-                                            debugPrint(
-                                                'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                            _showSnack(context, 'Ошибка: $e');
-                                          }
-                                        } else {
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString(),
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded', // явно указываем тип данных
-                                              },
-                                            );
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                            debugPrint(
-                                                'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                            if (response.statusCode == 200) {
-                                              final Map data =
-                                                  jsonDecode(response.body)
-                                                      as Map;
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    //'', // первый позиционный параметр data
-                                                    deviceToken: data[
-                                                        'fcm_token'], // обязательный именованный параметр
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'Ваш зкакз принят исполнителем!',
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e, s) {
-                                            debugPrint(
-                                                'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                            _showSnack(context, 'Ошибка: $e');
-                                          }
-                                        }
-                                      },
-                                      child: Text(hasOffer
-                                          ? 'Отказаться от предложения'
-                                          : 'Принять предложение'),
-                                    ),
-                                  );
-
-                                  if (hasOffer) {
-                                    buttonWidget = Column(children: [
-                                      buttonWidget,
-                                      Container(
-                                        margin:
-                                            const EdgeInsets.only(top: 20.0),
-                                        child: SizedBox(
-                                          width: double
-                                              .infinity, // Вторая кнопка также имеет полную ширину
-                                          child: TextButton(
-                                            style: TextButton.styleFrom(
-                                              fixedSize: const Size(
-                                                  double.infinity, 50),
-                                              foregroundColor: whiteprColor,
-                                              backgroundColor: blueaccentColor,
-                                              disabledForegroundColor:
-                                                  grayprprColor,
-                                              shape:
-                                                  const BeveledRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.all(
-                                                              Radius.circular(
-                                                                  3))),
-                                            ),
-
-                                            onPressed: () async {
-                                              debugPrint(
-                                                  'Нажали на кнопку'); // 1. Проверяем вызов
-
-                                              try {
-                                                final response =
-                                                    await http.post(
-                                                  Uri.parse(
-                                                      '${Config.baseUrl}/api/notification.php'),
-                                                  body: {
-                                                    'iduserp': truck['iduserp']
-                                                        .toString()
-                                                  },
-                                                  headers: {
-                                                    'Content-Type':
-                                                        'application/x-www-form-urlencoded'
-                                                  },
-                                                );
-
-                                                print(truck['iduserp']);
-                                                debugPrint(
-                                                    'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                                debugPrint(
-                                                    'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                                if (response.statusCode ==
-                                                    200) {
-                                                  final Map<String, dynamic>
-                                                      data =
-                                                      jsonDecode(response.body);
-
-                                                  if (data['fcm_token'] !=
-                                                      null) {
-                                                    // Отправляем уведомление, если токен есть
-                                                    try {
-                                                      await sendNotificationV1(
-                                                        deviceToken:
-                                                            data['fcm_token'],
-                                                        title:
-                                                            'Привет от crgtransp72app!',
-                                                        body:
-                                                            'Ваш заказ начали выполнять!',
-                                                      );
-                                                      print(
-                                                          'Уведомление отправлено');
-                                                    } catch (e) {
-                                                      print(
-                                                          'Ошибка при отправке уведомления: $e');
-                                                    }
-                                                  } else {
-                                                    _showSnack(context,
-                                                        'Токен не найден в ответе');
-                                                  }
-                                                } else {
-                                                  _showSnack(context,
-                                                      'Сервер вернул: ${response.statusCode}');
-                                                }
-
-                                                // Переход выполняем вне зависимости от наличия токена
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          OrderExecutionScreen(
-                                                            userId:
-                                                                truck['iduserp']
-                                                                    .toString(),
-                                                            orderId: widget
-                                                                    .nameImg ??
-                                                                '', // Обеспечиваем значение по умолчанию
-                                                          )),
-                                                );
-                                              } catch (e, s) {
-                                                debugPrint(
-                                                    'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                                _showSnack(
-                                                    context, 'Ошибка: $e');
-                                              }
-                                            }, // ───────────────────────────────────────────────────────── child
-                                            child:
-                                                const Text('Начать выполнение'),
-                                          ),
-                                        ),
-                                      ),
-                                    ]);
-                                  }
-
-                                  return buttonWidget;
-                                },
+                            if (truck['start_time'] != null)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Начало выполнения заказа:',
+                                        style:
+                                            DefaultTextStyle.of(context).style),
+                                    Text('${truck['start_time']}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
                               ),
-                            ),
+                            if (truck['end_time'] != null)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Заказ завершен:',
+                                        style:
+                                            DefaultTextStyle.of(context).style),
+                                    Text('${truck['end_time']}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            if (truck['cancel_time'] != null)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Заказ отменен:',
+                                        style:
+                                            DefaultTextStyle.of(context).style),
+                                    Text('${truck['cancel_time']}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            //Expanded(child: _getCurrentScreen()),
                           ],
                         );
                       });
