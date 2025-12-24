@@ -1,6 +1,7 @@
 // TODO Implement this library.
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
@@ -22,8 +23,14 @@ class OfferScreenZ extends StatefulWidget {
   final String userid;
 
   final dynamic bd;
+
+  final dynamic useridobj;
   //final int bd;
-  const OfferScreenZ({super.key, required this.userid, required this.bd});
+  const OfferScreenZ(
+      {super.key,
+      required this.userid,
+      required this.bd,
+      required this.useridobj});
 
   @override
 
@@ -265,6 +272,54 @@ class _OfferscreenForm extends State<OfferScreenZ> {
                         return;
                       }
                       uploadData();
+                      try {
+                        final response1 = await http.post(
+                          Uri.parse('${Config.baseUrl}/api/notification.php'),
+                          body: {'iduserp': widget.useridobj.toString()},
+                          headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                          },
+                        );
+                        debugPrint('userid : ${userid}'); // вывод тела ответа
+
+                        debugPrint('userId : ${userId}'); // вывод тела ответа
+                        debugPrint(
+                            'userIdp : ${widget.useridobj}'); // вывод тела ответа
+
+                        //  print(data['iduserp']); // вывод id пользователя
+                        debugPrint(
+                            'Status: ${response1.statusCode}'); // вывод статуса ответа
+                        debugPrint(
+                            'Body : ${response1.body}'); // вывод тела ответа
+                        debugPrint('userid : ${userIdp}'); // вывод тела ответа
+
+                        if (response1.statusCode == 200) {
+                          final Map<String, dynamic> datafdcm =
+                              jsonDecode(response1.body);
+
+                          if (datafdcm['fcm_token'] != null) {
+                            try {
+                              await sendNotificationV1(
+                                  deviceToken: datafdcm['fcm_token'],
+                                  title: 'Привет от crgtransp72app!',
+                                  body:
+                                      'Исполнитель откликнулся на предложение!');
+
+                              print('Уведомление отправлено');
+                              print(datafdcm['fcm_token']);
+                            } catch (e) {
+                              print('Ошибка при отправке уведомления: $e');
+                            }
+                          } else {
+                            _showSnack(context, 'Токен не найден в ответе');
+                          }
+                        } else {
+                          _showSnack(context,
+                              'Ошибка отправки уведомления (${response1.statusCode})');
+                        }
+                      } catch (err) {
+                        print('Общая ошибка: $err');
+                      }
                     },
                     child: const Text('Отправить предложение')),
               ),
@@ -273,5 +328,10 @@ class _OfferscreenForm extends State<OfferScreenZ> {
         ),
       ),
     );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

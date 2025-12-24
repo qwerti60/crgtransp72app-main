@@ -204,7 +204,11 @@ class _MyHomePageState extends State {
             child: FutureBuilder(
               future: fetchAds(bd!, idusers),
               builder: (context, snapshot) {
-                if (snapshot.hasData) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                      child:
+                          CircularProgressIndicator()); // пока загружаются данные, показываем индикатор загрузки
+                } else if (snapshot.data!.length > 0) {
                   return ListView.builder(
                       itemCount: snapshot.data?.length,
                       itemBuilder: (context, index) {
@@ -558,7 +562,13 @@ class _MyHomePageState extends State {
                         );
                       });
                 } else if (snapshot.hasError) {
-                  return Text("${snapshot.error}");
+                  return Center(
+                      child: Text(
+                          'Ошибка: ${snapshot.error}')); // обработка ошибок
+                } else if (snapshot.data!.length == 0) {
+                  return Center(
+                      child: Text(
+                          'Нет отзывов на заявки')); // если данных нет или массив пустой
                 }
 // By default, show a loading spinner.
                 return const CircularProgressIndicator();
@@ -567,6 +577,7 @@ class _MyHomePageState extends State {
           ),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 

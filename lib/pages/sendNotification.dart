@@ -46,7 +46,11 @@ Future<void> sendNotificationV1({
       },
       'android': {
         'priority': 'high',
-        'notification': {'sound': 'default'},
+        'notification': {
+          'sound': 'default',
+          'icon': '@drawable/icon', // иконка уведомления
+          'color': '#FF0000', // цвет фона иконки
+        },
       },
     }
   };
