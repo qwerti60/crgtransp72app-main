@@ -3,8 +3,10 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
+import 'package:crgtransp72app/pages/test.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart' show MyApp;
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 
@@ -38,7 +40,8 @@ class zprofil_nameForm extends State<zprofil_name2> {
   String city = '';
   String phone = '';
   String email = '';
-
+  int userId = 0;
+  String orderid = '';
   @override
   void initState() {
     super.initState();
@@ -51,8 +54,8 @@ class zprofil_nameForm extends State<zprofil_name2> {
       print("Token is null");
       return;
     }
-    final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+    final response = await http.get(
+        Uri.parse('${Config.baseUrl}/api/getuserinfo_order.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -61,6 +64,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
+          userId = data['idusers'];
           firstName = data['firstName'];
           lastName = data['lastName'];
           middleName = data['middleName'];
@@ -70,8 +74,10 @@ class zprofil_nameForm extends State<zprofil_name2> {
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
+          orderid = data['order_id'];
         });
-
+        print('d123 ${data}');
+        print('o123 ${orderid}');
         // Теперь переменные firstName, lastName, middleName, и userfoto доступны для использования в build() методе.
       }
     } else {
@@ -147,8 +153,11 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const zprofil_ld()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const HistortScreen(
+                                pageProfile: 'zprofil_ld')));
                   },
                   child: const Text('Личные данные')),
             ),
@@ -160,8 +169,11 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const Ads1App()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const HistortScreen(pageProfile: 'Ads1App')));
                   },
                   child: const Text('Мои заявки')),
             ),
@@ -176,10 +188,8 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const zprofil_zayavki(
-                                  nameImg: '',
-                                  base: 1,
-                                )));
+                            builder: (_) => const HistortScreen(
+                                pageProfile: 'zprofil_zayavki')));
                   },
                   child: const Text('Предложения заказчиков')),
             ),
@@ -194,10 +204,28 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                const outputobzlikes1(nameImg: '', base: 1)));
+                            builder: (_) => const HistortScreen(
+                                pageProfile:
+                                    'izbrannoe') // outputobzlikes1(nameImg: '', base: 1)
+                            ));
                   },
                   child: const Text('Избранные заказчики')),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistortScreen(pageProfile: 'hist'),
+                      ),
+                    );
+                  },
+                  child: const Text('История заказов')),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -210,7 +238,10 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const SubscriptionScreen()));
+                            builder: (_) => const HistortScreen(
+                                pageProfile:
+                                    'Subscription') //SubscriptionScreen()
+                            ));
                   },
                   child: const Text('Подписка')),
             ),
