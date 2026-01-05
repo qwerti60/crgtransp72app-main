@@ -1,7 +1,10 @@
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
+import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
+import 'package:crgtransp72app/pages/zprofil_page2.dart';
+import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
@@ -9,17 +12,23 @@ import 'package:dio/dio.dart';
 /* --------------------- ФОРМА ОТПРАВКИ ОТЗЫВА ----------------------- */
 
 class SendReviewForm extends StatefulWidget {
-  final int currentUserId;
-  final int targetUserId;
-
+  final String currentUserId;
+  final String targetUserId;
+  final int parsedUserIdOk;
   const SendReviewForm({
     Key? key,
     required this.currentUserId,
     required this.targetUserId,
+    required this.parsedUserIdOk,
   }) : super(key: key);
+  State<SendReviewForm> createState() {
+    // Логируем значения переменных
+    print('Initializing SendReviewForm with:');
+    print('Current User ID: $currentUserId');
+    print('Target User ID: $targetUserId');
 
-  @override
-  State<SendReviewForm> createState() => _SendReviewFormState();
+    return _SendReviewFormState();
+  }
 }
 
 /* ------------------------------------------------------------------- */
@@ -48,6 +57,9 @@ class _SendReviewFormState extends State<SendReviewForm> {
       'comment': _textComment.trim(),
     };
 
+    // Логируем отправляемые данные
+    print('Data to send: $data');
+
     try {
       final response = await Dio().post(
         '${Config.baseUrl}/api/save_review.php',
@@ -61,10 +73,17 @@ class _SendReviewFormState extends State<SendReviewForm> {
             onOkPressed: () {
           Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => history_isp(
-                  nameImg: widget.currentUserId.toString(), bd: 1)));
-          print('widget.currentUserId: ${widget.currentUserId}');
+                  nameImg: widget.parsedUserIdOk.toString(), bd: 1)));
+
+          // Логируем успешную операцию и значение userID
+          print(
+              'API Success: Review submitted by user ${widget.currentUserId} for user ${widget.targetUserId}.');
         });
       } else {
+        // Логируем сообщение об ошибке
+        print(
+            'API Error: Status Code=${response.statusCode}, Message=${response.data["message"]}');
+
         showErrorDialog('Ошибка', response.data['message']);
       }
     } catch (e) {
@@ -115,6 +134,21 @@ class _SendReviewFormState extends State<SendReviewForm> {
     );
   }
 
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    MyAppI1z(), // Страница объявлений
+    Ads1App(), // Страница заявок
+    zprofil_zayavki(nameImg: '', base: 1), // Страница заказчиков
+    zprofil_name2(), // Страница профиля
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
   /* ------------------------- UI ------------------------------------ */
   @override
   Widget build(BuildContext context) {
@@ -130,12 +164,12 @@ class _SendReviewFormState extends State<SendReviewForm> {
                 initialRating: _selectedRating,
                 onSelected: (val) => setState(() => _selectedRating = val),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               CommentField(
                 initialValue: _textComment,
                 onSaved: (val) => _textComment = val ?? '',
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.maxFinite,
                 height: 50,
@@ -236,7 +270,8 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: SendReviewForm(currentUserId: 1, targetUserId: 2),
+        child: SendReviewForm(
+            currentUserId: '1', targetUserId: '2', parsedUserIdOk: 106),
       ),
     );
   }

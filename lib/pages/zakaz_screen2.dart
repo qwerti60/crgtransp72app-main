@@ -74,7 +74,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
 
     if (response.statusCode == 200) {
       final decodedResponse = json.decode(response.body);
-      print('drr ${decodedResponse}');
+      print('drr454 ${decodedResponse}');
       return decodedResponse;
     } else {
       throw Exception('Ошибка загрузки статуса заказа');

@@ -4,6 +4,7 @@ import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
+import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -920,6 +921,26 @@ class _MyHomePageState extends State<MyHomePage> {
                                   return buttonWidget;
                                 },
                               ),
+                            ),
+                            Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20.0),
+                              margin: const EdgeInsets.only(top: 20.0),
+                              child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: TexticonsColor,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context, rootNavigator: true)
+                                        .push(
+                                      MaterialPageRoute(
+                                        builder: (_) => MainScreen(
+                                          pageProfile: '',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('t2222222')),
                             ),
                           ],
                         );

@@ -6,6 +6,7 @@ import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -161,6 +162,9 @@ class _MyHomePageState extends State<MyHomePage> {
         },
       ),
     );
+    print('usersid id: $userId');
+    print('idUser id: $idUser');
+    print('nameImg id: $nameImg');
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
@@ -347,55 +351,69 @@ class _MyHomePageState extends State<MyHomePage> {
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
-                                            Row(
-                                              children: [
-                                                Row(
-                                                  children:
-                                                      List.generate(5, (index) {
-                                                    return Icon(
-                                                      index <
-                                                              (truck['rating'] ??
-                                                                  0)
-                                                          ? Icons.star
-                                                          : Icons.star_border,
-                                                      color: Colors.amber,
-                                                      size: 16,
-                                                    );
-                                                  }),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${truck['rating'] ?? 0.0}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
+                                            GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          ReviewScreen(
+                                                              userId: truck[
+                                                                      'iduserp']
+                                                                  .toString())),
+                                                );
+                                              },
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Row(
+                                                    children: List.generate(5,
+                                                        (index) {
+                                                      final double parsedRating = truck[
+                                                                  'avg_rating'] !=
+                                                              null
+                                                          ? double.tryParse(truck[
+                                                                      'avg_rating']
+                                                                  .toString()) ??
+                                                              0.0
+                                                          : 0.0;
+                                                      return Icon(
+                                                        index < parsedRating
+                                                            ? Icons.star
+                                                            : Icons.star_border,
+                                                        color: Colors.amber,
+                                                        size: 16,
+                                                      );
+                                                    }),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                GestureDetector(
-                                                  onTap: () {
-// Добавьте здесь навигацию к отзывам
-                                                  },
-                                                  child: Row(
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${truck['avg_rating'] ?? 0.0}',
+                                                    style: const TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Row(
                                                     children: [
                                                       const Icon(
-                                                        Icons.comment_outlined,
-                                                        size: 16,
-                                                        color: Colors.grey,
-                                                      ),
+                                                          Icons
+                                                              .comment_outlined,
+                                                          size: 16,
+                                                          color: Colors.grey),
                                                       const SizedBox(width: 2),
                                                       Text(
                                                         '${truck['reviewsCount'] ?? 0}',
                                                         style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey,
-                                                        ),
+                                                            fontSize: 14,
+                                                            color: Colors.grey),
                                                       ),
                                                     ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
+                                                ],
+                                              ),
+                                            )
                                           ],
                                         ),
                                     ],
