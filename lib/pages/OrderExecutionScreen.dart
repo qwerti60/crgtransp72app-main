@@ -211,6 +211,12 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
       final dio = Dio();
 
+      // Логируем переменные перед отправкой запроса
+      print('User ID: ${widget.userId.toString()}');
+      print('Order ID: ${widget.orderId.toString()}');
+      print('Start Time: $formattedDateTime');
+      print('User ID OK: ${userId.toString()}');
+
       final response = await dio.post(
         '${Config.baseUrl}/api/check_order_status.php',
         data: {
@@ -224,10 +230,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
           responseType: ResponseType.json,
         ),
       );
-
       if (response.data is Map<String, dynamic>) {
         final message = response.data['message'];
-        print('вывод idiok777: $userIdok');
+        print('вывод idiok777: $message');
         print('вывод idiok77766: $userId');
         switch (message) {
           case 'Продолжается выполнение':
@@ -376,13 +381,21 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                               onPressed: () {
                                 final parsedUserIdOk = int.tryParse(widget
                                     .orderId); // Пробуем преобразовать строку в int
+                                print(
+                                    'Current User ID: ${widget.userId.toString()}'); //141
+                                print('Target User ID: $userId'); //140
+                                print(
+                                    'Parsed User ID Ok: $parsedUserIdOk'); //106
+
                                 if (parsedUserIdOk != null) {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => SendReviewForm(
-                                              currentUserId: parsedUserIdOk,
-                                              targetUserId: userId,
+                                              currentUserId:
+                                                  widget.userId.toString(),
+                                              targetUserId: userId.toString(),
+                                              parsedUserIdOk: parsedUserIdOk,
                                             )),
                                   );
                                 } else {
