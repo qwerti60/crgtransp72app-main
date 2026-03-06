@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -132,7 +133,7 @@ class _MyHomePageState extends State {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Мои объявления4',
+          'Мои объявления',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -140,6 +141,8 @@ class _MyHomePageState extends State {
         backgroundColor: blueaccentColor,
       ),
       // Добавление FloatingActionButton
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Действие, производимое при нажатии на кнопку
@@ -155,45 +158,6 @@ class _MyHomePageState extends State {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Ищу грузоперевозчика') bd = 1;
-                  if (_selectedType == 'Ищу спецтехнику') bd = 2;
-                  if (_selectedType == 'Ищу грузчика') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите тип"),
-            ),
-          ),
-
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
@@ -244,7 +208,7 @@ class _MyHomePageState extends State {
                                     icon: const Icon(Icons.delete),
                                     onPressed: () {
                                       showDeleteDialog(
-                                          context, int.parse(truck['id']), bd);
+                                          context, truck['id'], bd);
                                     },
                                   ),
                                 ],
@@ -568,11 +532,18 @@ class _MyHomePageState extends State {
                                                 rootNavigator: true)
                                             .push(
                                           MaterialPageRoute(
-                                            builder: (_) =>
-                                                list_predloj_na_obj_isp(
+                                            builder: (_) => HistortScreen1z(
+                                                pageProfile:
+                                                    'list_predloj_na_obj_isp',
+                                                userId1: truck['id'].toString(),
+                                                orderId: bd!.toString(),
+                                                parsedUserIdOk: ''),
+
+                                            /*  list_predloj_na_obj_isp(
                                               nameImg: truck['id'].toString(),
                                               bd: bd!,
                                             ),
+                                            */
                                           ),
                                         );
                                       },

@@ -1,5 +1,6 @@
 // TODO Implement this library.
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
@@ -49,8 +50,9 @@ class _add_ob_gpForm extends State<add_ob_gp> {
   String city = '';
 
   final List _images = List.generate(4, (index) => null);
-  final List _imagesDoc = [null, null, null, null]; // Список для хр
+  final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
+  final List<XFile?> _originalImagesDoc = List.generate(4, (indexDoc) => null);
   @override
   void initState() {
     super.initState();
@@ -142,6 +144,43 @@ class _add_ob_gpForm extends State<add_ob_gp> {
       setState(() {
         _images[index] = compressedFile;
         _originalImages[index] = pickedFile;
+        // _imagesDoc[index] = compressedFile;
+        // _originalImagesDoc[index] = pickedFile;
+      });
+    }
+  }
+
+  Future _pickImageDoc(int indexDoc) async {
+    final ImagePicker picker = ImagePicker();
+
+// Показываем диалоговое окно для выбора источника изображения
+    final ImageSource? source = await _showImageSourceDialog(context);
+
+// Если пользователь не выбрал источник, выходим из функции
+    if (source == null) return;
+
+    final XFile? pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+// Генерируем новое имя файла для сжатого изображения
+      String dir = p.dirname(pickedFile.path);
+      String extension = p.extension(pickedFile.path);
+      String newFileName =
+          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
+      String newPath = p.join(dir, newFileName);
+      XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
+        pickedFile.path,
+        newPath, // Использовать новый путь для сжатого файла
+        minWidth: 100,
+        minHeight: 100,
+        quality: 88,
+      );
+
+      setState(() {
+        //     _images[index] = compressedFile;
+        //   _originalImages[index] = pickedFile;
+        _imagesDoc[indexDoc] = compressedFile;
+        _originalImagesDoc[indexDoc] = pickedFile;
       });
     }
   }
@@ -178,6 +217,30 @@ class _add_ob_gpForm extends State<add_ob_gp> {
                     .path)) // Преобразуем XFile из _images в File
                 : _originalImages[index] != null
                     ? FileImage(File(_originalImages[index]!
+                        .path)) // Преобразуем XFile из _originalImages в File
+                    : const AssetImage('assets/images/fotouser.png')
+                        as ImageProvider,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imageSlotDoc(int indexDoc) {
+    return GestureDetector(
+      onTap: () => _pickImageDoc(indexDoc),
+      child: Container(
+        height: imageSize,
+        width: imageSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: _imagesDoc[indexDoc] != null
+                ? FileImage(File(_imagesDoc[indexDoc]!
+                    .path)) // Преобразуем XFile из _images в File
+                : _originalImagesDoc[indexDoc] != null
+                    ? FileImage(File(_originalImagesDoc[indexDoc]!
                         .path)) // Преобразуем XFile из _originalImages в File
                     : const AssetImage('assets/images/fotouser.png')
                         as ImageProvider,
@@ -235,6 +298,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
     }
   }
 
+/*
   Future _pickImageDoc(int index) async {
     final picker = ImagePicker();
 // Можно указать типы файлов, добавив параметры в pickImage
@@ -247,7 +311,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
       });
     }
   }
-
+*/
   void uploadData() async {
     var uri = Uri.parse('http://ivnovav.ru/api/add_ob_gp.php');
 
@@ -278,10 +342,21 @@ class _add_ob_gpForm extends State<add_ob_gp> {
             .add(await http.MultipartFile.fromPath('img${i + 1}', filePath));
       }
     }
+    for (int i1 = 0; i1 < _originalImagesDoc.length; i1++) {
+      if (_originalImagesDoc[i1] != null) {
+        // Получаем путь из объекта XFile
+        //FileImage(File(_originalImages[i]!.path));
+        String filePath =
+            _originalImagesDoc[i1]!.path; // Используем _originalImages здесь
+
+        request.files.add(
+            await http.MultipartFile.fromPath('imgDoc${i1 + 1}', filePath));
+      }
+    }
 
 // Пример добавления imgdoc1
 // Повторите для imgdoc2, imgdoc3, imgdoc4
-    if (_imagesDoc[0] != null) {
+    /*  if (_imagesDoc[0] != null) {
       request.files.add(await http.MultipartFile.fromPath(
         'imgdoc1',
         _imagesDoc[0].path, // Извлекаем строку пути из объекта XFile
@@ -306,7 +381,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
         _imagesDoc[3].path, // Извлекаем строку пути из объекта XFile
       ));
     }
-
+*/
     var response = await request.send();
 
     if (response.statusCode == 200) {
@@ -315,8 +390,9 @@ class _add_ob_gpForm extends State<add_ob_gp> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const Ads1App(),
-        ),
+            builder: (context) =>
+                const HistortScreen(pageProfile: 'Ads1App') // Ads1App(),
+            ),
       );
     } else {
       print('Failed!');
@@ -767,7 +843,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 15.0),
               child: const Text(
-                'Загрузить документы(Паспорт водителя, стс машины и стс прицепа)',
+                'Загрузить документы(Фото паспорта водителя, стс машины и стс прицепа)',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black38,
@@ -777,6 +853,15 @@ class _add_ob_gpForm extends State<add_ob_gp> {
               ),
             ),
             Container(
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children:
+                      List.generate(4, (indexDoc) => _imageSlotDoc(indexDoc)),
+                ),
+              ),
+            ),
+            /*   Container(
               padding: const EdgeInsets.all(
                   10), // Добавляет внутренний отступ к контейнеру
               child: Center(
@@ -814,6 +899,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
                 ),
               ),
             ),
+           */
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 30.0),

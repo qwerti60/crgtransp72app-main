@@ -4,6 +4,7 @@ import 'package:crgtransp72app/pages/OfferScreen.dart';
 import 'package:crgtransp72app/pages/OfferScreenZ.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -15,15 +16,11 @@ import '../design/colors.dart';
 
 import 'changerol_page.dart';
 
-void main() {
-  runApp(const outputob(
-    nameImg: '',
-  ));
-}
-
 class outputob extends StatelessWidget {
   final String nameImg;
-  const outputob({super.key, required this.nameImg});
+  final String city;
+
+  const outputob({super.key, required this.nameImg, required this.city});
 
   @override
   Widget build(BuildContext context) {
@@ -32,14 +29,16 @@ class outputob extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(nameImg: nameImg),
+      home: MyHomePage(nameImg: nameImg, city: city),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
+  final String city;
   final String nameImg;
-  const MyHomePage({super.key, required this.nameImg});
+
+  const MyHomePage({super.key, required this.nameImg, required this.city});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -76,10 +75,11 @@ class _MyHomePageState extends State<MyHomePage> {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
     String nameImg = widget.nameImg;
-    bd ??= 1;
-    //super.initState();
+    bd = 1;
+    String city = widget.city;
+
     getUserData();
-    fetchAds(bd!, nameImg);
+//fetchAds(city, nameImg, userId);
   }
 
   int userId = 0;
@@ -153,16 +153,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<List> fetchAds(int bd, String nameImg) async {
+  Future<List> fetchAds(String city, String nameImg, int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/get_ads2.php',
         queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
           'nameImg': nameImg,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
+          'city': city, // Преобразуем в строку
+          'useId':
+              userId.toString() // Преобразуем в строку, если userId это число
         },
       ),
     );
@@ -172,8 +171,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       try {
         final parsed = json.decode(response.body);
-        print('666');
-        print(idUser);
+
+        print('uu77${userId}');
+        print('uu77${nameImg}');
+
+        print('uu77${userId}');
+        print('uu77${city}');
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -217,51 +220,12 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Грузоперевозчик') bd = 1;
-                  if (_selectedType == 'Спецтехника') bd = 2;
-                  if (_selectedType == 'Грузчик') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!, widget.nameImg);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите услугу"),
-            ),
-          ),
-
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(bd!, widget.nameImg),
+              future: fetchAds(widget.city, widget.nameImg, bd!),
               builder: (context, snapshot) {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -301,7 +265,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         }
                         String base64Stringf = '';
                         Uint8List? truckImage;
-                        bool isLiked = false; // Состояние кнопки like
+                        //bool isLiked = false; // Состояние кнопки like
                         // Проверяем существует ли изображение fotouser
                         if (truck['fotouser'] != null) {
                           base64Stringf =
@@ -370,55 +334,69 @@ class _MyHomePageState extends State<MyHomePage> {
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
-                                            Row(
-                                              children: [
-                                                Row(
-                                                  children:
-                                                      List.generate(5, (index) {
-                                                    return Icon(
-                                                      index <
-                                                              (truck['rating'] ??
-                                                                  0)
-                                                          ? Icons.star
-                                                          : Icons.star_border,
-                                                      color: Colors.amber,
-                                                      size: 16,
-                                                    );
-                                                  }),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${truck['rating'] ?? 0.0}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
+                                            GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          ReviewScreen(
+                                                              userId: truck[
+                                                                      'iduserp']
+                                                                  .toString())),
+                                                );
+                                              },
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Row(
+                                                    children: List.generate(5,
+                                                        (index) {
+                                                      final double parsedRating = truck[
+                                                                  'avg_rating'] !=
+                                                              null
+                                                          ? double.tryParse(truck[
+                                                                      'avg_rating']
+                                                                  .toString()) ??
+                                                              0.0
+                                                          : 0.0;
+                                                      return Icon(
+                                                        index < parsedRating
+                                                            ? Icons.star
+                                                            : Icons.star_border,
+                                                        color: Colors.amber,
+                                                        size: 16,
+                                                      );
+                                                    }),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                GestureDetector(
-                                                  onTap: () {
-// Добавьте здесь навигацию к отзывам
-                                                  },
-                                                  child: Row(
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${truck['avg_rating'] ?? 0.0}',
+                                                    style: const TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Row(
                                                     children: [
                                                       const Icon(
-                                                        Icons.comment_outlined,
-                                                        size: 16,
-                                                        color: Colors.grey,
-                                                      ),
+                                                          Icons
+                                                              .comment_outlined,
+                                                          size: 16,
+                                                          color: Colors.grey),
                                                       const SizedBox(width: 2),
                                                       Text(
                                                         '${truck['reviewsCount'] ?? 0}',
                                                         style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey,
-                                                        ),
+                                                            fontSize: 14,
+                                                            color: Colors.grey),
                                                       ),
                                                     ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
+                                                ],
+                                              ),
+                                            )
                                           ],
                                         ),
                                     ],
@@ -867,9 +845,8 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       try {
         final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print('7777');
-        print(userId);
+        //isLiked = parsed['success'];
+
         return isLiked;
 
         //getUserDataAds(idusers1);
@@ -942,7 +919,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          fetchAds(bd!, widget.nameImg);
+          fetchAds(widget.city, widget.nameImg, bd!);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

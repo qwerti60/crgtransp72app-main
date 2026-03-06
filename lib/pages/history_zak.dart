@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -22,11 +23,11 @@ import '../design/colors.dart';
 import 'changerol_page.dart';
 import 'sendNotification.dart';
 
-class history_isp extends StatelessWidget {
+class history_zak extends StatelessWidget {
   final String nameImg;
   final int bd; // добавляем параметр base
 
-  const history_isp({
+  const history_zak({
     Key? key,
     required this.nameImg,
     required this.bd, // добавляем обязательное поле
@@ -152,7 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_history_isp.php',
+        path: '/api/list_history_zak.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
@@ -224,7 +225,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'История заказов',
+          'История заказов заказчика',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -357,7 +358,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   context,
                                                   MaterialPageRoute(
                                                       builder: (context) =>
-                                                          ReviewScreen(
+                                                          ReviewScreenz(
                                                               userId: truck[
                                                                       'iduserp']
                                                                   .toString())),

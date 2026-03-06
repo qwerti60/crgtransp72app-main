@@ -23,10 +23,12 @@ class CustomBottomNavigationBar extends StatelessWidget {
           icon: Icon(Icons.subject),
           label: 'Заявки',
         ),
+        /*
         const BottomNavigationBarItem(
           icon: Icon(Icons.group),
           label: 'Заказчики',
         ),
+        */
         BottomNavigationBarItem(
           icon: Icon(
             Icons.account_circle,

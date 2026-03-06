@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/history_zak.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -16,8 +16,8 @@ import '../pages/history_isp.dart';
 import '../pages/subscription_screen.dart';
 import '../pages/fcm_token.dart';
 
-class HistortScreen extends StatefulWidget {
-  const HistortScreen({
+class HistortScreen12 extends StatefulWidget {
+  const HistortScreen12({
     Key? key,
     required this.pageProfile,
   }) : super(key: key);
@@ -28,20 +28,14 @@ class HistortScreen extends StatefulWidget {
   _HistortScreenState createState() => _HistortScreenState();
 }
 
-class _HistortScreenState extends State<HistortScreen> {
+class _HistortScreenState extends State<HistortScreen12> {
   int? _currentIndex;
+  final List<Widget?> _pages = List.filled(4, null, growable: false);
 
-  Map<String, dynamic>? orderInfo; // Информация о заказе
-
-  final List<Widget?> _pages = List.filled(3, null, growable: false);
   late final List<Widget Function()> _builders = [
     () => MyAppI1z(),
-    () => hasActiveOrder
-        ? OrderExecutionScreen(
-            userId: orderuserid, //orderInfo!['user_id'].toString(),
-            orderId: orderid //orderInfo!['order_id'].toString()
-            )
-        : SearchForm(),
+    () => SearchForm(), //Ads1App(),
+    //  () => zprofil_zayavki(nameImg: '', base: 1),
     () => zprofil_name2(),
   ];
 
@@ -83,13 +77,7 @@ class _HistortScreenState extends State<HistortScreen> {
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
           orderid = data['order_id'];
-          orderuserid = data['user_id'];
         });
-        print('object');
-        print(orderid);
-        print(userId);
-        print(orderuserid);
-        print(data);
       } else {
         throw Exception(
             'Failed to load user data with status code: ${response.statusCode}}');
@@ -101,7 +89,7 @@ class _HistortScreenState extends State<HistortScreen> {
 
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
-        'https://ivnovav.ru/api/check_order_status1.php?userIdok=$userIdok');
+        'https://ivnovav.ru/api/check_order_status.php?userIdok=$userIdok');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -136,33 +124,31 @@ class _HistortScreenState extends State<HistortScreen> {
         hasActiveOrder = orderInfo['result'] == true;
 
         return Scaffold(
-          //       body: _currentIndex == null
-          //         ? buildProfilePage(widget.pageProfile, orderId: orderid)
-          //       : _pages[_currentIndex!],
           body: _currentIndex == null
               ? buildProfilePage(widget.pageProfile, orderId: orderid)
-              : _builders[_currentIndex!](),
+              : _pages[_currentIndex!],
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex ?? 0,
             onTap: _selectTab,
             type: BottomNavigationBarType.fixed,
             items: [
               const BottomNavigationBarItem(
-                  icon: Icon(Icons.fire_truck), label: 'Объявления'),
+                icon: Icon(Icons.fire_truck),
+                label: 'Услуги',
+              ),
               BottomNavigationBarItem(
                 icon: Icon(
                   Icons.subject,
                   color: hasActiveOrder
                       ? Colors.red
-                      : null, // Меняется цвет иконки, если есть активная заявка
+                      : null, // Меняем цвет иконки на красный, если есть активная запись
                 ),
-                label: 'Заявки',
+                label: 'Заказы',
               ),
-              /*   const BottomNavigationBarItem(
-                  icon: Icon(Icons.group), label: 'Заказчики'),
-             */
               const BottomNavigationBarItem(
-                  icon: Icon(Icons.account_circle), label: 'Профиль'),
+                icon: Icon(Icons.account_circle),
+                label: 'Профиль',
+              ),
             ],
           ),
         );
@@ -180,7 +166,7 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
     case 'zprofil_zayavki':
       return const zprofil_zayavki(nameImg: '', base: 1);
     case 'hist':
-      return history_isp(nameImg: orderId, bd: 1);
+      return history_zak(nameImg: orderId, bd: 1);
     case 'izbrannoe':
       return outputobzlikes1(nameImg: '', base: 1);
     case 'Subscription':
@@ -191,7 +177,6 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
 }
 
 String orderid = '';
-String orderuserid = '';
 bool isSwitched = false;
 Uint8List? fotouser;
 String firstName = '';

@@ -11,10 +11,34 @@ import 'package:googleapis_auth/googleapis_auth.dart';
 
 Future<void> _initializeFirebase() async {
   await Firebase.initializeApp(); // Инициализируем Firebase
-  final fcmToken =
-      await FirebaseMessaging.instance.getToken(); // Получаем токен устройства
-  if (fcmToken != null) {
-    print('Device Token: $fcmToken'); // Выводим токен в консоль
+  //final fcmToken
+
+  // Запрашиваем разрешения на отправку уведомлений (особенно важно для iOS)
+  NotificationSettings settings =
+      await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  if (settings.authorizationStatus == AuthorizationStatus.denied) {
+    // Пользователь отказал в разрешении – возвращаемся без дальнейших действий
+    return;
+  }
+
+  // Подписываемся на получение нового токена (рекомендуемый способ)
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    debugPrint('Новый FCM-токен: $newToken');
+  });
+
+  // Пробуем сразу получить токен, используя await (для немедленного вывода токена)
+  try {
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      debugPrint('Полученный FCM-токен: $fcmToken');
+    }
+  } catch (e) {
+    debugPrint('Ошибка получения токена: $e');
   }
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -22,6 +46,46 @@ Future<void> _initializeFirebase() async {
     print('Received a notification!');
     print(message.notification?.title); // Выводим заголовок уведомления
     print(message.notification?.body); // Выводим тело уведомления
+  });
+}
+
+Future<void> initPush() async {
+  await Firebase
+      .initializeApp(); // Инициализация Firebase должна произойти первой
+
+  // Запрашиваем разрешения на отправку уведомлений (особенно важно для iOS)
+  NotificationSettings settings =
+      await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  if (settings.authorizationStatus == AuthorizationStatus.denied) {
+    // Пользователь отказал в разрешении – возвращаемся без дальнейших действий
+    return;
+  }
+
+  // Подписываемся на получение нового токена (рекомендуемый способ)
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    debugPrint('Новый FCM-токен: $newToken');
+  });
+
+  // Пробуем сразу получить токен, используя await (для немедленного вывода токена)
+  try {
+    String? currentToken = await FirebaseMessaging.instance.getToken();
+    if (currentToken != null) {
+      debugPrint('Полученный FCM-токен: $currentToken');
+    }
+  } catch (e) {
+    debugPrint('Ошибка получения токена: $e');
+  }
+
+  // Обработчик входящих сообщений
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    debugPrint('Получено уведомление:');
+    debugPrint(
+        'Заголовок: ${message.notification?.title}, Сообщение: ${message.notification?.body}');
   });
 }
 

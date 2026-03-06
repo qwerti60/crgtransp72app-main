@@ -2,7 +2,10 @@ import 'dart:typed_data';
 
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
+import 'package:crgtransp72app/pages/SendReviewForm.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
+import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -16,31 +19,34 @@ import '../pages/history_isp.dart';
 import '../pages/subscription_screen.dart';
 import '../pages/fcm_token.dart';
 
-class HistortScreen extends StatefulWidget {
-  const HistortScreen({
+class HistortScreen1 extends StatefulWidget {
+  final String? pageProfile;
+  final String? userId1; // Параметры принимаются конструктором
+  final String? orderId; // Параметры принимаются конструктором
+  final String? parsedUserIdOk;
+  const HistortScreen1({
     Key? key,
     required this.pageProfile,
+    required this.userId1,
+    required this.orderId,
+    required this.parsedUserIdOk,
   }) : super(key: key);
-
-  final String pageProfile;
 
   @override
   _HistortScreenState createState() => _HistortScreenState();
 }
 
-class _HistortScreenState extends State<HistortScreen> {
+class _HistortScreenState extends State<HistortScreen1> {
   int? _currentIndex;
 
   Map<String, dynamic>? orderInfo; // Информация о заказе
 
-  final List<Widget?> _pages = List.filled(3, null, growable: false);
+  final List<Widget?> _pages = List.filled(4, null, growable: false);
   late final List<Widget Function()> _builders = [
     () => MyAppI1z(),
     () => hasActiveOrder
         ? OrderExecutionScreen(
-            userId: orderuserid, //orderInfo!['user_id'].toString(),
-            orderId: orderid //orderInfo!['order_id'].toString()
-            )
+            userId: orderInfo!['user_id'], orderId: orderInfo!['order_id'])
         : SearchForm(),
     () => zprofil_name2(),
   ];
@@ -73,7 +79,7 @@ class _HistortScreenState extends State<HistortScreen> {
         }
 
         setState(() {
-          userId = data['idusers'];
+          userId1 = data['idusers'];
           firstName = data['firstName'];
           lastName = data['lastName'];
           middleName = data['middleName'];
@@ -82,14 +88,8 @@ class _HistortScreenState extends State<HistortScreen> {
           email = data['email'];
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
-          orderid = data['order_id'];
-          orderuserid = data['user_id'];
+          orderid123 = data['order_id'];
         });
-        print('object');
-        print(orderid);
-        print(userId);
-        print(orderuserid);
-        print(data);
       } else {
         throw Exception(
             'Failed to load user data with status code: ${response.statusCode}}');
@@ -125,8 +125,14 @@ class _HistortScreenState extends State<HistortScreen> {
 
   @override
   Widget build(BuildContext context) {
+    uid = widget.userId1!;
+    oid = widget.orderId!;
+    uidok = widget.parsedUserIdOk!;
+    bd = int.parse(widget.orderId!);
+    print('userIdiii: ${uid}');
+    print('orderIdiii: ${oid}');
     return FutureBuilder<Map<String, dynamic>>(
-      future: checkOrderStatus(userId.toString()),
+      future: checkOrderStatus(userId1.toString()),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -136,12 +142,10 @@ class _HistortScreenState extends State<HistortScreen> {
         hasActiveOrder = orderInfo['result'] == true;
 
         return Scaffold(
-          //       body: _currentIndex == null
-          //         ? buildProfilePage(widget.pageProfile, orderId: orderid)
-          //       : _pages[_currentIndex!],
           body: _currentIndex == null
-              ? buildProfilePage(widget.pageProfile, orderId: orderid)
-              : _builders[_currentIndex!](),
+              ? buildProfilePage(widget.pageProfile!, widget.userId1,
+                  widget.orderId, widget.parsedUserIdOk!)
+              : _pages[_currentIndex!],
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex ?? 0,
             onTap: _selectTab,
@@ -158,9 +162,9 @@ class _HistortScreenState extends State<HistortScreen> {
                 ),
                 label: 'Заявки',
               ),
-              /*   const BottomNavigationBarItem(
+              /*         const BottomNavigationBarItem(
                   icon: Icon(Icons.group), label: 'Заказчики'),
-             */
+       */
               const BottomNavigationBarItem(
                   icon: Icon(Icons.account_circle), label: 'Профиль'),
             ],
@@ -171,7 +175,11 @@ class _HistortScreenState extends State<HistortScreen> {
   }
 }
 
-Widget buildProfilePage(String pageProfile, {required String orderId}) {
+Widget buildProfilePage(String pageProfile, userId1, orderId123, String uidok) {
+  print('pageProfile'); // должно быть SearchForm
+  print(pageProfile); // должно быть SearchForm
+  print(userId1);
+  print(orderId123);
   switch (pageProfile) {
     case 'zprofil_ld':
       return const zprofil_ld();
@@ -180,18 +188,34 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
     case 'zprofil_zayavki':
       return const zprofil_zayavki(nameImg: '', base: 1);
     case 'hist':
-      return history_isp(nameImg: orderId, bd: 1);
-    case 'izbrannoe':
-      return outputobzlikes1(nameImg: '', base: 1);
+      return history_isp(nameImg: orderid123, bd: 1);
+    case 'SendReviewForm':
+      return SendReviewForm(
+        currentUserId: userId1,
+        targetUserId: orderId123,
+        parsedUserIdOk: int.parse(uidok),
+      );
     case 'Subscription':
       return const SubscriptionScreen();
+    /*case 'OrderExecutionScreen': // Специальный случай для OrderExecutionScreen
+      return OrderExecutionScreen(
+        userId: uid.toString(), // Передаем userId
+        orderId: oid ?? '', // Передаем orderId
+      );
+*/
+    case 'list_predloj_na_zayavki':
+      return list_predloj_na_zayavki(nameImg: uid, bd: bd);
+    case 'SearchForm':
+      return outputobz(
+        nameImg: userId1,
+        city: orderId123,
+      );
     default:
       return const SizedBox.shrink();
   }
 }
 
-String orderid = '';
-String orderuserid = '';
+String orderid123 = '';
 bool isSwitched = false;
 Uint8List? fotouser;
 String firstName = '';
@@ -200,4 +224,9 @@ String middleName = '';
 String city = '';
 String phone = '';
 String email = '';
-int userId = 0;
+int userId1 = 0;
+int userId123 = 0;
+String uid = '';
+String oid = '';
+String uidok = '';
+int bd = 0;

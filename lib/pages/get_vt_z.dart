@@ -1,3 +1,4 @@
+import 'package:crgtransp72app/pages/CityScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
@@ -112,9 +113,10 @@ class _MyImageGridState extends State {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => outputobz(
-                                      nameImg: images[index].name,
-                                      base: base, // Передача переменной
+                                builder: (_) => CityScreen(
+                                      //outputobz(
+                                      indexName: images[index].name,
+                                      //  base: base, // Передача переменной
                                     )));
                       },
                       child: Padding(

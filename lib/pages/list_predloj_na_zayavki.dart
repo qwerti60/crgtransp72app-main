@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
@@ -890,11 +891,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 }
 
                                                 // Переход выполняем вне зависимости от наличия токена
-                                                Navigator.push(
-                                                  context,
+                                                Navigator.of(context).push(
                                                   MaterialPageRoute(
                                                       builder: (_) =>
+                                                          //HistortScreen(
                                                           OrderExecutionScreen(
+                                                            //pageProfile:
+                                                            //  'OrderExecutionScreen',
                                                             userId:
                                                                 truck['iduserp']
                                                                     .toString(),
@@ -903,6 +906,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                 '', // Обеспечиваем значение по умолчанию
                                                           )),
                                                 );
+                                                print(
+                                                    'userIdiii111 : ${truck['iduserp'].toString()}');
+                                                print(
+                                                    'orderIdiii111  : ${widget.nameImg}');
                                               } catch (e, s) {
                                                 debugPrint(
                                                     'Ошибка сети: $e\n$s'); // 4. Ловим исключения
@@ -921,26 +928,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                   return buttonWidget;
                                 },
                               ),
-                            ),
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20.0),
-                              margin: const EdgeInsets.only(top: 20.0),
-                              child: TextButton(
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: TexticonsColor,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context, rootNavigator: true)
-                                        .push(
-                                      MaterialPageRoute(
-                                        builder: (_) => MainScreen(
-                                          pageProfile: '',
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('t2222222')),
                             ),
                           ],
                         );
@@ -985,7 +972,8 @@ class _MyHomePageState extends State<MyHomePage> {
         print(userId);
         return isLiked;
 
-        //getUserDataAds(idusers1);
+        //
+        getUserDataAds(userId);
       } catch (e) {
         print('Ошибка декодирования: $e');
         print('Ответ сервера: ${response.body}');

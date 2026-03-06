@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
-class ReviewScreen extends StatefulWidget {
+class ReviewScreenz extends StatefulWidget {
   final String userId;
 
-  ReviewScreen({required this.userId});
+  ReviewScreenz({required this.userId});
 
   @override
-  _ReviewScreenState createState() => _ReviewScreenState();
+  _ReviewScreenzState createState() => _ReviewScreenzState();
 }
 
-class _ReviewScreenState extends State<ReviewScreen> {
+class _ReviewScreenzState extends State<ReviewScreenz> {
   late Future<List<Map<String, dynamic>>> futureReviews;
 
   @override
@@ -26,12 +26,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<List<Map<String, dynamic>>> fetchReviews(String userId) async {
     final response = await http.get(
-      Uri.parse(Config.baseUrl + '/api/review_api.php')
+      Uri.parse(Config.baseUrl + '/api/review_apiz.php')
           .replace(queryParameters: {
         'userId': userId,
       }),
     );
-
+    print('kall');
+    print(userId);
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
@@ -57,7 +58,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Отзывы о заказчике',
+          'Отзывы о подрядчике',
           style: TextStyle(
             color: whiteprColor,
           ),

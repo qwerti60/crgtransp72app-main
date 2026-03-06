@@ -244,45 +244,6 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Грузоперевозчик') bd = 1;
-                  if (_selectedType == 'Спецтехника') bd = 2;
-                  if (_selectedType == 'Грузчик') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!, widget.nameImg);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите вид объявлений"),
-            ),
-          ),
-
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(

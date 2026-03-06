@@ -1,5 +1,6 @@
 // TODO Implement this library.
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
@@ -309,7 +310,8 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const Ads2App(),
+          builder: (context) =>
+              const MenuzakScreen(pageProfile: 'Ads2App'), // Ads2App(),
         ),
       );
     } else {

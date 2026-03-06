@@ -109,6 +109,7 @@ class _MyImageGridState extends State {
 //                                    ));
                                 builder: (_) => outputob(
                                       nameImg: images[index].name,
+                                      city: '',
                                     )));
                         /*                              Navigator.push(
                           context,

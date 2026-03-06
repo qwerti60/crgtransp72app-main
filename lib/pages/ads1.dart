@@ -4,6 +4,8 @@ import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
+import 'package:crgtransp72app/pages/scrmenu.dart';
+import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -90,7 +92,7 @@ class _MyHomePageState extends State {
           city = data['city'];
           phone = data['phone'];
           email = data['email'];
-          print(idusers);
+          print('xxxzz ${idusers}');
         });
 
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -103,7 +105,7 @@ class _MyHomePageState extends State {
   Future<List> fetchAds(int bd, int idusers) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/get_ads.php',
+        path: '/api/get_adstest.php',
         queryParameters: {
           'idusers': idusers.toString(),
           'bd': bd
@@ -130,12 +132,83 @@ class _MyHomePageState extends State {
     }
   }
 
+  Future<void> showDeleteConfirmationDialog(
+      BuildContext context, int truckId, bd) async {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Подтверждение удаления'),
+          content: Text('Вы уверены, что хотите удалить этот элемент?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Отмена'),
+              onPressed: () {
+                Navigator.pop(context, false); // Закрываем диалог
+              },
+            ),
+            TextButton(
+              child: Text('Удалить'),
+              style: ButtonStyle(
+                foregroundColor: MaterialStateProperty.all(Colors.red),
+              ),
+              onPressed: () {
+                deleteTruck(truckId, context,
+                    bd); // Удаляем запись, если выбран вариант "Да"
+                // Здесь логика удаления элемента
+                print('Элемент удалён!');
+                Navigator.pop(context, true); // Закрываем диалог
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> showDeleteDialog(BuildContext context, int truckId, bd) async {
+    try {
+      // Используем правильный контекст
+      final result = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false, // Диалог нельзя закрыть свайпом
+        builder: (context) {
+          // Обратите внимание на использование внутреннего контекста
+          return AlertDialog(
+            title: const Text('Удалить объявление безвозвратно?'),
+            content: const Text(
+                'Вы уверены, что хотите удалить объявление?'), // Дополнительное сообщение
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(
+                    context, false), // Важно использовать внутренний контекст
+                child: const Text('Нет'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                    context, true), // Важно использовать внутренний контекст
+                child: const Text('Да'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result == true) {
+        deleteTruck(
+            truckId, context, bd); // Удаляем запись, если выбран вариант "Да"
+      }
+    } catch (e) {
+      print("Error showing dialog: $e"); // Логируем возможные ошибки
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Мои заявки8',
+          'Мои объявления',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -158,45 +231,6 @@ class _MyHomePageState extends State {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Грузоперевозчик') bd = 1;
-                  if (_selectedType == 'Спецтехника') bd = 2;
-                  if (_selectedType == 'Грузчик') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!, idusers);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите тип"),
-            ),
-          ),
-
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
@@ -240,19 +274,22 @@ class _MyHomePageState extends State {
                                 mainAxisAlignment: MainAxisAlignment
                                     .end, // Равнение элементов в конце (справа)
                                 children: [
-                                  IconButton(
+                                  /*IconButton(
                                     icon: const Icon(Icons.edit),
                                     onPressed: () {
                                       // Действия по редактированию
                                     },
                                   ),
+                                  */
+                                  // Ваш исходный виджет кнопки
                                   IconButton(
                                     icon: const Icon(Icons.delete),
                                     onPressed: () {
                                       showDeleteDialog(
-                                          context, int.parse(truck['id']), bd);
+                                          context, truck['id'], bd);
                                     },
                                   ),
+
                                   Expanded(
                                     // Добавлено, чтобы текст "На проверке/Опубликовано" не сжимал иконки
                                     child: Align(
@@ -519,12 +556,21 @@ class _MyHomePageState extends State {
                                         Navigator.of(context,
                                                 rootNavigator: true)
                                             .push(
-                                          MaterialPageRoute(
+                                          /*   MaterialPageRoute(
                                             builder: (_) =>
                                                 list_predloj_na_zayavki(
                                               nameImg: truck['id'].toString(),
                                               bd: bd!,
                                             ),
+                                          ),
+                                        */
+                                          MaterialPageRoute(
+                                            builder: (_) => HistortScreen1(
+                                                pageProfile:
+                                                    'list_predloj_na_zayavki',
+                                                userId1: truck['id'].toString(),
+                                                orderId: bd!.toString(),
+                                                parsedUserIdOk: ''),
                                           ),
                                         );
                                       },
@@ -579,31 +625,6 @@ class _MyHomePageState extends State {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
-  }
-
-  Future<void> showDeleteDialog(BuildContext context, int truckId, bd) async {
-    bool? result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Удалить объявление безвозвратно?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Нет'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Да'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result == true) {
-      deleteTruck(truckId, context, bd);
-    }
   }
 
   Future<void> deleteTruck(int truckId, context, int bd) async {

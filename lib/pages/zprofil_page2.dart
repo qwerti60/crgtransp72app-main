@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
+import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
+import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart' show MyApp;
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -78,10 +81,13 @@ class zprofil_nameForm extends State<zprofil_name2> {
         });
         print('d123 ${data}');
         print('o123 ${orderid}');
+        print('Данные пользователя1: $data');
         // Теперь переменные firstName, lastName, middleName, и userfoto доступны для использования в build() методе.
       }
+      print('Данные пользователя2: $data');
     } else {
       print('Ошибка при получении данных пользователя');
+      //print('Данные пользователя: $data');
     }
   }
 
@@ -175,7 +181,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
                             builder: (_) =>
                                 const HistortScreen(pageProfile: 'Ads1App')));
                   },
-                  child: const Text('Мои заявки')),
+                  child: const Text('Мои объявления')),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -188,10 +194,13 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const HistortScreen(
-                                pageProfile: 'zprofil_zayavki')));
+                            builder: (_) => //list_predloj_na_obj_isp(
+                                //nameImg: userId.toString(), bd: 1),
+                                HistortScreen(pageProfile: 'zprofil_zayavki')
+                            //Ads1App()zprofil_zayavki
+                            ));
                   },
-                  child: const Text('Предложения заказчиков')),
+                  child: const Text('Я предлогаю')),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -221,7 +230,11 @@ class zprofil_nameForm extends State<zprofil_name2> {
                   onPressed: () {
                     Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
-                        builder: (_) => HistortScreen(pageProfile: 'hist'),
+                        builder: (_) =>
+                            //history_isp(
+                            //  nameImg: userId.toString(),
+                            //bd: 1), //
+                            HistortScreen(pageProfile: 'hist'),
                       ),
                     );
                   },

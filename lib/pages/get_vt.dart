@@ -1,4 +1,5 @@
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/CityScreenisp.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -110,9 +111,15 @@ class _MyImageGridState extends State {
                                 //                                     nameImg: images[index].name,
 //                                    )
 //                                    ));
-                                builder: (_) => outputob(
-                                      nameImg: images[index].name,
-                                    )));
+
+                                builder: (_) => CityScreenIsp(
+                                      //outputobz(
+                                      indexName: images[index].name,
+                                      //  base: base, // Передача переменной
+                                    ) //outputob(
+                                //nameImg: images[index].name,
+                                //)
+                                ));
                         /*                              Navigator.push(
                           context,
                           MaterialPageRoute(

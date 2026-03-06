@@ -1,12 +1,14 @@
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
+import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
+import 'package:crgtransp72app/pages/bmenu.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/test.dart'; // as hist;
-import 'package:crgtransp72app/pages/test.dart' as hist;
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
@@ -15,21 +17,22 @@ import 'package:dio/dio.dart';
 /* =================================================================== */
 /* --------------------- ФОРМА ОТПРАВКИ ОТЗЫВА ----------------------- */
 
-class SendReviewForm extends StatefulWidget {
+class SendReviewFormzakaz extends StatefulWidget {
   final String currentUserId;
   final String targetUserId;
   final int parsedUserIdOk;
-  const SendReviewForm({
+  const SendReviewFormzakaz({
     Key? key,
     required this.currentUserId,
     required this.targetUserId,
     required this.parsedUserIdOk,
   }) : super(key: key);
-  State<SendReviewForm> createState() {
+  State<SendReviewFormzakaz> createState() {
     // Логируем значения переменных
     print('Initializing SendReviewForm with:');
     print('Current User ID: $currentUserId');
     print('Target User ID: $targetUserId');
+    print('Target parsedUserIdOk: $parsedUserIdOk');
 
     return _SendReviewFormState();
   }
@@ -37,7 +40,7 @@ class SendReviewForm extends StatefulWidget {
 
 /* ------------------------------------------------------------------- */
 
-class _SendReviewFormState extends State<SendReviewForm> {
+class _SendReviewFormState extends State<SendReviewFormzakaz> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   int _selectedRating = 0;
@@ -66,22 +69,33 @@ class _SendReviewFormState extends State<SendReviewForm> {
 
     try {
       final response = await Dio().post(
-        '${Config.baseUrl}/api/save_review.php',
+        '${Config.baseUrl}/api/save_reviewzaka.php',
         data: data,
-        options: Options(validateStatus: (code) => code! >= 200 && code < 300),
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (code) => code! >= 200 && code < 300,
+        ),
       );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Server returned an error: ${response.data.toString()}');
+      }
 
       if (response.statusCode == 200 && response.data['status'] == 'success') {
         // Открытие окна с успешным результатом и последующей навигацией
         showSuccessDialog('Спасибо!', 'Ваш отзыв успешно отправлен.',
             onOkPressed: () {
-          /*         Navigator.of(context).push(MaterialPageRoute(
+          /*  Navigator.of(context).push(
+            MaterialPageRoute(
               builder: (_) => history_isp(
-                  nameImg: widget.parsedUserIdOk.toString(), bd: 1)));
-*/
+                  nameImg: widget.currentUserId,
+                  bd: 1), // HistortScreen12(pageProfile: 'hist')),
+            ),
+          );*/
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
+              builder: (_) => MenuzakScreen(pageProfile: 'hist'),
             ),
           );
 
@@ -165,13 +179,14 @@ class _SendReviewFormState extends State<SendReviewForm> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Оставьте отзыв',
+          'Оставьте отзыв о исполнителе',
           style: TextStyle(
             color: whiteprColor,
           ),
         ),
         backgroundColor: blueaccentColor,
       ),
+// appBar: AppBar(title: const Text('Оставьте отзыв')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -197,7 +212,7 @@ class _SendReviewFormState extends State<SendReviewForm> {
                     backgroundColor: MaterialStateProperty.all(Colors.blue),
                   ),
                   onPressed: _submitReview,
-                  child: const Text('Отправить отзыв'),
+                  child: const Text('Отправить отзыв о исполнителе'),
                 ),
               ),
             ],
@@ -288,7 +303,7 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: SendReviewForm(
+        child: SendReviewFormzakaz(
             currentUserId: '1', targetUserId: '2', parsedUserIdOk: 106),
       ),
     );

@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 import '../config.dart';
 import '../design/dimension.dart';
@@ -40,7 +41,10 @@ class _LoginState extends State<LoginPage> {
       body: {
         'email': _emailController.text,
         'password': _passwordController.text,
-        'fcm_token': fcmToken!, // Передаём токен FCM на сервер
+        if (fcmToken != null)
+          'fcm_token':
+              fcmToken, // Теперь токен передается только если он существует
+        // Передаём токен FCM на сервер
       },
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );
@@ -189,29 +193,6 @@ class _LoginState extends State<LoginPage> {
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                    style: TextButton.styleFrom(
-                      fixedSize: const Size(double.infinity, 50),
-                      foregroundColor: whiteprColor,
-                      backgroundColor: blueaccentColor,
-                      disabledForegroundColor: grayprprColor,
-                      shape: const BeveledRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(3))),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const RentDateForm()));
-                    },
-                    child: const Text('объявы')),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 80.0),
               child: TextButton(
                 style: TextButton.styleFrom(
@@ -228,6 +209,20 @@ class _LoginState extends State<LoginPage> {
                 child: const Text('Регистрация'),
               ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: OutlinedButton.icon(
+                icon: Icon(Icons.group_add_outlined),
+                label: const Text('Присоединиться к группе'),
+                style: ButtonStyle(
+                  foregroundColor: MaterialStateProperty.all(Colors.blueAccent),
+                ),
+                onPressed: () {
+                  launchUrlString("https://t.me/+bocT1PzkmNIyZmQy");
+                },
+              ),
+            )
           ],
         ),
       ),

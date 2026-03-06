@@ -49,9 +49,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSCameraUsageDescription</key>
-<string>Это приложение требует доступа к вашей камере</string>
 	<key>CFBundleIconFile</key>
     <string>AppIcon</string>
+<!-- Чтение/выбор фото -->
+	<key>NSPhotoLibraryUsageDescription</key>
+		<string>Нам нужен доступ к вашей медиатеке, чтобы вы могли выбрать фотографию для загрузки.</string>
+	<key>NSCameraUsageDescription</key>
+		<string>Нам нужен доступ к камере, чтобы сделать фотографию профиля, документов, техники.</string>
 </dict>
+
 </plist>

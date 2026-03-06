@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
@@ -260,6 +261,22 @@ class zprofil_nameForm extends State<zprofil_name> {
                   child: const Text('Избранное')),
             ),
 
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const MenuzakScreen(pageProfile: 'hist')));
+                  },
+                  child: const Text('История заказов')),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 40.0),

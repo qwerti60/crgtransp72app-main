@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -174,6 +175,38 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       throw Exception('Failed to load ads');
     }
+  }
+
+  Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
+    final response = await http.post(
+      Uri.parse('http://ivnovav.ru/api/check_isp.php'),
+      body: {
+        'idusers': idUser.toString(),
+        'bd': bd.toString(),
+        'iduserp': idUserP.toString(),
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load data');
+    }
+
+    final data = json.decode(response.body); // Map<String, dynamic>
+
+    final dynamic raw = data['isp']; // что-то, приходящее с сервера
+    print(raw);
+    print('Это текст idUser.toString(): ${idUser.toString()}');
+    print('Это текст bd.toString(): ${bd.toString()}');
+    print('Это текст idUserP.toString(): ${idUserP.toString()}');
+    print('Это текст api: ${raw}');
+
+    // Приводим к bool
+    if (raw is bool) return raw; // true / false
+    if (raw is int) return raw != 0; // 1 / 0
+    if (raw is String) return raw == '1' || raw.toLowerCase() == 'true';
+
+    // Если формат неожиданный – сигнализируем об ошибке
+    throw Exception('Unexpected value of "isp": $raw');
   }
 
   @override
@@ -545,23 +578,163 @@ class _MyHomePageState extends State<MyHomePage> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20.0),
                               margin: const EdgeInsets.only(top: 20.0),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: TextButton(
-                                    style: TextButton.styleFrom(
-                                      fixedSize:
-                                          const Size(double.infinity, 50),
-                                      foregroundColor: whiteprColor,
-                                      backgroundColor: blueaccentColor,
-                                      disabledForegroundColor: grayprprColor,
-                                      shape: const BeveledRectangleBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(3))),
+                              child: FutureBuilder<bool>(
+                                future: checkIsp(widget.nameImg, widget.bd,
+                                    truck['iduserp']),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const SizedBox(
+                                        height: 50,
+                                        child: Center(
+                                            child:
+                                                CircularProgressIndicator()));
+                                  }
+
+                                  final bool hasOffer = snapshot.data ?? false;
+
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    child: TextButton(
+                                      style: TextButton.styleFrom(
+                                        fixedSize:
+                                            const Size(double.infinity, 50),
+                                        foregroundColor: whiteprColor,
+                                        backgroundColor: blueaccentColor,
+                                        disabledForegroundColor: grayprprColor,
+                                        shape: const BeveledRectangleBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(3))),
+                                      ),
+                                      onPressed: () async {
+                                        if (hasOffer) {
+                                          // Отказ от предложения
+                                          await updateOffer(
+                                              widget.bd,
+                                              widget.nameImg,
+                                              userId,
+                                              truck['iduserp']);
+
+                                          try {
+                                            final response = await http.post(
+                                              Uri.parse(
+                                                  '${Config.baseUrl}/api/notification.php'),
+                                              body: {
+                                                'iduserp':
+                                                    truck['iduserp'].toString()
+                                              },
+                                              headers: {
+                                                'Content-Type':
+                                                    'application/x-www-form-urlencoded'
+                                              },
+                                            );
+
+                                            print(truck['iduserp']);
+                                            debugPrint(
+                                                'Status: ${response.statusCode}');
+                                            debugPrint(
+                                                'Body : ${response.body}');
+
+                                            if (response.statusCode == 200) {
+                                              final Map<String, dynamic> data =
+                                                  jsonDecode(response.body);
+
+                                              if (data['fcm_token'] != null) {
+                                                try {
+                                                  await sendNotificationV1(
+                                                    deviceToken:
+                                                        data['fcm_token'],
+                                                    title:
+                                                        'Привет от crgtransp72app!',
+                                                    body:
+                                                        'От вашего предложения исполнитель отказался!', // Измененное сообщение
+                                                  );
+                                                  print(
+                                                      'Уведомление отправлено');
+                                                } catch (e) {
+                                                  print(
+                                                      'Ошибка при отправке уведомления: $e');
+                                                }
+                                              } else {
+                                                _showSnack(context,
+                                                    'Токен не найден в ответе');
+                                              }
+                                            } else {
+                                              _showSnack(context,
+                                                  'Сервер вернул: ${response.statusCode}');
+                                            }
+                                          } catch (e) {
+                                            print('Ошибка сети: $e');
+                                          }
+                                        } else {
+                                          // Принятие предложения
+                                          await updateOffer(
+                                              widget.bd,
+                                              widget.nameImg,
+                                              userId,
+                                              truck['iduserp']);
+
+                                          try {
+                                            final response = await http.post(
+                                              Uri.parse(
+                                                  '${Config.baseUrl}/api/notification.php'),
+                                              body: {
+                                                'iduserp':
+                                                    truck['iduserp'].toString()
+                                              },
+                                              headers: {
+                                                'Content-Type':
+                                                    'application/x-www-form-urlencoded'
+                                              },
+                                            );
+
+                                            print(truck['iduserp']);
+                                            debugPrint(
+                                                'Status: ${response.statusCode}');
+                                            debugPrint(
+                                                'Body : ${response.body}');
+
+                                            if (response.statusCode == 200) {
+                                              final Map<String, dynamic> data =
+                                                  jsonDecode(response.body);
+
+                                              if (data['fcm_token'] != null) {
+                                                try {
+                                                  await sendNotificationV1(
+                                                    deviceToken:
+                                                        data['fcm_token'],
+                                                    title:
+                                                        'Привет от crgtransp72app!',
+                                                    body:
+                                                        'Ваше предложение принято исполнителем!', // Изменённое сообщение
+                                                  );
+                                                  print(
+                                                      'Уведомление отправлено');
+                                                } catch (e) {
+                                                  print(
+                                                      'Ошибка при отправке уведомления: $e');
+                                                }
+                                              } else {
+                                                _showSnack(context,
+                                                    'Токен не найден в ответе');
+                                              }
+                                            } else {
+                                              _showSnack(context,
+                                                  'Сервер вернул: ${response.statusCode}');
+                                            }
+                                          } catch (e) {
+                                            print('Ошибка сети: $e');
+                                          }
+                                        }
+                                      },
+                                      child: Text(hasOffer
+                                          ? 'Отказаться от предложения'
+                                          : 'Принять предложение'),
                                     ),
-                                    onPressed: () {},
-                                    child: const Text('Принять предложение')),
+                                  );
+                                },
                               ),
-                            ),
+                            )
                           ],
                         );
                       });
@@ -575,6 +748,43 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
+    final uri =
+        Uri.parse('http://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
+
+    try {
+      final response = await http.post(uri, body: {
+        'idusers': widget.nameImg, // Пользовательский ID
+        'bd': bd.toString(), // Поле bd
+        'iduserp': iduserp.toString() // Поле bd
+      });
+      print('ttt');
+      print(userId.toString());
+      print(widget.nameImg);
+      //       print(idUser);
+      print(iduserp);
+      //  print(id);
+      if (response.statusCode == 200) {
+        _showSnack(context, 'Данные успешно загружены!!!');
+        setState(() {
+          //raw = data['isp']; // что-то, приходящее с сервера
+        });
+      } else {
+        _showSnack(context,
+            'Ошибка обновления: ${response.statusCode}\n${response.body}');
+      }
+    } catch (err) {
+      _showSnack(context, 'Ошибка сети: $err');
+    }
+  }
+
+// SnackBar
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 

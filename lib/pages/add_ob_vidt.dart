@@ -1,4 +1,5 @@
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
@@ -47,8 +48,9 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
 
   static const double imageSize = 100.0;
   final List _images = List.generate(4, (index) => null);
-  final List _imagesDoc = [null, null, null, null]; // Список для хр
+  final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
+  final List<XFile?> _originalImagesDoc = List.generate(4, (indexDoc) => null);
   String firstName = '';
   String lastName = '';
   String middleName = '';
@@ -163,6 +165,30 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
     );
   }
 
+  Widget _imageSlotDoc(int indexDoc) {
+    return GestureDetector(
+      onTap: () => _pickImageDoc(indexDoc),
+      child: Container(
+        height: imageSize,
+        width: imageSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: _imagesDoc[indexDoc] != null
+                ? FileImage(File(_imagesDoc[indexDoc]!
+                    .path)) // Преобразуем XFile из _images в File
+                : _originalImagesDoc[indexDoc] != null
+                    ? FileImage(File(_originalImagesDoc[indexDoc]!
+                        .path)) // Преобразуем XFile из _originalImages в File
+                    : const AssetImage('assets/images/fotouser.png')
+                        as ImageProvider,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future _fetchVidT() async {
     final response = await http
         .get(Uri.parse(Config.baseUrl).replace(path: '/api/vidt.php'));
@@ -177,15 +203,37 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
     }
   }
 
-  Future _pickImageDoc(int index) async {
-    final picker = ImagePicker();
-// Можно указать типы файлов, добавив параметры в pickImage
-    final XFile? image = await picker.pickImage(
-        source:
-            ImageSource.gallery); // Или pickMultiImage для нескольких файлов
-    if (image != null) {
+  Future _pickImageDoc(int indexDoc) async {
+    final ImagePicker picker = ImagePicker();
+
+// Показываем диалоговое окно для выбора источника изображения
+    final ImageSource? source = await _showImageSourceDialog(context);
+
+// Если пользователь не выбрал источник, выходим из функции
+    if (source == null) return;
+
+    final XFile? pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+// Генерируем новое имя файла для сжатого изображения
+      String dir = p.dirname(pickedFile.path);
+      String extension = p.extension(pickedFile.path);
+      String newFileName =
+          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
+      String newPath = p.join(dir, newFileName);
+      XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
+        pickedFile.path,
+        newPath, // Использовать новый путь для сжатого файла
+        minWidth: 100,
+        minHeight: 100,
+        quality: 88,
+      );
+
       setState(() {
-        _imagesDoc[index] = image;
+        //     _images[index] = compressedFile;
+        //   _originalImages[index] = pickedFile;
+        _imagesDoc[indexDoc] = compressedFile;
+        _originalImagesDoc[indexDoc] = pickedFile;
       });
     }
   }
@@ -246,35 +294,17 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
             .add(await http.MultipartFile.fromPath('img${i + 1}', filePath));
       }
     }
+    for (int i1 = 0; i1 < _originalImagesDoc.length; i1++) {
+      if (_originalImagesDoc[i1] != null) {
+        // Получаем путь из объекта XFile
+        //FileImage(File(_originalImages[i]!.path));
+        String filePath =
+            _originalImagesDoc[i1]!.path; // Используем _originalImages здесь
 
-// Пример добавления imgdoc1
-// Повторите для imgdoc2, imgdoc3, imgdoc4
-    if (_imagesDoc[0] != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'imgdoc1',
-        _imagesDoc[0].path, // Извлекаем строку пути из объекта XFile
-      ));
+        request.files.add(
+            await http.MultipartFile.fromPath('imgDoc${i1 + 1}', filePath));
+      }
     }
-
-    if (_imagesDoc[1] != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'imgdoc2',
-        _imagesDoc[1].path, // Извлекаем строку пути из объекта XFile
-      ));
-    }
-    if (_imagesDoc[2] != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'imgdoc3',
-        _imagesDoc[2].path, // Извлекаем строку пути из объекта XFile
-      ));
-    }
-    if (_imagesDoc[3] != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'imgdoc4',
-        _imagesDoc[3].path, // Извлекаем строку пути из объекта XFile
-      ));
-    }
-
     var response = await request.send();
 
     if (response.statusCode == 200) {
@@ -282,7 +312,8 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const Ads1App(),
+          builder: (context) =>
+              const HistortScreen(pageProfile: 'Ads1App'), //Ads1App(),
         ),
       );
     } else {
@@ -543,7 +574,7 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 15.0),
               child: const Text(
-                'Загрузить документы(Паспорт водителя, стс машины и стс прицепа)',
+                'Загрузить документы(фото паспорта водителя, стс машины и стс прицепа)',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black38,
@@ -552,6 +583,16 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
                 textAlign: TextAlign.left,
               ),
             ),
+            Container(
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children:
+                      List.generate(4, (indexDoc) => _imageSlotDoc(indexDoc)),
+                ),
+              ),
+            ),
+            /*
             Container(
               padding: const EdgeInsets.all(
                   10), // Добавляет внутренний отступ к контейнеру
@@ -590,6 +631,7 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
                 ),
               ),
             ),
+            */
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 30.0),

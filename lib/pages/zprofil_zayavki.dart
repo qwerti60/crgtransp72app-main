@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OfferScreen.dart';
+import 'package:crgtransp72app/pages/OfferScreen2.dart';
+import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -108,7 +111,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
+  Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
     final response = await http.get(Uri.parse(
         '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
 
@@ -138,6 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
           city = data['city'] ?? "Нет города";
           phone = data['phone'] ?? "Нет телефона";
           email = data['email'] ?? "Нет email";
+          print('firstName');
           print(firstName);
         });
 
@@ -157,7 +161,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like.php',
+        path: '/api/toggle_like1.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
@@ -174,6 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
       try {
         final parsed = json.decode(response.body);
         isLiked = parsed['success'];
+        print(isLiked);
         return isLiked;
 
         //getUserDataAds(idusers1);
@@ -192,7 +197,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg, int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/getofferuser.php',
+        path: '/api/getofferusern.php',
         queryParameters: {
           'nameImg': nameImg,
           'bd': bd.toString(), // Преобразуем в строку
@@ -208,9 +213,9 @@ class _MyHomePageState extends State<MyHomePage> {
       try {
         final parsed = json.decode(response.body);
         print(parsed);
-        print(nameImg);
-        print(bd);
-        print(userId);
+        print(response.body); // Просмотреть полный ответ
+        print('uu77${userId}');
+        print('uu77${nameImg}');
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -231,7 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Мои заявки 6',
+          'Предложения заказчиков',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -254,45 +259,6 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Грузоперевозчик') bd = 1;
-                  if (_selectedType == 'Спецтехника') bd = 2;
-                  if (_selectedType == 'Грузчик') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!, widget.nameImg, userId);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите раздел объявлений"),
-            ),
-          ),
-
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
@@ -418,58 +384,74 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
-                                              Row(
-                                                children: [
-                                                  Row(
-                                                    children: List.generate(5,
-                                                        (index) {
-                                                      return Icon(
-                                                        index <
-                                                                (truck['rating'] ??
-                                                                    0)
-                                                            ? Icons.star
-                                                            : Icons.star_border,
-                                                        color: Colors.amber,
-                                                        size: 16,
-                                                      );
-                                                    }),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${truck['rating'] ?? 0.0}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.grey,
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ReviewScreen(
+                                                                userId: truck[
+                                                                        'iduserp']
+                                                                    .toString())),
+                                                  );
+                                                },
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Row(
+                                                      children: List.generate(5,
+                                                          (index) {
+                                                        final double
+                                                            parsedRating =
+                                                            truck['avg_rating'] !=
+                                                                    null
+                                                                ? double.tryParse(
+                                                                        truck['avg_rating']
+                                                                            .toString()) ??
+                                                                    0.0
+                                                                : 0.0;
+                                                        return Icon(
+                                                          index < parsedRating
+                                                              ? Icons.star
+                                                              : Icons
+                                                                  .star_border,
+                                                          color: Colors.amber,
+                                                          size: 16,
+                                                        );
+                                                      }),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  GestureDetector(
-                                                    onTap: () {
-// Добавьте здесь навигацию к отзывам
-                                                    },
-                                                    child: Row(
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${truck['avg_rating'] ?? 0.0}',
+                                                      style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Row(
                                                       children: [
                                                         const Icon(
-                                                          Icons
-                                                              .comment_outlined,
-                                                          size: 16,
-                                                          color: Colors.grey,
-                                                        ),
+                                                            Icons
+                                                                .comment_outlined,
+                                                            size: 16,
+                                                            color: Colors.grey),
                                                         const SizedBox(
                                                             width: 2),
                                                         Text(
                                                           '${truck['reviewsCount'] ?? 0}',
                                                           style:
                                                               const TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.grey,
-                                                          ),
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .grey),
                                                         ),
                                                       ],
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
+                                                  ],
+                                                ),
+                                              )
                                             ],
                                           ),
                                       ],
@@ -553,7 +535,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ],
                                   ),
                                 ),
-                              if (truck['maxgruz'] != null)
+                              if (truck['maxgruz'] != '')
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
@@ -799,49 +781,208 @@ class _MyHomePageState extends State<MyHomePage> {
                                 color: Colors.white, // По желанию добавьте фон
                                 padding: const EdgeInsets.all(
                                     8.0), // Добавьте отступы вокруг FutureBuilder
+
                                 child: FutureBuilder<bool>(
                                   future: checkOfferExists(
-                                      userId, truck['id'], bd!),
+                                      truck['iduser']!, truck['id'], bd!),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData && snapshot.data!) {
                                       // Если запись существует
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20.0),
-                                        margin:
-                                            const EdgeInsets.only(top: 20.0),
-                                        child: SizedBox(
-                                          width: double.infinity,
-                                          child: TextButton(
-                                            style: TextButton.styleFrom(
-                                              fixedSize: const Size(
-                                                  double.infinity, 50),
-                                              foregroundColor: whiteprColor,
-                                              backgroundColor: blueaccentColor,
-                                              disabledForegroundColor:
-                                                  grayprprColor,
-                                              shape:
-                                                  const BeveledRectangleBorder(
-                                                borderRadius: BorderRadius.all(
-                                                    Radius.circular(3)),
+                                      return Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20.0),
+                                            margin: const EdgeInsets.only(
+                                                top: 20.0),
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: TextButton(
+                                                style: TextButton.styleFrom(
+                                                  fixedSize: const Size(
+                                                      double.infinity, 50),
+                                                  foregroundColor: whiteprColor,
+                                                  backgroundColor:
+                                                      blueaccentColor,
+                                                  disabledForegroundColor:
+                                                      grayprprColor,
+                                                  shape:
+                                                      const BeveledRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                            Radius.circular(3)),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          OfferScreen2(
+                                                        userid: truck['id'],
+                                                        useridobj:
+                                                            truck['iduser'],
+                                                        bd: bd, // Изменение экрана
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: const Text(
+                                                    'Редактировать предложение'),
                                               ),
                                             ),
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => OfferScreen(
-                                                      userid: truck['id'],
-                                                      useridobj:
-                                                          truck['iduser'],
-                                                      bd: bd), // Изменение экрана
-                                                ),
-                                              );
-                                            },
-                                            child: const Text(
-                                                'Редактировать предложение'),
                                           ),
-                                        ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20.0),
+                                            margin: const EdgeInsets.only(
+                                                top: 20.0),
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: TextButton(
+                                                style: TextButton.styleFrom(
+                                                  fixedSize: const Size(
+                                                      double.infinity, 50),
+                                                  foregroundColor: whiteprColor,
+                                                  backgroundColor:
+                                                      readColor, // Меняем фон кнопки на красный
+                                                  disabledForegroundColor:
+                                                      grayprprColor,
+                                                  shape:
+                                                      const BeveledRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                            Radius.circular(3)),
+                                                  ),
+                                                ),
+                                                onPressed: () async {
+                                                  bool confirmed =
+                                                      await showDialog<bool>(
+                                                            context: context,
+                                                            builder:
+                                                                (context) =>
+                                                                    AlertDialog(
+                                                              title: const Text(
+                                                                  "Подтверждение удаления"),
+                                                              content: const Text(
+                                                                  "Вы уверены, что хотите удалить предложение?"),
+                                                              actions: [
+                                                                TextButton(
+                                                                  child: const Text(
+                                                                      "Отмена"),
+                                                                  onPressed: () =>
+                                                                      Navigator.pop(
+                                                                          context,
+                                                                          false),
+                                                                ),
+                                                                TextButton(
+                                                                  child: const Text(
+                                                                      "Да, удалить"),
+                                                                  onPressed: () =>
+                                                                      Navigator.pop(
+                                                                          context,
+                                                                          true),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ) ??
+                                                          false;
+
+                                                  if (confirmed) {
+                                                    // Отправляем запрос на удаление записи
+                                                    var response =
+                                                        await http.post(
+                                                      Uri.parse(
+                                                          '${Config.baseUrl}/api/deleteoffer.php'), // Здесь укажите ваш API адрес
+                                                      body: jsonEncode({
+                                                        'iduserp': userId, //140
+                                                        'iduser':
+                                                            truck['id'], //33
+                                                        'bd': bd, //3
+                                                      }),
+                                                    );
+                                                    print(
+                                                        'truckid ${truck['id']}');
+                                                    print(
+                                                        'truckiduser ${userId}');
+                                                    print('bd ${bd}');
+                                                    if (response.statusCode ==
+                                                        200) {
+                                                      // Запись успешно удалена
+                                                      setState(() {
+                                                        //isLoading = false; // Выключаем загрузчик
+                                                      });
+                                                      print(
+                                                          'Запись успешно удалена');
+                                                    } else {
+                                                      print(
+                                                          'Ошибка при удалении записи');
+                                                    }
+                                                  }
+                                                },
+                                                child: const Text(
+                                                    'Удалить предложение'),
+                                              ),
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20.0),
+                                            margin: const EdgeInsets.only(
+                                                top: 20.0),
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: TextButton(
+                                                style: TextButton.styleFrom(
+                                                  fixedSize: const Size(
+                                                      double.infinity, 50),
+                                                  foregroundColor: whiteprColor,
+                                                  backgroundColor:
+                                                      blueaccentColor,
+                                                  disabledForegroundColor:
+                                                      grayprprColor,
+                                                  shape:
+                                                      const BeveledRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                            Radius.circular(3)),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          OrderExecutionScreen(
+                                                        //pageProfile:
+                                                        //  'OrderExecutionScreen',
+                                                        userId: truck['iduser']
+                                                            .toString(),
+                                                        orderId: truck['id']
+                                                                .toString() ??
+                                                            '', // Обеспечиваем значение по умолчанию
+                                                      ), /*OfferScreen(
+                                                        userid: truck['id'],
+                                                        useridobj:
+                                                            truck['iduser'],
+                                                        bd: bd, // Изменение экрана
+                                                      ),*/
+                                                    ),
+                                                  );
+                                                  print(
+                                                      'trid ${truck['id']}'); //33
+                                                  print('uid ${userId}'); //140
+                                                  print(
+                                                      'uid ${truck['iduser']}');
+
+                                                  ///141
+                                                },
+                                                child: const Text(
+                                                    'Начать выполнение'),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       );
                                     } else {
                                       // Если записи нет
@@ -871,7 +1012,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      OfferScreen(
+                                                      OfferScreen2(
                                                           userid: truck['id'],
                                                           useridobj:
                                                               truck['iduser'],

@@ -1,9 +1,16 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OfferScreen.dart';
+import 'package:crgtransp72app/pages/OfferScreen2.dart';
+import 'package:crgtransp72app/pages/SearchForm.dart';
+import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/zprofil_page2.dart';
+import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -13,17 +20,11 @@ import '../config.dart';
 import '../design/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-void main() {
-  runApp(const outputobz(
-    nameImg: '',
-    base: 1,
-  ));
-}
-
 class outputobz extends StatelessWidget {
   final String nameImg;
-  final int base;
-  const outputobz({super.key, required this.nameImg, required this.base});
+  final String city;
+
+  const outputobz({super.key, required this.nameImg, required this.city});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,7 @@ class outputobz extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(nameImg: nameImg, base: base),
+      home: MyHomePage(nameImg: nameImg, city: city),
     );
   }
 }
@@ -40,8 +41,8 @@ class outputobz extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   final String nameImg;
 
-  final int base;
-  const MyHomePage({super.key, required this.nameImg, required this.base});
+  final String city;
+  const MyHomePage({super.key, required this.nameImg, required this.city});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -74,11 +75,12 @@ class _MyHomePageState extends State<MyHomePage> {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
     String nameImg = widget.nameImg;
-    bd ??= widget.base;
+    bd = 1;
+    String city = widget.city;
 
     //super.initState();
     getUserData();
-    fetchAds(bd!, nameImg, userId);
+    fetchAds(city, nameImg, userId);
   }
 
   int userId = 0;
@@ -108,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
+  Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
     final response = await http.get(Uri.parse(
         '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
 
@@ -179,7 +181,7 @@ class _MyHomePageState extends State<MyHomePage> {
         //getUserDataAds(idusers1);
       } catch (e) {
         print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
+        print('Ответ сервера: ${response.statusCode}');
         throw Exception('Ошибка формата ответа');
       }
       // Это излишне, поскольку возвращение происходит в блоке try выше
@@ -189,18 +191,20 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<List> fetchAds(int bd, String nameImg, int userId) async {
+  Future<List> fetchAds(String city, String nameImg, int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/getads3.php',
         queryParameters: {
           'nameImg': nameImg,
-          'bd': bd.toString(), // Преобразуем в строку
+          'city': city, // Преобразуем в строку
           'useId':
               userId.toString() // Преобразуем в строку, если userId это число
         },
       ),
     );
+    print('uu77${userId}');
+    print('uu77${nameImg}');
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
@@ -251,51 +255,14 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16), // Применение отступа
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: Colors.blueAccent, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              value: _selectedType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedType = newValue;
-                  print(_selectedType);
-                  if (_selectedType == 'Грузоперевозчик') bd = 1;
-                  if (_selectedType == 'Спецтехника') bd = 2;
-                  if (_selectedType == 'Грузчик') bd = 3;
-                  //'Грузоперевозчик',
-                  //'Спецтехника',
-                  //'Грузчик'
-                  fetchAds(bd!, widget.nameImg, userId);
-                });
-              },
-              items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              hint: const Text("Выберите раздел объявлений"),
-            ),
-          ),
+          // основная часть экрана
 
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(bd!, widget.nameImg, userId),
+                future: fetchAds(widget.city, widget.nameImg, userId),
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -415,58 +382,74 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
-                                              Row(
-                                                children: [
-                                                  Row(
-                                                    children: List.generate(5,
-                                                        (index) {
-                                                      return Icon(
-                                                        index <
-                                                                (truck['rating'] ??
-                                                                    0)
-                                                            ? Icons.star
-                                                            : Icons.star_border,
-                                                        color: Colors.amber,
-                                                        size: 16,
-                                                      );
-                                                    }),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${truck['rating'] ?? 0.0}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.grey,
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ReviewScreen(
+                                                                userId: truck[
+                                                                        'iduserp']
+                                                                    .toString())),
+                                                  );
+                                                },
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Row(
+                                                      children: List.generate(5,
+                                                          (index) {
+                                                        final double
+                                                            parsedRating =
+                                                            truck['avg_rating'] !=
+                                                                    null
+                                                                ? double.tryParse(
+                                                                        truck['avg_rating']
+                                                                            .toString()) ??
+                                                                    0.0
+                                                                : 0.0;
+                                                        return Icon(
+                                                          index < parsedRating
+                                                              ? Icons.star
+                                                              : Icons
+                                                                  .star_border,
+                                                          color: Colors.amber,
+                                                          size: 16,
+                                                        );
+                                                      }),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  GestureDetector(
-                                                    onTap: () {
-// Добавьте здесь навигацию к отзывам
-                                                    },
-                                                    child: Row(
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${truck['avg_rating'] ?? 0.0}',
+                                                      style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Row(
                                                       children: [
                                                         const Icon(
-                                                          Icons
-                                                              .comment_outlined,
-                                                          size: 16,
-                                                          color: Colors.grey,
-                                                        ),
+                                                            Icons
+                                                                .comment_outlined,
+                                                            size: 16,
+                                                            color: Colors.grey),
                                                         const SizedBox(
                                                             width: 2),
                                                         Text(
                                                           '${truck['reviewsCount'] ?? 0}',
                                                           style:
                                                               const TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.grey,
-                                                          ),
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .grey),
                                                         ),
                                                       ],
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
+                                                  ],
+                                                ),
+                                              )
                                             ],
                                           ),
                                       ],
@@ -798,7 +781,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     8.0), // Добавьте отступы вокруг FutureBuilder
                                 child: FutureBuilder<bool>(
                                   future: checkOfferExists(
-                                      userId, truck['id'], bd!),
+                                      truck['iduser'], truck['id'], bd!),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData && snapshot.data!) {
                                       // Если запись существует
@@ -827,11 +810,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (context) => OfferScreen(
-                                                      userid: truck['id'],
-                                                      useridobj:
-                                                          truck['iduser'],
-                                                      bd: bd), // Изменение экрана
+                                                  builder: (context) =>
+                                                      OfferScreen2(
+                                                          userid: truck['id'],
+                                                          useridobj:
+                                                              truck['iduser'],
+                                                          bd: bd), // Изменение экрана
                                                 ),
                                               );
                                             },
@@ -868,7 +852,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      OfferScreen(
+                                                      OfferScreen2(
                                                           userid: truck['id'],
                                                           useridobj:
                                                               truck['iduser'],
@@ -961,7 +945,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          fetchAds(bd!, widget.nameImg, userId);
+          fetchAds(widget.city, widget.nameImg, userId);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

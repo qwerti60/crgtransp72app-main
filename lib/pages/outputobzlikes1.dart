@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/pages/OfferScreen2.dart';
 import 'package:crgtransp72app/pages/OfferScreenZ.dart';
+import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -74,12 +79,12 @@ class _MyHomePageState extends State<MyHomePage> {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
     String nameImg = widget.nameImg;
-    bd ??= widget.base;
+    bd = 1;
+    //String city = widget.city;
 
     //super.initState();
-    //   getUserData();
     getUserData();
-    fetchAds(bd!, nameImg);
+    fetchAds(userId);
   }
 
   int userId = 0;
@@ -106,6 +111,17 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     } else {
       print('Ошибка при получении данных пользователя');
+    }
+  }
+
+  Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
+    final response = await http.get(Uri.parse(
+        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['exists'];
+    } else {
+      throw Exception('Failed to load data');
     }
   }
 
@@ -147,8 +163,9 @@ class _MyHomePageState extends State<MyHomePage> {
     //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
+        path: '/api/toggle_like.php',
         queryParameters: {
+          'usersid': userId.toString(),
           'idusers': idUser,
           'id': id,
           'bd': bd
@@ -168,7 +185,7 @@ class _MyHomePageState extends State<MyHomePage> {
         //getUserDataAds(idusers1);
       } catch (e) {
         print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
+        print('Ответ сервера: ${response.statusCode}');
         throw Exception('Ошибка формата ответа');
       }
       // Это излишне, поскольку возвращение происходит в блоке try выше
@@ -178,15 +195,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<List> fetchAds(int bd, String nameImg) async {
+  Future<List> fetchAds(int idUser) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/getads_likes.php',
         queryParameters: {
-          'idusers': idUser.toString(),
-          'nameImg': nameImg,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
+          'idusers': userId.toString(),
+//          'nameImg': nameImg,
+          //        'bd': bd
+          //          .toString(), // Добавляем переменную bd как строку в параметры запроса
         },
       ),
     );
@@ -198,8 +215,8 @@ class _MyHomePageState extends State<MyHomePage> {
         final parsed = json.decode(response.body);
         print('789');
         print(userId);
-        print(bd);
-        print(nameImg);
+        print(parsed);
+        //     print(nameImg);
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -215,12 +232,29 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _selectTab(int index) {
+    setState(() {
+      _currentIndex = index;
+      _pages[index] ??= _builders[index]();
+    });
+  }
+
+  bool hasActiveOrder = false; // Переменная для отслеживания активности заказа
+  int? _currentIndex;
+  final List<Widget?> _pages = List.filled(4, null, growable: false);
+  late final List<Widget Function()> _builders = [
+    () => MyAppI1z(),
+    () => SearchForm(), //Ads1App(),
+    //() => zprofil_zayavki(nameImg: '', base: 1),
+    () => zprofil_name2(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Избранные объявления 1 ',
+          'Избранные заказчики',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -243,7 +277,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
-          Padding(
+          /*        Padding(
             padding: const EdgeInsets.all(16), // Применение отступа
             child: DropdownButtonFormField<String>(
               decoration: InputDecoration(
@@ -269,7 +303,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   //'Грузоперевозчик',
                   //'Спецтехника',
                   //'Грузчик'
-                  fetchAds(bd!, widget.nameImg);
+                  //  fetchAds(bd!, widget.nameImg, userId);
                 });
               },
               items: _typeOptions.map<DropdownMenuItem<String>>((String value) {
@@ -281,13 +315,13 @@ class _MyHomePageState extends State<MyHomePage> {
               hint: const Text("Выберите раздел объявлений"),
             ),
           ),
-
+*/
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(bd!, widget.nameImg),
+                future: fetchAds(userId),
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -378,9 +412,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment
-                                          .center, // Выравнивание по центру
-                                      children: <Widget>[
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
                                         IconButton(
                                           icon: Icon(
                                             truck['success'] == 'true'
@@ -391,19 +425,93 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(truck['iduser'],
-                                                truck['id'], bd!);
-
-                                            setState(() {
-                                              // После асинхронной операции обновляем UI
-                                            });
+                                            await toggleLike(
+                                                truck['idusers'].toString(),
+                                                truck['id'].toString(),
+                                                bd!);
+                                            setState(() {});
                                           },
                                         ),
                                         if (truck['firstName'] != null)
-                                          Text(
-                                            '${truck['firstName']} ${truck['lastName']}',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${truck['firstName']} ${truck['lastName']}',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ReviewScreen(
+                                                                userId: truck[
+                                                                        'iduserp']
+                                                                    .toString())),
+                                                  );
+                                                },
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Row(
+                                                      children: List.generate(5,
+                                                          (index) {
+                                                        final double
+                                                            parsedRating =
+                                                            truck['avg_rating'] !=
+                                                                    null
+                                                                ? double.tryParse(
+                                                                        truck['avg_rating']
+                                                                            .toString()) ??
+                                                                    0.0
+                                                                : 0.0;
+                                                        return Icon(
+                                                          index < parsedRating
+                                                              ? Icons.star
+                                                              : Icons
+                                                                  .star_border,
+                                                          color: Colors.amber,
+                                                          size: 16,
+                                                        );
+                                                      }),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${truck['avg_rating'] ?? 0.0}',
+                                                      style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                            Icons
+                                                                .comment_outlined,
+                                                            size: 16,
+                                                            color: Colors.grey),
+                                                        const SizedBox(
+                                                            width: 2),
+                                                        Text(
+                                                          '${truck['reviewsCount'] ?? 0}',
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .grey),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            ],
                                           ),
                                       ],
                                     ),
@@ -412,14 +520,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                         _makePhoneCall(truck['phone']);
                                       },
                                       child: Row(
-                                        children: <Widget>[
-                                          const Icon(
-                                              Icons.phone), // Иконка телефона
-                                          const SizedBox(
-                                              width:
-                                                  4), // небольшой промежуток между иконкой и текстом
+                                        children: [
+                                          const Icon(Icons.phone),
+                                          const SizedBox(width: 4),
                                           Text(
-                                            '${truck['phone']}', // текст, допустим, номер телефона
+                                            '${truck['phone']}',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -455,313 +560,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                         2.0, // Можно адаптировать в зависимости от желаемых пропорций
                                   ),
                                 ),
-                              if (truck['maxgruz'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Создано :',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['created_at']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['vidt'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Вид техники:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['vidt']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['maxgruz'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Грузоподъемность:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['maxgruz']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['city'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Откуда забрать:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['city']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if ((truck['startdate'] != '0000-00-00') &&
-                                  (truck['enddate'] != '0000-00-00'))
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Дата погрузки с:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['startdate']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if ((truck['startdate'] != '0000-00-00') &&
-                                  (truck['enddate'] != '0000-00-00'))
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Дата погрузки до:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['enddate']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if ((truck['startdate'] == '0000-00-00') &&
-                                  (truck['enddate'] == '0000-00-00'))
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Дата погрузки:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      const Text('Как можно быстрее',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if ((truck['startdate'] == '0000-00-00') &&
-                                  (truck['enddate'] != '0000-00-00'))
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Дата погрузки не позднее:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['enddate']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['city1'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Куда доставить:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['city1']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['vidk'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Вид кузова:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['vidk']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['zagr'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Загрузка:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['zagr']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['gruzch'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Кол-во грузчиков:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['gruzch']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['typepr'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Тип перевозки:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['typepr']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['cena'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Цена до:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['cena']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['about'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Подробнее о заказе:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['about']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              if (truck['enddatez'] != '0000-00-00')
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('Прием заявок до:',
-                                          style: DefaultTextStyle.of(context)
-                                              .style),
-                                      Text('${truck['enddatez']}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20.0),
-                                margin: const EdgeInsets.only(top: 20.0),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: TextButton(
-                                      style: TextButton.styleFrom(
-                                        fixedSize:
-                                            const Size(double.infinity, 50),
-                                        foregroundColor: whiteprColor,
-                                        backgroundColor: blueaccentColor,
-                                        disabledForegroundColor: grayprprColor,
-                                        shape: const BeveledRectangleBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(3))),
-                                      ),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => OfferScreenZ(
-                                                userid: truck['id'],
-                                                useridobj: truck['iduser'],
-                                                bd: bd),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text('Предложить заказ')),
-                                ),
-                              ),
                             ],
                           );
                         });
@@ -838,7 +636,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          fetchAds(bd!, widget.nameImg);
+          fetchAds(userId);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

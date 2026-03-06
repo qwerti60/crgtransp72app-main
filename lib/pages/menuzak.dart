@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 
+import 'package:crgtransp72app/pages/SearchFormisp.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/get_vt.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/history_zak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page.dart';
@@ -60,8 +62,8 @@ class _MainScreenState extends State<MainScreen> {
 
   late final List<Widget Function()> _builders = [
     () => MyAppI1(),
-    () => Ads2App(),
-    () => outputobzlikes(nameImg: '', base: 1),
+    () => SearchFormisp(), // Ads2App(),
+//    () => outputobzlikes(nameImg: '', base: 1),
     () => zprofil_name(),
   ];
 
@@ -81,6 +83,8 @@ class _MainScreenState extends State<MainScreen> {
         return const Ads2App();
       case 'outputobzlikes':
         return const outputobzlikes(nameImg: '', base: 1);
+      case 'hist':
+        return const history_zak(nameImg: '', bd: 1);
       default:
         return const SizedBox.shrink();
     }
@@ -142,6 +146,23 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  bool hasActiveOrder = false; // Переменная для отслеживания активности заказа
+
+  Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
+    final uri = Uri.parse(
+        '${Config.baseUrl}/api/check_order_status1.php?userIdok=$userIdok');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final decodedResponse = json.decode(response.body);
+      print('drr ${decodedResponse}');
+      return decodedResponse;
+    } else {
+      throw Exception('Ошибка загрузки статуса заказа');
+    }
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,16 +173,44 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _currentIndex ?? 0,
         onTap: _selectTab,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
               icon: Icon(Icons.fire_truck), label: 'Услуги'),
-          BottomNavigationBarItem(icon: Icon(Icons.subject), label: 'Заказы'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.group), label: 'Исполнители'),
-          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.subject,
+              color: hasActiveOrder
+                  ? Colors.red
+                  : null, // Изменение цвета иконки при наличии активного заказа
+            ),
+            label: 'Заказы',
+          ),
+          // const BottomNavigationBarItem(
+          //   icon: Icon(Icons.group), label: 'Исполнители'),
+          const BottomNavigationBarItem(
               icon: Icon(Icons.account_circle), label: 'Профиль'),
         ],
       ),
+    );
+  }
+
+// Добавляем метод для отображения будущего результата проверки заказа
+  Widget _checkOrderStatus(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: checkOrderStatus(orderid.toString()),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Text('Ошибка загрузки статуса заказа: ${snapshot.error}');
+        } else if (!snapshot.hasData) {
+          return const Text('Нет данных');
+        }
+
+        final orderInfo = snapshot.data!;
+        hasActiveOrder = orderInfo['result'] == true;
+        return Scaffold(); // Здесь можете вернуть нужный вам виджет
+      },
     );
   }
 }

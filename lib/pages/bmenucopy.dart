@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
+import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/history_zak.dart';
+import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -16,32 +18,34 @@ import '../pages/history_isp.dart';
 import '../pages/subscription_screen.dart';
 import '../pages/fcm_token.dart';
 
-class HistortScreen extends StatefulWidget {
-  const HistortScreen({
+class HistortScreen12z extends StatefulWidget {
+  final String pageProfile;
+  final String userId1; // Параметры принимаются конструктором
+  final String orderId; // Параметры принимаются конструктором
+  final String parsedUserIdOk;
+  const HistortScreen12z({
     Key? key,
     required this.pageProfile,
+    required this.userId1,
+    required this.orderId,
+    required this.parsedUserIdOk,
   }) : super(key: key);
 
-  final String pageProfile;
+  //final String pageProfile;
 
   @override
   _HistortScreenState createState() => _HistortScreenState();
 }
 
-class _HistortScreenState extends State<HistortScreen> {
+class _HistortScreenState extends State<HistortScreen12z> {
   int? _currentIndex;
 
-  Map<String, dynamic>? orderInfo; // Информация о заказе
-
   final List<Widget?> _pages = List.filled(3, null, growable: false);
+
   late final List<Widget Function()> _builders = [
     () => MyAppI1z(),
-    () => hasActiveOrder
-        ? OrderExecutionScreen(
-            userId: orderuserid, //orderInfo!['user_id'].toString(),
-            orderId: orderid //orderInfo!['order_id'].toString()
-            )
-        : SearchForm(),
+    () => SearchForm(),
+    //() => zprofil_zayavki(nameImg: '', base: 1),
     () => zprofil_name2(),
   ];
 
@@ -83,13 +87,7 @@ class _HistortScreenState extends State<HistortScreen> {
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
           orderid = data['order_id'];
-          orderuserid = data['user_id'];
         });
-        print('object');
-        print(orderid);
-        print(userId);
-        print(orderuserid);
-        print(data);
       } else {
         throw Exception(
             'Failed to load user data with status code: ${response.statusCode}}');
@@ -125,44 +123,53 @@ class _HistortScreenState extends State<HistortScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('lolo');
+    print(widget.orderId);
+    print(widget.userId1);
+    print(widget.pageProfile);
     return FutureBuilder<Map<String, dynamic>>(
       future: checkOrderStatus(userId.toString()),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child:
+                  CircularProgressIndicator()); // Показываем индикатор ожидания
+        }
+
+        if (snapshot.hasError) {
+          return Text("Ошибка: ${snapshot.error}");
         }
 
         final orderInfo = snapshot.data!;
         hasActiveOrder = orderInfo['result'] == true;
 
         return Scaffold(
-          //       body: _currentIndex == null
-          //         ? buildProfilePage(widget.pageProfile, orderId: orderid)
-          //       : _pages[_currentIndex!],
           body: _currentIndex == null
-              ? buildProfilePage(widget.pageProfile, orderId: orderid)
-              : _builders[_currentIndex!](),
+              ? buildProfilePage(widget.pageProfile, widget.userId1,
+                  widget.orderId, widget.pageProfile)
+              : _pages[_currentIndex!],
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex ?? 0,
             onTap: _selectTab,
             type: BottomNavigationBarType.fixed,
             items: [
               const BottomNavigationBarItem(
-                  icon: Icon(Icons.fire_truck), label: 'Объявления'),
+                icon: Icon(Icons.fire_truck),
+                label: 'Услуги',
+              ),
               BottomNavigationBarItem(
                 icon: Icon(
                   Icons.subject,
                   color: hasActiveOrder
                       ? Colors.red
-                      : null, // Меняется цвет иконки, если есть активная заявка
+                      : null, // Меняем цвет иконки на красный, если есть активная запись
                 ),
-                label: 'Заявки',
+                label: 'Заказы',
               ),
-              /*   const BottomNavigationBarItem(
-                  icon: Icon(Icons.group), label: 'Заказчики'),
-             */
               const BottomNavigationBarItem(
-                  icon: Icon(Icons.account_circle), label: 'Профиль'),
+                icon: Icon(Icons.account_circle),
+                label: 'Профиль',
+              ),
             ],
           ),
         );
@@ -171,18 +178,16 @@ class _HistortScreenState extends State<HistortScreen> {
   }
 }
 
-Widget buildProfilePage(String pageProfile, {required String orderId}) {
+Widget buildProfilePage(
+    String pageProfile, String userId1, String orderId, String parsedUserIdOk) {
   switch (pageProfile) {
-    case 'zprofil_ld':
-      return const zprofil_ld();
-    case 'Ads1App':
-      return const Ads1App();
-    case 'zprofil_zayavki':
-      return const zprofil_zayavki(nameImg: '', base: 1);
-    case 'hist':
-      return history_isp(nameImg: orderId, bd: 1);
-    case 'izbrannoe':
-      return outputobzlikes1(nameImg: '', base: 1);
+    case 'SearchForm':
+      print(userId1); // Переместили сюда вывод строки
+      print(orderId); // Переместили сюда вывод строки
+      return outputobz(
+        nameImg: orderId,
+        city: userId1,
+      ); // Возвращаем виджет сразу же
     case 'Subscription':
       return const SubscriptionScreen();
     default:
@@ -191,7 +196,6 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
 }
 
 String orderid = '';
-String orderuserid = '';
 bool isSwitched = false;
 Uint8List? fotouser;
 String firstName = '';

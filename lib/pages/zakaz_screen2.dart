@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
+import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -92,11 +93,11 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
             orderId: orderInfo['order_id'],
           );
         } else {
-          return const Ads1App();
+          return const SearchForm(); //Ads1App();
         }
       case 2:
-        return const zprofil_zayavki(nameImg: '', base: 1);
-      case 3:
+        //return const zprofil_zayavki(nameImg: '', base: 1);
+        //case 3:
         return const zprofil_name2();
       default:
         return const MyAppI1z();
@@ -151,10 +152,11 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
                 ),
                 label: 'Заявки',
               ),
-              const BottomNavigationBarItem(
+              /*const BottomNavigationBarItem(
                 icon: Icon(Icons.group),
                 label: 'Заказчики',
               ),
+              */
               const BottomNavigationBarItem(
                 icon: Icon(Icons.account_circle),
                 label: 'Профиль',

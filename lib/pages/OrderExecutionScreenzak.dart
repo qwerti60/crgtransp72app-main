@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/SendReviewForm.dart' hide Config;
+import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
@@ -13,11 +15,11 @@ import 'package:intl/intl.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
 
-class OrderExecutionScreen extends StatefulWidget {
+class OrderExecutionScreenzak extends StatefulWidget {
   final String userId;
   final String orderId;
 
-  const OrderExecutionScreen(
+  const OrderExecutionScreenzak(
       {Key? key, required this.userId, required this.orderId})
       : super(key: key);
 
@@ -25,7 +27,7 @@ class OrderExecutionScreen extends StatefulWidget {
   _OrderExecutionScreenState createState() => _OrderExecutionScreenState();
 }
 
-class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
+class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
   bool isLoading = true; // Используется для отображения индикатора загрузки
   Duration elapsedDuration = Duration.zero;
   Timer? timer;
@@ -122,7 +124,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
+                        builder: (_) => history_isp(
+                            nameImg: userIdok,
+                            bd: 1), //hist.HistortScreen(pageProfile: 'hist'),
                       ),
                     );
                   },
@@ -222,9 +226,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       print('User ID OK: ${userId.toString()}');
 
       final response = await dio.post(
-        '${Config.baseUrl}/api/check_order_status.php',
+        '${Config.baseUrl}/api/check_order_statusisp2.php',
         data: {
-          'user_id': widget.userId.toString(),
+          'user_id': userId.toString(), //widget.userId.toString(),
           'order_id': widget.orderId.toString(),
           'start_time': formattedDateTime,
           'user_idok': userId.toString(),
@@ -389,24 +393,23 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                                     'Current User ID: ${widget.userId.toString()}'); //141
                                 print('Target User ID: $userId'); //140
                                 print(
-                                    'Parsed User ID Ok: $parsedUserIdOk'); //106
+                                    'Parsed User ID Ok zab: $parsedUserIdOk'); //106
 
                                 if (parsedUserIdOk != null) {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => HistortScreen1(
-                                          pageProfile: 'SendReviewForm',
-                                          userId1: widget.userId.toString(),
-                                          orderId: userId.toString(),
-                                          parsedUserIdOk:
-                                              parsedUserIdOk.toString()),
-                                    ),
-                                    /* MaterialPageRoute(
-                                        builder: (context) => SendReviewForm(
+                                        builder: (context) => HistortScreen1z(
+                                            pageProfile: 'SendReviewForm',
+                                            userId1: widget.userId.toString(),
+                                            orderId: widget.orderId.toString(),
+                                            parsedUserIdOk:
+                                                parsedUserIdOk.toString())
+                                        /*   SendReviewFormzakaz(
                                               currentUserId:
                                                   widget.userId.toString(),
-                                              targetUserId: userId.toString(),
+                                              targetUserId:
+                                                  widget.orderId.toString(),
                                               parsedUserIdOk: parsedUserIdOk,
                                             )
                                         SendReviewForm(
@@ -415,6 +418,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                                               targetUserId: userId.toString(),
                                               parsedUserIdOk: parsedUserIdOk,
                                             )*/
+                                        ),
                                   );
                                 } else {
                                   // Если преобразование не удалось, вывести предупреждение или ошибку
@@ -422,12 +426,12 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                                       'Ошибка: Невозможно преобразовать "$userIdok" в целое число.');
                                 }
                               },
-                              child: Text('Оставьте отзыв'),
+                              child: Text('Оставьте отзыв о исполнителе'),
                             ),
                         ],
                       ),
                     ),
-                  if (orderStatus == null ||
+                  /*        if (orderStatus == null ||
                       !['выполнен', 'отменен'].contains(orderStatus))
                     Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -465,6 +469,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                             onPressed: () => updateOrderStatus('отменен'),
                           ),
                         ])
+           */
                 ],
               ),
             ),
