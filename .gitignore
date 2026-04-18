@@ -41,4 +41,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-android/app/build/intermediates/assets/debug/flutter_assets/kernel_blob.binandroid/app/build/intermediates/assets/debug/flutter_assets/kernel_blob.bin
+/android/app/build/
+
+# Secrets, keys, and generated Firebase config (do not commit)
+**/google-services.json
+**/GoogleService-Info.plist
+/lib/firebase_options.dart
+firebase.json
+assets/service_account.json
+*.jks
+*.keystore
+key.properties
+**/key.properties
+.env
+.env.*
+!.env.example
