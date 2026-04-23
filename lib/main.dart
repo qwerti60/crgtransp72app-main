@@ -26,6 +26,13 @@ Future<void> _initializeFirebase() async {
     return;
   }
 
+  // Для iOS: показываем баннер/звук/бейдж, когда приложение на экране.
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
   // Подписываемся на получение нового токена (рекомендуемый способ)
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
     debugPrint('Новый FCM-токен: $newToken');
@@ -65,6 +72,13 @@ Future<void> initPush() async {
     // Пользователь отказал в разрешении – возвращаемся без дальнейших действий
     return;
   }
+
+  // Для iOS: показываем баннер/звук/бейдж, когда приложение на экране.
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 
   // Подписываемся на получение нового токена (рекомендуемый способ)
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {

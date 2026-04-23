@@ -64,6 +64,7 @@ class _RegisterPage extends State {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 DropdownButton(
+                  isExpanded: true,
                   hint: const Text('Select city'),
                   value: _selectedCity,
                   onChanged: (String? newValue) {

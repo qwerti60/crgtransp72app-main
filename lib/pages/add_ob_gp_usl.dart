@@ -159,7 +159,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
       });
     }
@@ -416,6 +416,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите грузоподьемность',
                             style: TextStyle(
@@ -426,7 +427,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                           ),
                           dropdownColor: grayprprColor,
                           value: _selectedGP,
-                          isExpanded: true,
                           underline: const SizedBox(),
                           onChanged: (String? newValue) {
                             setState(() {
@@ -479,6 +479,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(
@@ -489,7 +490,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                           ),
                           dropdownColor: grayprprColor,
                           value: _selectedCity,
-                          isExpanded: true,
                           underline: const SizedBox(),
                           onChanged: (String? newValue) {
                             setState(() {
@@ -541,6 +541,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   DropdownButton(
+                    isExpanded: true,
                     hint: Text(
                       _selectedOption ?? 'Выберите опцию',
                       style: const TextStyle(
@@ -551,7 +552,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                     ),
                     dropdownColor: grayprprColor,
                     value: _selectedOption,
-                    isExpanded: true,
                     underline: const SizedBox(),
                     onChanged: (String? newValue) {
                       setState(() {
@@ -662,6 +662,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(
@@ -672,7 +673,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                           ),
                           dropdownColor: grayprprColor,
                           value: _selectedCity1,
-                          isExpanded: true,
                           underline: const SizedBox(),
                           onChanged: (String? newValue) {
                             setState(() {
@@ -725,6 +725,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Не знаю',
                             style: TextStyle(
@@ -735,7 +736,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
                           ),
                           dropdownColor: grayprprColor,
                           value: _selectedVidkuzov,
-                          isExpanded: true,
                           underline: const SizedBox(),
                           onChanged: (String? newValue) {
                             setState(() {

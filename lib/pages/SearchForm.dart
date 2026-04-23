@@ -103,6 +103,7 @@ class _SearchFormState extends State<SearchForm> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт)',
                             style: TextStyle(
@@ -165,6 +166,7 @@ class _SearchFormState extends State<SearchForm> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите услугу',
                             style: TextStyle(

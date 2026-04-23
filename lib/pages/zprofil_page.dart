@@ -306,7 +306,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                     navigateIfNeeded(context,
                         userId); // предполагается, что userId уже объявлен и доступен
                   },
-                  child: const Text('Стать исполнителем'),
+                  child: const Text('Стать грузоперевозчиком'),
                 ),
               ),
             ),

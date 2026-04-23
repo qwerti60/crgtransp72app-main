@@ -142,6 +142,7 @@ class _MyAppState extends State<MyAppGUD1> {
           children: [
 // DropdownButton для выбора города
             DropdownButton(
+              isExpanded: true,
               value: _selectedCity,
               hint: const Text("Выберите город"),
               items: _cities.map<DropdownMenuItem<String>>((dynamic city) {

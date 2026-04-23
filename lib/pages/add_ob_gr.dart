@@ -117,7 +117,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
       });
     }
@@ -232,7 +232,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
       setState(() {
         //     _images[index] = compressedFile;
         //   _originalImages[index] = pickedFile;
-        _imagesDoc[indexDoc] = compressedFile;
+        _imagesDoc[indexDoc] = compressedFile ?? pickedFile;
         _originalImagesDoc[indexDoc] = pickedFile;
       });
     }
@@ -367,6 +367,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(

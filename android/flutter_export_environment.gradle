@@ -1,0 +1,9 @@
+// Файл: android/flutter_export_environment.gradle
+
+// Это имя пакета из вашего build.gradle
+def FLUTTER_APPLICATION_ID = 'com.newunique.crgtransp72app' 
+
+// Это ваша схема (SCHEME). 
+// Вы можете использовать любое слово, например 'myapp', 'pay', 'app'.
+// Для примера используем 'myapp'.
+def FLUTTER_URI_HOST = 'myapp'

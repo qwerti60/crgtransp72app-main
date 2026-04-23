@@ -7,7 +7,7 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
-import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -449,7 +449,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) =>
-                                                            ReviewScreen(
+                                                            ReviewScreenz(
                                                                 userId: truck[
                                                                         'iduserp']
                                                                     .toString())),

@@ -249,6 +249,7 @@ class _creguser_nameForm extends State<creguser_name> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите грузоподьемность',
                             style: TextStyle(
@@ -395,6 +396,7 @@ class _creguser_nameForm extends State<creguser_name> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите вид кузова',
                             style: TextStyle(

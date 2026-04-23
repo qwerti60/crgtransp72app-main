@@ -4,6 +4,7 @@ import 'package:crgtransp72app/pages/OfferScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -444,7 +445,17 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   const SizedBox(width: 8),
                                                   GestureDetector(
                                                     onTap: () {
-// Добавьте здесь навигацию к отзывам
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              ReviewScreenz(
+                                                            userId: truck[
+                                                                    'iduser']
+                                                                .toString(),
+                                                          ),
+                                                        ),
+                                                      );
                                                     },
                                                     child: Row(
                                                       children: [

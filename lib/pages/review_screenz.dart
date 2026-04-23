@@ -58,7 +58,7 @@ class _ReviewScreenzState extends State<ReviewScreenz> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Отзывы о подрядчике',
+          'Отзывы о грузоперевозчике',
           style: TextStyle(
             color: whiteprColor,
           ),

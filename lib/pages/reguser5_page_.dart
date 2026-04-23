@@ -164,6 +164,7 @@ class _creguser5_nameForm extends State<creguser5_name_> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите вид спецтехники',
                             style: TextStyle(

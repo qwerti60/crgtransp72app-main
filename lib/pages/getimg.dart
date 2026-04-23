@@ -58,7 +58,7 @@ class _ImagePickerDemoState extends State {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
       });
     }
   }

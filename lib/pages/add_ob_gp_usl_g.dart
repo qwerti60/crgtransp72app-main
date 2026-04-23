@@ -158,7 +158,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
       });
     }
@@ -370,6 +370,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(
@@ -380,7 +381,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                           ),
                           dropdownColor: grayprprColor,
                           value: _selectedCity,
-                          isExpanded: true,
                           underline: const SizedBox(),
                           onChanged: (String? newValue) {
                             setState(() {
@@ -432,6 +432,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   DropdownButton(
+                    isExpanded: true,
                     hint: Text(
                       _selectedOption ?? 'Выберите опцию',
                       style: const TextStyle(
@@ -442,7 +443,6 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                     ),
                     dropdownColor: grayprprColor,
                     value: _selectedOption,
-                    isExpanded: true,
                     underline: const SizedBox(),
                     onChanged: (String? newValue) {
                       setState(() {

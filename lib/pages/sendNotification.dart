@@ -44,6 +44,21 @@ Future<void> sendNotificationV1({
         'title': title,
         'body': body,
       },
+      'apns': {
+        'headers': {
+          'apns-priority': '10',
+        },
+        'payload': {
+          'aps': {
+            'alert': {
+              'title': title,
+              'body': body,
+            },
+            'sound': 'default',
+            'badge': 1,
+          },
+        },
+      },
       'android': {
         'priority': 'high',
         'notification': {

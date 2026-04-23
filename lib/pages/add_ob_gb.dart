@@ -125,7 +125,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
       });
     }
@@ -317,6 +317,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(
@@ -444,6 +445,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите грузоподьемность',
                             style: TextStyle(
@@ -571,6 +573,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите вид кузова',
                             style: TextStyle(

@@ -142,7 +142,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
       );
 
       setState(() {
-        _images[index] = compressedFile;
+        _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
         // _imagesDoc[index] = compressedFile;
         // _originalImagesDoc[index] = pickedFile;
@@ -179,7 +179,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
       setState(() {
         //     _images[index] = compressedFile;
         //   _originalImages[index] = pickedFile;
-        _imagesDoc[indexDoc] = compressedFile;
+        _imagesDoc[indexDoc] = compressedFile ?? pickedFile;
         _originalImagesDoc[indexDoc] = pickedFile;
       });
     }
@@ -430,6 +430,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(
@@ -557,6 +558,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите грузоподьемность',
                             style: TextStyle(
@@ -684,6 +686,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите вид кузова',
                             style: TextStyle(

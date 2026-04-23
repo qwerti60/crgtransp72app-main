@@ -235,6 +235,7 @@ class _Creguser1_NameForm extends State<Creguser1_Name> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
+                          isExpanded: true,
                           hint: const Text(
                             'Выберите город(населенный пункт',
                             style: TextStyle(

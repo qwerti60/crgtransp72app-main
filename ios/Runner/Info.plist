@@ -32,6 +32,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -54,6 +58,8 @@
 <!-- Чтение/выбор фото -->
 	<key>NSPhotoLibraryUsageDescription</key>
 		<string>Нам нужен доступ к вашей медиатеке, чтобы вы могли выбрать фотографию для загрузки.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Нам нужен доступ к медиатеке для сохранения и обработки выбранных изображений.</string>
 	<key>NSCameraUsageDescription</key>
 		<string>Нам нужен доступ к камере, чтобы сделать фотографию профиля, документов, техники.</string>
 </dict>

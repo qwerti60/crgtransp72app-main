@@ -53,6 +53,7 @@ class _RentDateFormState extends State {
         child: Column(
           children: [
             DropdownButton(
+              isExpanded: true,
               value: _selectedOption,
               onChanged: (String? newValue) {
                 setState(() {
