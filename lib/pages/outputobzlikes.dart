@@ -68,18 +68,20 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  late Future<List> _adsFuture;
 
   @override
   void initState() {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
     String nameImg = widget.nameImg;
+    print('[outputobzlikes] initState opened');
     bd ??= widget.base;
 
     //super.initState();
-    //   getUserData();
+    _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-    fetchAds(bd!, nameImg);
+    _adsFuture = fetchAds(bd!, nameImg);
   }
 
   int userId = 0;
@@ -100,6 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
+          _adsFuture = fetchAds(bd!, widget.nameImg);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -142,7 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool isLiked = false;
 
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
     //   final response = await http.get(Uri.parse(
     //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
     final response = await http.get(
@@ -179,17 +182,19 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List> fetchAds(int bd, String nameImg) async {
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/getads_likes1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'nameImg': nameImg,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+    final uri = Uri.parse(Config.baseUrl).replace(
+      path: '/api/getads_likes1.php',
+      queryParameters: {
+        'usersid': userId.toString(),
+        'nameImg': nameImg,
+        'bd': bd
+            .toString(), // Добавляем переменную bd как строку в параметры запроса
+      },
     );
+    print('[outputobzlikes] fetchAds url: $uri');
+    final response = await http.get(uri);
+    print('[outputobzlikes] fetchAds status: ${response.statusCode}');
+    print('[outputobzlikes] fetchAds body: ${response.body}');
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
@@ -249,7 +254,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(bd!, widget.nameImg),
+                future: _adsFuture,
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -353,11 +358,20 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(truck['iduser'],
+                                            final bool updatedLike =
+                                                await toggleLike(truck['iduser'],
                                                 truck['id'], bd!);
-
+                                            if (!mounted) return;
                                             setState(() {
-                                              // После асинхронной операции обновляем UI
+                                              final data = snapshot.data;
+                                              if (!updatedLike &&
+                                                  data != null) {
+                                                data.removeWhere((item) =>
+                                                    (item['iduser'] ?? '')
+                                                        .toString() ==
+                                                    (truck['iduser'] ?? '')
+                                                        .toString());
+                                              }
                                             });
                                           },
                                         ),
@@ -380,10 +394,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                           const SizedBox(
                                               width:
                                                   4), // небольшой промежуток между иконкой и текстом
-                                          Text(
-                                            '${truck['phone']}', // текст, допустим, номер телефона
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                          Flexible(
+                                            child: Text(
+                                              '${truck['phone']}', // текст, допустим, номер телефона
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
                                         ],

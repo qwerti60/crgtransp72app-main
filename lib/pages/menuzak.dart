@@ -82,7 +82,8 @@ class _MainScreenState extends State<MainScreen> {
       case 'Ads2App':
         return const Ads2App();
       case 'outputobzlikes':
-        return const outputobzlikes(nameImg: '', base: 1);
+        print('[menuzak] route: outputobzlikes -> outputobzlikes1');
+        return const Outputobzlikes1Page(nameImg: '', base: 1);
       case 'hist':
         return const history_zak(nameImg: '', bd: 1);
       default:
@@ -127,15 +128,15 @@ class _MainScreenState extends State<MainScreen> {
 
         setState(() {
           userId = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city = data['city'];
-          phone = data['phone'];
-          email = data['email'];
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
-          orderid = data['order_id'];
+          orderid = data['order_id']?.toString() ?? '';
         });
       } else {
         throw Exception(
@@ -175,7 +176,7 @@ class _MainScreenState extends State<MainScreen> {
         type: BottomNavigationBarType.fixed,
         items: [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.fire_truck), label: 'Услуги'),
+              icon: Icon(Icons.fire_truck), label: 'Объявления'),
           BottomNavigationBarItem(
             icon: Icon(
               Icons.subject,

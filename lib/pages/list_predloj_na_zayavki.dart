@@ -481,10 +481,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         const Icon(Icons.phone),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          '${truck['phone']}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        Flexible(
+                                          child: Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -956,7 +960,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool isLiked = false;
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
     //   final response = await http.get(Uri.parse(
     //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
     final response = await http.get(

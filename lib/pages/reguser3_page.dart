@@ -1,5 +1,6 @@
 import 'package:crgtransp72app/config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../design/colors.dart';
@@ -12,6 +13,50 @@ import 'dart:convert';
 
 import 'reguser5_page_.dart';
 import 'reguser_name.dart';
+
+class RussianPhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.startsWith('8')) {
+      digits = digits.substring(1);
+    } else if (digits.startsWith('7')) {
+      digits = digits.substring(1);
+    }
+    if (digits.length > 10) {
+      digits = digits.substring(0, 10);
+    }
+
+    final b = StringBuffer('+7');
+    if (digits.isNotEmpty) {
+      b.write('(');
+      b.write(digits.substring(0, digits.length.clamp(0, 3)));
+      if (digits.length >= 3) b.write(')');
+    }
+    if (digits.length > 3) {
+      b.write(' ');
+      b.write(digits.substring(3, digits.length.clamp(3, 6)));
+    }
+    if (digits.length > 6) {
+      b.write('-');
+      b.write(digits.substring(6, digits.length.clamp(6, 8)));
+    }
+    if (digits.length > 8) {
+      b.write('-');
+      b.write(digits.substring(8, digits.length.clamp(8, 10)));
+    }
+
+    final formatted = b.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class creguser3name extends StatefulWidget {
   final int rollNum;
@@ -50,6 +95,171 @@ class _CregUser3NameState extends State<creguser3name> {
   late final TextEditingController emailController = TextEditingController();
   late final TextEditingController passwordController = TextEditingController();
   bool _isChecked = false;
+  bool _obscurePassword = true;
+  bool _isEmailVerified = false;
+  String _verifiedEmail = '';
+
+  String _normalizePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 11 && digits.startsWith('8')) {
+      return '+7${digits.substring(1)}';
+    }
+    if (digits.length == 11 && digits.startsWith('7')) {
+      return '+$digits';
+    }
+    return phone.trim();
+  }
+
+  bool _isValidPhone(String phone) {
+    final normalized = _normalizePhone(phone);
+    return RegExp(r'^\+7\d{10}$').hasMatch(normalized);
+  }
+
+  Future<Map<String, dynamic>> _postForm(
+    String path,
+    Map<String, String> body,
+  ) async {
+    final response = await http.post(
+      Uri.parse(Config.baseUrl).replace(path: path),
+      body: body,
+    );
+    try {
+      return json.decode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'message': 'Некорректный ответ сервера (${response.statusCode})',
+      };
+    }
+  }
+
+  Future<bool> _requestRegistrationCode(String email) async {
+    final data = await _postForm('/api/request_registration_code.php', {
+      'email': email,
+    });
+    if (data['status'] != 'success') {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${data['message'] ?? 'Ошибка отправки кода'}')),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _verifyRegistrationCode(String email, String code) async {
+    final data = await _postForm('/api/verify_registration_code.php', {
+      'email': email,
+      'code': code,
+    });
+    if (data['status'] != 'success') {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${data['message'] ?? 'Ошибка проверки кода'}')),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _ensureEmailVerified(String email) async {
+    if (_isEmailVerified && _verifiedEmail == email) return true;
+
+    final sent = await _requestRegistrationCode(email);
+    if (!sent || !mounted) return false;
+
+    final TextEditingController codeController = TextEditingController();
+    bool isSubmitting = false;
+    bool isResending = false;
+
+    final bool? verified = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Подтверждение e-mail'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Введите код, отправленный на $email'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 6,
+                  decoration: const InputDecoration(
+                    hintText: '6-значный код',
+                    counterText: '',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text('Отмена'),
+              ),
+              TextButton(
+                onPressed: isResending
+                    ? null
+                    : () async {
+                        setDialogState(() => isResending = true);
+                        await _requestRegistrationCode(email);
+                        if (mounted) {
+                          setDialogState(() => isResending = false);
+                        }
+                      },
+                child: Text(isResending ? 'Отправка...' : 'Отправить код снова'),
+              ),
+              TextButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final code = codeController.text.trim();
+                        if (code.length != 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Введите 6-значный код'),
+                            ),
+                          );
+                          return;
+                        }
+                        setDialogState(() => isSubmitting = true);
+                        final ok = await _verifyRegistrationCode(email, code);
+                        if (!mounted) return;
+                        setDialogState(() => isSubmitting = false);
+                        if (ok) {
+                          Navigator.of(dialogContext).pop(true);
+                        }
+                      },
+                child: Text(isSubmitting ? 'Проверка...' : 'Подтвердить'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (verified == true) {
+      setState(() {
+        _isEmailVerified = true;
+        _verifiedEmail = email;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    phoneController.text = '+7';
+    phoneController.selection =
+        TextSelection.collapsed(offset: phoneController.text.length);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +309,10 @@ class _CregUser3NameState extends State<creguser3name> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: phoneController,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  RussianPhoneInputFormatter(),
+                ],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -109,7 +323,7 @@ class _CregUser3NameState extends State<creguser3name> {
                   ),
                   fillColor: grayprprColor,
                   filled: true,
-                  // hintText: '8(999) 888 77-66',
+                  hintText: '+7(___) ___-__-__',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -177,7 +391,8 @@ class _CregUser3NameState extends State<creguser3name> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: passwordController,
-                decoration: const InputDecoration(
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
                   ),
@@ -188,6 +403,16 @@ class _CregUser3NameState extends State<creguser3name> {
                   hintText: '150',
                   fillColor: grayprprColor,
                   filled: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -250,19 +475,14 @@ class _CregUser3NameState extends State<creguser3name> {
                       return regex.hasMatch(email);
                     }
 
-                    bool validatePhone(String phone) {
-                      final RegExp regex = RegExp(r'^\+?[0-9]{10,15}$');
-                      return regex.hasMatch(phone);
-                    }
-
                     bool validatePassword(String password) {
                       final RegExp regex =
                           RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$');
                       return regex.hasMatch(password);
                     }
 
-                    String phone = phoneController.text;
-                    String email = emailController.text;
+                    String phone = _normalizePhone(phoneController.text);
+                    String email = emailController.text.trim();
                     String password = passwordController.text;
 
                     if (phone.isEmpty || email.isEmpty) {
@@ -274,9 +494,10 @@ class _CregUser3NameState extends State<creguser3name> {
                         ),
                       );
                       return;
-                    } else if (!validatePhone(phone)) {
+                    } else if (!_isValidPhone(phone)) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Введите корректный номер телефона')));
+                          content: Text(
+                              'Введите корректный номер телефона в формате +7XXXXXXXXXX')));
                       return;
                     } else if (!validateEmail(email)) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -292,6 +513,14 @@ class _CregUser3NameState extends State<creguser3name> {
                           content: Text('Примте пользовательское соглашение')));
                       return;
                     }
+
+                    final verified = await _ensureEmailVerified(email);
+                    if (!verified) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text(
+                              'Подтвердите e-mail кодом для продолжения регистрации')));
+                      return;
+                    }
                     if ((widget.rollNum == 1 && widget.statNum == 2) ||
                         (widget.rollNum == 4 && widget.statNum == 2)) {
                       final response = await http.post(
@@ -300,7 +529,7 @@ class _CregUser3NameState extends State<creguser3name> {
                         body: json.encode({
                           'email': emailController.text,
                           'password': passwordController.text,
-                          'phone': phoneController.text,
+                          'phone': phone,
                           'rollNum': widget
                               .rollNum, // пример данных из предыдущего окна
                           'statNum': widget

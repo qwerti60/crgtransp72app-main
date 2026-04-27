@@ -4,7 +4,7 @@ import 'package:crgtransp72app/pages/OfferScreen.dart';
 import 'package:crgtransp72app/pages/OfferScreenZ.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -15,6 +15,7 @@ import '../config.dart';
 import '../design/colors.dart';
 
 import 'changerol_page.dart';
+import 'like_helper.dart';
 
 class outputob extends StatelessWidget {
   final String nameImg;
@@ -24,13 +25,7 @@ class outputob extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(nameImg: nameImg, city: city),
-    );
+    return MyHomePage(nameImg: nameImg, city: city);
   }
 }
 
@@ -65,6 +60,38 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  bool _invalidResponseSnackShown = false;
+  final Map<String, bool> _likedOverrides = {};
+  late Future<List> _adsFuture;
+
+  void _showInvalidResponseSnack() {
+    if (_invalidResponseSnackShown || !mounted) return;
+    _invalidResponseSnackShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Сервер вернул некорректный ответ. Попробуйте позже.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
+  }
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  bool _likedForTruck(Map truck) {
+    final key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
   String namefirm = '';
   String innStr = '';
   String ogrnStr = '';
@@ -78,8 +105,9 @@ class _MyHomePageState extends State<MyHomePage> {
     bd = 1;
     String city = widget.city;
 
+    _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-//fetchAds(city, nameImg, userId);
+    _adsFuture = fetchAds(city, nameImg, userId);
   }
 
   int userId = 0;
@@ -100,6 +128,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
+          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -142,9 +171,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
+  Future<bool> checkOfferExists(int userId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -160,17 +189,24 @@ class _MyHomePageState extends State<MyHomePage> {
         queryParameters: {
           'nameImg': nameImg,
           'city': city, // Преобразуем в строку
-          'useId':
-              userId.toString() // Преобразуем в строку, если userId это число
+          // Поддержка обоих вариантов параметра на бэкенде.
+          'useId': userId.toString(),
+          'usersid': userId.toString(),
         },
       ),
     );
     if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
+      final String body = response.body.trim();
+      if (body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
       }
       try {
-        final parsed = json.decode(response.body);
+        if (!(body.startsWith('{') || body.startsWith('['))) {
+          debugPrint('Non-JSON response from get_ads2.php: $body');
+          _showInvalidResponseSnack();
+          return [];
+        }
+        final parsed = json.decode(body);
 
         print('uu77${userId}');
         print('uu77${nameImg}');
@@ -182,8 +218,9 @@ class _MyHomePageState extends State<MyHomePage> {
         //getUserDataAds(idusers1);
       } catch (e) {
         print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
+        print('Ответ сервера: $body');
+        _showInvalidResponseSnack();
+        return [];
       }
       // Это излишне, поскольку возвращение происходит в блоке try выше
       // return json.decode(response.body);
@@ -225,7 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(widget.city, widget.nameImg, bd!),
+              future: _adsFuture,
               builder: (context, snapshot) {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -302,26 +339,39 @@ class _MyHomePageState extends State<MyHomePage> {
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final bool isNarrow = constraints.maxWidth < 380;
+
+                                  final Widget infoBlock = Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       IconButton(
                                         icon: Icon(
-                                          truck['success'] == 'true'
+                                          _likedForTruck(truck)
                                               ? Icons.favorite
                                               : Icons.favorite_border,
-                                          color: truck['success'] == 'true'
+                                          color: _likedForTruck(truck)
                                               ? Colors.red
                                               : Colors.grey,
                                         ),
                                         onPressed: () async {
-                                          await toggleLike(truck['iduser'],
-                                              truck['id'], bd!);
-                                          setState(() {});
+                                          final key =
+                                              (truck['id'] ?? '').toString();
+                                          final currentLiked =
+                                              _likedForTruck(truck);
+                                          setState(() {
+                                            _likedOverrides[key] = !currentLiked;
+                                          });
+                                          final updated = await toggleLike(
+                                            truck['iduser'],
+                                            truck['id'],
+                                            bd!,
+                                          );
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _likedOverrides[key] = updated;
+                                          });
                                         },
                                       ),
                                       if (truck['firstName'] != null)
@@ -340,7 +390,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   context,
                                                   MaterialPageRoute(
                                                       builder: (context) =>
-                                                          ReviewScreen(
+                                                          ReviewScreenz(
                                                               userId: truck[
                                                                       'iduserp']
                                                                   .toString())),
@@ -400,25 +450,52 @@ class _MyHomePageState extends State<MyHomePage> {
                                           ],
                                         ),
                                     ],
-                                  ),
-                                  GestureDetector(
+                                  );
+
+                                  final Widget phoneBlock = GestureDetector(
                                     onTap: () {
                                       _makePhoneCall(truck['phone']);
                                     },
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(Icons.phone),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          '${truck['phone']}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        SizedBox(
+                                          width: 130,
+                                          child: Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                  )
-                                ],
+                                  );
+
+                                  if (isNarrow) {
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        infoBlock,
+                                        const SizedBox(height: 8),
+                                        Center(child: phoneBlock),
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      infoBlock,
+                                      phoneBlock,
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                             if (images
@@ -475,8 +552,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['namefirm']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -492,8 +568,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['innStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -509,8 +584,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['ogrnStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -526,8 +600,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['kppStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -543,8 +616,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['marka']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -560,8 +632,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['godv']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -576,8 +647,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       style:
                                           DefaultTextStyle.of(context).style),
                                   Text('${truck['city']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
+                                      style: const TextStyle(fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -593,8 +663,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['vidt']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -610,8 +679,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['maxgruz']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -627,8 +695,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['dkuzov']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -644,8 +711,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['shkuzov']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -661,8 +727,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['vidk']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -678,8 +743,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['cenahaurs']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -695,8 +759,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['cenasmena']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -712,8 +775,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style:
                                             DefaultTextStyle.of(context).style),
                                     Text('${truck['cenakm']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
@@ -751,7 +813,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) => OfferScreen(
-                                                    userid: truck['id'],
+                                                    userid: truck['id'].toString(),
                                                     useridobj: truck['iduser'],
                                                     bd: bd), // Изменение экрана
                                               ),
@@ -789,7 +851,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                               MaterialPageRoute(
                                                 builder: (context) =>
                                                     OfferScreen(
-                                                        userid: truck['id'],
+                                                        userid: truck['id']
+                                                            .toString(),
                                                         useridobj:
                                                             truck['iduser'],
                                                         bd: bd),
@@ -817,49 +880,19 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 
-  bool isLiked = false;
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
+    return toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: false,
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        //isLiked = parsed['success'];
-
-        return isLiked;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -919,7 +952,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          fetchAds(widget.city, widget.nameImg, bd!);
+          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

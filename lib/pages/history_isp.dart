@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'like_helper.dart';
 
 import 'changerol_page.dart';
 import 'sendNotification.dart';
@@ -77,16 +78,21 @@ class _MyHomePageState extends State<MyHomePage> {
   String innStr = '';
   String ogrnStr = '';
   String kppStr = '';
+  Future<List>? _historyFuture;
 
   @override
   void initState() {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
-    String nameImg = widget.nameImg;
-    int bd = widget.bd;
-    //super.initState();
-    getUserData();
-    fetchAds(bd, nameImg);
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    await getUserData();
+    if (!mounted) return;
+    setState(() {
+      _historyFuture = fetchAds(widget.bd, widget.nameImg);
+    });
   }
 
   int userId = 0;
@@ -155,8 +161,8 @@ class _MyHomePageState extends State<MyHomePage> {
         path: '/api/list_history_isp.php',
         queryParameters: {
           'usersid': userId.toString(),
-          'idusers': idUser,
-          'nameImg': userId.toString(), //nameImg,
+          'idusers': idUser?.toString() ?? '',
+          'nameImg': nameImg,
           'bd': bd
               .toString(), // Добавляем переменную bd как строку в параметры запроса
         },
@@ -240,7 +246,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(widget.bd, widget.nameImg),
+              future: _historyFuture,
               builder: (context, snapshot) {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -254,11 +260,21 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 );
 
+                if (_historyFuture == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
                 if (snapshot.hasData) {
+                  final data = (snapshot.data as List);
+                  if (data.isEmpty) {
+                    return const Center(
+                      child: Text('История заказов пока пуста'),
+                    );
+                  }
                   return ListView.builder(
-                      itemCount: snapshot.data?.length,
+                      itemCount: data.length,
                       itemBuilder: (context, index) {
-                        var truck = snapshot.data![index];
+                        var truck = data[index];
                         if (truck == null)
                           Text(
                             'В этом разделе нет объявлений',
@@ -426,10 +442,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         const Icon(Icons.phone),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          '${truck['phone']}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        Flexible(
+                                          child: Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -667,43 +687,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool isLiked = false;
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
+    isLiked = await toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: true,
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print('7777');
-        print(userId);
-        return isLiked;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
+    return isLiked;
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {

@@ -2,6 +2,7 @@ import 'package:crgtransp72app/pages/CityScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -21,7 +22,7 @@ class MyAppI1z extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Ищут услуги',
+            'Объявления',
             style: TextStyle(
               color: whiteprColor,
             ),
@@ -40,6 +41,7 @@ class MyAppI1z extends StatelessWidget {
           child: const Icon(Icons.add), // Цвет фона кнопки
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
       ),
     );
   }

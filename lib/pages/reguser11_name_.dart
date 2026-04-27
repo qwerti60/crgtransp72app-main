@@ -16,6 +16,8 @@ class creguser11_name_ extends StatefulWidget {
 }
 
 class _creguser11_nameForm extends State<creguser11_name_> {
+  bool _obscurePassword = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,8 +76,8 @@ class _creguser11_nameForm extends State<creguser11_name_> {
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
               child: TextFormField(
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
                   ),
@@ -87,6 +89,16 @@ class _creguser11_nameForm extends State<creguser11_name_> {
                   hintText: 'Пароль',
                   fillColor: grayprprColor,
                   filled: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
               ),
             ),

@@ -2,6 +2,8 @@
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'decimal_text_input_formatter.dart';
 
 import '../design/colors.dart';
 //import 'reguser1_name.dart';
@@ -31,10 +33,11 @@ class add_ob_gp_usl_t extends StatefulWidget {
 class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
   final TextEditingController _cenakmController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
-  static const double imageSize = 100.0;
+  static const double imageSize = 80.0;
   List _vidt = [];
   String? _selectedVidkuzov;
   List _cities = [];
+  bool _isSubmitting = false;
   String? _selectedCity;
   final List _cities1 = [];
   String? _selectedCity1;
@@ -146,17 +149,18 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -268,7 +272,10 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
     }
   }
 
-  void uploadData() async {
+  Future<void> uploadData() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
     var uri = Uri.parse('${Config.baseUrl}/api/add_st_info.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
@@ -308,6 +315,9 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
       );
     } else {
       print('Failed!');
+    }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -646,6 +656,8 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -737,8 +749,11 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) => _imageSlot(index)),
                 ),
               ),
@@ -757,7 +772,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
                       shape: const BeveledRectangleBorder(
                           borderRadius: BorderRadius.all(Radius.circular(3))),
                     ),
-                    onPressed: () async {
+                    onPressed: _isSubmitting ? null : () async {
                       String about = _aboutController.text;
                       String cena = _cenakmController.text;
 
@@ -771,9 +786,9 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_t> {
                         return;
                       }
 
-                      uploadData();
+                      await uploadData();
                     },
-                    child: const Text('Отправить заказ')),
+                    child: Text(_isSubmitting ? 'Сохранение...' : 'Отправить заказ')),
               ),
             ),
           ],

@@ -68,15 +68,15 @@ class _HistortScreenState extends State<HistortScreen12> {
 
         setState(() {
           userId = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city = data['city'];
-          phone = data['phone'];
-          email = data['email'];
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
-          orderid = data['order_id'];
+          orderid = data['order_id']?.toString() ?? '';
         });
       } else {
         throw Exception(
@@ -134,7 +134,7 @@ class _HistortScreenState extends State<HistortScreen12> {
             items: [
               const BottomNavigationBarItem(
                 icon: Icon(Icons.fire_truck),
-                label: 'Услуги',
+                label: 'Объявления',
               ),
               BottomNavigationBarItem(
                 icon: Icon(

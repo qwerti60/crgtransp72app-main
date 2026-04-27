@@ -1,8 +1,10 @@
-import 'dart:typed_data';
+        import 'dart:typed_data';
 
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'decimal_text_input_formatter.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../design/colors.dart';
@@ -65,7 +67,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
     });
   }
 
-  static const double imageSize = 100.0;
+  static const double imageSize = 80.0;
   final List _images = List.generate(4, (index) => null);
   final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
@@ -122,17 +124,18 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -235,17 +238,18 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -356,18 +360,93 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
     }
   }
 
-  Future<void> _pickImageFromDB(int index, String? raw) async {
+  Uint8List? _hexToBytes(String hex) {
+    String normalized = hex.trim();
+    if (normalized.startsWith('0x') || normalized.startsWith('0X')) {
+      normalized = normalized.substring(2);
+    }
+    if (normalized.startsWith(r'\x')) {
+      normalized = normalized.substring(2);
+    }
+    if (normalized.isEmpty || normalized.length.isOdd) return null;
+
+    final RegExp onlyHex = RegExp(r'^[0-9a-fA-F]+$');
+    if (!onlyHex.hasMatch(normalized)) return null;
+
+    final bytes = <int>[];
+    for (int i = 0; i < normalized.length; i += 2) {
+      bytes.add(int.parse(normalized.substring(i, i + 2), radix: 16));
+    }
+    return Uint8List.fromList(bytes);
+  }
+
+  Future<Uint8List?> _resolveImageBytes(dynamic raw) async {
+    if (raw == null) return null;
+
+    if (raw is List) {
+      try {
+        return Uint8List.fromList(raw.cast<int>());
+      } catch (_) {}
+    }
+
+    final String value = raw.toString().trim();
+    if (value.isEmpty || value.toLowerCase() == 'null') return null;
+
+    try {
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        final response = await http.get(Uri.parse(value));
+        if (response.statusCode == 200) return response.bodyBytes;
+        return null;
+      }
+
+      if (value.startsWith('data:')) {
+        final int commaIndex = value.indexOf(',');
+        if (commaIndex != -1) {
+          final String dataPart = value.substring(commaIndex + 1);
+          return base64Decode(dataPart);
+        }
+      }
+
+      final bool looksLikeRelativeImagePath = value.contains('/') &&
+          (value.endsWith('.jpg') ||
+              value.endsWith('.jpeg') ||
+              value.endsWith('.png') ||
+              value.endsWith('.webp') ||
+              value.endsWith('.heic'));
+      if (looksLikeRelativeImagePath) {
+        final String base = Config.baseUrl.replaceAll(RegExp(r'/$'), '');
+        final String path = value.replaceFirst(RegExp(r'^/'), '');
+        final response = await http.get(Uri.parse('$base/$path'));
+        if (response.statusCode == 200) return response.bodyBytes;
+      }
+
+      final Uint8List? hexBytes = _hexToBytes(value);
+      if (hexBytes != null && hexBytes.isNotEmpty) return hexBytes;
+
+      String normalized = value
+          .replaceAll('\n', '')
+          .replaceAll('\r', '')
+          .replaceAll(' ', '');
+      final int mod4 = normalized.length % 4;
+      if (mod4 != 0) {
+        normalized = normalized.padRight(normalized.length + (4 - mod4), '=');
+      }
+      return base64Decode(normalized);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _pickImageFromDB(int index, dynamic raw) async {
     if (raw == null || raw.isEmpty) return; // в БД нет картинки – выходим
 
     try {
-      // 2.1. Получаем байты
-      // Если сервер отдаёт URL – скачайте его через http.get().
-      // Ниже пример, когда приходит Base64:
-      final Uint8List bytes = base64Decode(raw);
+      final Uint8List? bytes = await _resolveImageBytes(raw);
+      if (bytes == null || bytes.isEmpty) return;
 
       // 2.2. Пишем во временный файл
       final dir = await getTemporaryDirectory();
-      final filePath = '${dir.path}/db_img_$index.png';
+      final filePath = '${dir.path}/db_img_${index}_${DateTime.now().microsecondsSinceEpoch}.jpg';
       final file = await File(filePath).writeAsBytes(bytes);
 
       final XFile xfile = XFile(file.path); // оборачиваем во «файлик»
@@ -384,6 +463,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+      format: CompressFormat.jpeg,
       );
 
       // 2.4. Кладём в стейт, чтобы виджеты перерисовались
@@ -399,18 +479,16 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
     }
   }
 
-  Future<void> _pickImageFromDBdoc(int indexDoc, String? raw) async {
+  Future<void> _pickImageFromDBdoc(int indexDoc, dynamic raw) async {
     if (raw == null || raw.isEmpty) return; // в БД нет картинки – выходим
 
     try {
-      // 2.1. Получаем байты
-      // Если сервер отдаёт URL – скачайте его через http.get().
-      // Ниже пример, когда приходит Base64:
-      final Uint8List bytes = base64Decode(raw);
+      final Uint8List? bytes = await _resolveImageBytes(raw);
+      if (bytes == null || bytes.isEmpty) return;
 
       // 2.2. Пишем во временный файл
       final dir = await getTemporaryDirectory();
-      final filePath = '${dir.path}/db_img_$indexDoc.png';
+      final filePath = '${dir.path}/db_img_${indexDoc}_${DateTime.now().microsecondsSinceEpoch}.jpg';
       final file = await File(filePath).writeAsBytes(bytes);
 
       final XFile xfile = XFile(file.path); // оборачиваем во «файлик»
@@ -427,12 +505,13 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+      format: CompressFormat.jpeg,
       );
 
       // 2.4. Кладём в стейт, чтобы виджеты перерисовались
       if (mounted) {
         setState(() {
-          _imagesDoc[indexDoc] = compressed;
+          _imagesDoc[indexDoc] = compressed ?? xfile;
           _originalImagesDoc[indexDoc] = xfile;
         });
       }
@@ -445,8 +524,9 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
   Future<List<Map<String, dynamic>>> fetchAds() async {
     // формируем uri
     final uri = Uri.parse(Config.baseUrl).replace(
-      path: '/api/edit_ob_gr_u.php',
+      path: '/api/edit_ob_gr_u_v2.php',
       queryParameters: {
+        'id': widget.id.toString(),
         'idusers': widget.id.toString(),
       },
     );
@@ -482,15 +562,25 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
           _cenasmenaController.text = ad['cenasmena'];
           _cenakmController.text = ad['cenakm'];
           for (var i = 0; i < 4; i++) {
+            _images[i] = null;
+            _originalImages[i] = null;
+            _imagesDoc[i] = null;
+            _originalImagesDoc[i] = null;
+          }
+          for (var i = 0; i < 4; i++) {
             // 0,1,2,3
             final key = 'img${i + 1}'; // img1,img2,img3,img4
-            _pickImageFromDB(i, ad[key] as String?); // передаём 0-й индекс
+            _pickImageFromDB(i, ad[key]); // передаём 0-й индекс
           }
           for (var x = 0; x < 4; x++) {
             // 0,1,2,3
-            final keydoc = 'imgdoc${x + 1}'; // img1,img2,img3,img4
+            // Поддерживаем оба варианта ключей из API: imgDocN и imgdocN
+            final keydocCamel = 'imgDoc${x + 1}';
+            final keydocLower = 'imgdoc${x + 1}';
             _pickImageFromDBdoc(
-                x, ad[keydoc] as String?); // передаём 0-й индекс
+              x,
+              ad[keydocCamel] ?? ad[keydocLower],
+            ); // передаём 0-й индекс
           }
 
           print('xxxz');
@@ -598,6 +688,8 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenahaursController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -631,6 +723,8 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenasmenaController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -664,6 +758,8 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -694,8 +790,11 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) => _imageSlot(index)),
                 ),
               ),
@@ -716,8 +815,11 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children:
                       List.generate(4, (indexDoc) => _imageSlotDoc(indexDoc)),
                 ),
@@ -728,8 +830,11 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
               padding: const EdgeInsets.all(
                   10), // Добавляет внутренний отступ к контейнеру
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) {
                     // Ваш контейнер с изображением или иконкой
                     return GestureDetector(

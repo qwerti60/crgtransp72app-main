@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart'; // Для HTTP запросов
 import 'package:flutter/services.dart';
@@ -143,6 +144,7 @@ class _CityScreenState extends State<CityScreen> {
                 },
               ),
       ),
+      bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
     );
   }
 

@@ -1,6 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
+import 'package:crgtransp72app/pages/edit_ob_gp1.dart';
+import 'package:crgtransp72app/pages/edit_ob_gr.dart';
+import 'package:crgtransp72app/pages/edit_ob_vidt.dart';
+import 'package:crgtransp72app/pages/editn_ob_gp1.dart';
+//import 'package:crgtransp72app/pages/editn_ob_vidt.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
@@ -33,6 +38,16 @@ class Ads1App extends StatelessWidget {
       ),
       home: const MyHomePage(),
     );
+  }
+}
+
+// Use this widget when Ads1 is opened inside an existing app shell.
+class Ads1Page extends StatelessWidget {
+  const Ads1Page({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MyHomePage();
   }
 }
 
@@ -176,8 +191,8 @@ class _MyHomePageState extends State {
           // Обратите внимание на использование внутреннего контекста
           return AlertDialog(
             title: const Text('Удалить объявление безвозвратно?'),
-            content: const Text(
-                'Вы уверены, что хотите удалить объявление?'), // Дополнительное сообщение
+            content: Text(
+                'Вы уверены, что хотите удалить объявление ?'), // Дополнительное сообщение
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(
@@ -203,12 +218,50 @@ class _MyHomePageState extends State {
     }
   }
 
+  void editTruck(int id, BuildContext context, String tableName) async {
+    try {
+      // Логика редактирования записи
+      switch (tableName) {
+        // Использование switch-case улучшает читаемость кода
+        case 'add_ob_gr':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => edit_ob_gr(
+                        id: id,
+                      )));
+          break;
+        case 'add_ob_vidt':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => edit_ob_vidt(
+                        id: id,
+                      )));
+          break;
+        case 'add_ob_gp':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => editn_ob_gp(
+                        id: id,
+                      )));
+          break;
+        default:
+          print(
+              'Unknown table name'); // Сообщение в консоль, если неизвестная таблица
+      }
+    } catch (e) {
+      debugPrint("Ошибка при редактировании: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Мои объявления',
+          'Мои объявления ',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -216,7 +269,7 @@ class _MyHomePageState extends State {
         backgroundColor: blueaccentColor,
       ),
       // Добавление FloatingActionButton
-      floatingActionButton: FloatingActionButton(
+/*      floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Действие, производимое при нажатии на кнопку
           Navigator.push(context,
@@ -227,7 +280,7 @@ class _MyHomePageState extends State {
             Colors.blueAccent, // Поправил цвет на стандартный из Flutter
         child: const Icon(Icons.add), // Иконка на кнопке
       ),
-
+*/
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
@@ -274,13 +327,15 @@ class _MyHomePageState extends State {
                                 mainAxisAlignment: MainAxisAlignment
                                     .end, // Равнение элементов в конце (справа)
                                 children: [
-                                  /*IconButton(
+                                  IconButton(
                                     icon: const Icon(Icons.edit),
                                     onPressed: () {
-                                      // Действия по редактированию
+                                      print(
+                                          "ID: ${truck['id']}, Table Name: ${truck['tableName']}"); // Посмотрите, что реально приходит
+                                      editTruck(truck['id'], context,
+                                          truck['tableName']);
                                     },
                                   ),
-                                  */
                                   // Ваш исходный виджет кнопки
                                   IconButton(
                                     icon: const Icon(Icons.delete),
@@ -344,7 +399,7 @@ class _MyHomePageState extends State {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Создано :',
+                                  Text('Создано/изменено :',
                                       style:
                                           DefaultTextStyle.of(context).style),
                                   Text('${truck['created_at']}',
@@ -353,7 +408,8 @@ class _MyHomePageState extends State {
                                 ],
                               ),
                             ),
-                            if (truck['marka'] != null)
+                            if ((truck['marka'] != null) &&
+                                (truck['marka'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -370,7 +426,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['godv'] != null)
+                            if ((truck['godv'] != null) &&
+                                (truck['godv'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -403,7 +460,8 @@ class _MyHomePageState extends State {
                                 ],
                               ),
                             ),
-                            if (truck['vidt'] != null)
+                            if ((truck['vidt'] != null) &&
+                                (truck['vidt'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -420,7 +478,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['maxgruz'] != null)
+                            if ((truck['maxgruz'] != null) &&
+                                (truck['maxgruz'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -437,7 +496,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['dkuzov'] != null)
+                            if ((truck['dkuzov'] != null) &&
+                                (truck['dkuzov'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -454,7 +514,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['shkuzov'] != null)
+                            if ((truck['shkuzov'] != null) &&
+                                (truck['shkuzov'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -471,7 +532,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['vidk'] != null)
+                            if ((truck['vidk'] != null) &&
+                                (truck['vidk'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -488,7 +550,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['cenahaurs'] != null)
+                            if ((truck['cenahaurs'] != null) &&
+                                (truck['cenahaurs'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -505,7 +568,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['cenasmena'] != null)
+                            if ((truck['cenasmena'] != null) &&
+                                (truck['cenasmena'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -522,7 +586,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['cenakm'] != null)
+                            if ((truck['cenakm'] != null) &&
+                                (truck['cenakm'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -649,6 +714,13 @@ class _MyHomePageState extends State {
         setState(() {
           fetchAds(bd, idusers);
         });
+
+        // 1. ждём, пока получим новые данные
+        await fetchAds(bd, idusers);
+        // 2. сообщаем фреймворку, что данные изменились
+        if (mounted) {
+          setState(() {}); // без async-кода внутри!
+        }
       } else {
         // Ошибка, можно показать сообщение об ошибке
 

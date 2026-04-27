@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../design/colors.dart';
 import '../design/dimension.dart';
@@ -14,6 +15,16 @@ class creguser3_name_ extends StatefulWidget {
 }
 
 class _creguser3_nameForm extends State<creguser3_name_> {
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = '+7';
+    _phoneController.selection =
+        TextSelection.collapsed(offset: _phoneController.text.length);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,6 +72,11 @@ class _creguser3_nameForm extends State<creguser3_name_> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  _RussianPhoneInputFormatter(),
+                ],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -71,7 +87,7 @@ class _creguser3_nameForm extends State<creguser3_name_> {
                   ),
                   fillColor: grayprprColor,
                   filled: true,
-                  hintText: '8(999) 888 77-66',
+                  hintText: '+7(___) ___-__-__',
                 ),
               ),
             ),
@@ -164,6 +180,50 @@ class _creguser3_nameForm extends State<creguser3_name_> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RussianPhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.startsWith('8')) {
+      digits = digits.substring(1);
+    } else if (digits.startsWith('7')) {
+      digits = digits.substring(1);
+    }
+    if (digits.length > 10) {
+      digits = digits.substring(0, 10);
+    }
+
+    final b = StringBuffer('+7');
+    if (digits.isNotEmpty) {
+      b.write('(');
+      b.write(digits.substring(0, digits.length.clamp(0, 3)));
+      if (digits.length >= 3) b.write(')');
+    }
+    if (digits.length > 3) {
+      b.write(' ');
+      b.write(digits.substring(3, digits.length.clamp(3, 6)));
+    }
+    if (digits.length > 6) {
+      b.write('-');
+      b.write(digits.substring(6, digits.length.clamp(6, 8)));
+    }
+    if (digits.length > 8) {
+      b.write('-');
+      b.write(digits.substring(8, digits.length.clamp(8, 10)));
+    }
+
+    final formatted = b.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

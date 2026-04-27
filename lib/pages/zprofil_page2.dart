@@ -2,10 +2,12 @@ import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/HistortScreen1z.dart';
+import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
@@ -68,16 +70,16 @@ class zprofil_nameForm extends State<zprofil_name2> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city = data['city'];
-          phone = data['phone'];
-          email = data['email'];
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
-          orderid = data['order_id'];
+          orderid = data['order_id']?.toString() ?? '';
         });
         print('d123 ${data}');
         print('o123 ${orderid}');
@@ -175,7 +177,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             builder: (_) =>
@@ -191,16 +193,16 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    print('[zprofil_page2] tap: Избранные заказчики');
+                    Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => //list_predloj_na_obj_isp(
-                                //nameImg: userId.toString(), bd: 1),
-                                HistortScreen(pageProfile: 'zprofil_zayavki')
-                            //Ads1App()zprofil_zayavki
-                            ));
+                            builder: (_) => const zprofil_zayavki(
+                                  nameImg: '',
+                                  base: 1,
+                                )));
                   },
-                  child: const Text('Я предлогаю')),
+                  child: const Text('Предложения')),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -210,12 +212,12 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             builder: (_) => const HistortScreen(
                                 pageProfile:
-                                    'izbrannoe') // outputobzlikes1(nameImg: '', base: 1)
+                                    'outputobzlikes') //outputobzlikes1(nameImg: '', base: 1)
                             ));
                   },
                   child: const Text('Избранные заказчики')),
@@ -252,9 +254,8 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const HistortScreen(
-                                pageProfile:
-                                    'Subscription') //SubscriptionScreen()
+                            builder: (_) =>
+                                const PaymentScreen() //SubscriptionScreen()
                             ));
                   },
                   child: const Text('Подписка')),

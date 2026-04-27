@@ -1,4 +1,5 @@
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:flutter/material.dart';
@@ -51,10 +52,8 @@ void navigateIfNeeded(BuildContext context, int userId) async {
             TextButton(
               child: const Text("Оформить"),
               onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const SubscriptionScreen()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const PaymentScreen()));
               },
             ),
           ],
@@ -114,6 +113,7 @@ class change_userForm extends State<change_user> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Выбор роли',

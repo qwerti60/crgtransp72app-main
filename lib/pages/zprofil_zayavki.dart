@@ -14,6 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'like_helper.dart';
+import 'performer_bottom_nav.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -71,6 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  late Future<List> _adsFuture;
 
   @override
   void initState() {
@@ -80,8 +83,9 @@ class _MyHomePageState extends State<MyHomePage> {
     bd ??= widget.base;
 
     //super.initState();
+    _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-    fetchAds(bd!, nameImg, userId);
+    _adsFuture = fetchAds(bd!, nameImg, userId);
   }
 
   int userId = 0;
@@ -102,6 +106,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
+          _adsFuture = fetchAds(bd!, widget.nameImg, userId);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -156,54 +161,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool isLiked = false;
 
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
+    isLiked = await toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: true,
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print(isLiked);
-        return isLiked;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
+    return isLiked;
   }
 
   Future<List> fetchAds(int bd, String nameImg, int userId) async {
+    final Map<String, String> queryParameters = {
+      'bd': bd.toString(),
+      'useId': userId.toString(),
+    };
+    if (nameImg.trim().isNotEmpty) {
+      queryParameters['nameImg'] = nameImg;
+    }
+
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/getofferusern.php',
-        queryParameters: {
-          'nameImg': nameImg,
-          'bd': bd.toString(), // Преобразуем в строку
-          'useId':
-              userId.toString() // Преобразуем в строку, если userId это число
-        },
+        queryParameters: queryParameters,
       ),
     );
     if (response.statusCode == 200) {
@@ -264,7 +245,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(bd!, widget.nameImg, userId),
+                future: _adsFuture,
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -464,10 +445,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                         children: [
                                           const Icon(Icons.phone),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            '${truck['phone']}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                          Flexible(
+                                            child: Text(
+                                              '${truck['phone']}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -1042,6 +1027,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+      bottomNavigationBar: const PerformerBottomNav(currentIndex: 1),
 
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
@@ -1105,7 +1091,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          fetchAds(bd!, widget.nameImg, userId);
+          _adsFuture = fetchAds(bd!, widget.nameImg, userId);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

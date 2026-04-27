@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../design/colors.dart';
@@ -18,6 +19,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ads1.dart';
+import 'image_bytes_helper.dart';
+import 'decimal_text_input_formatter.dart';
 
 // Step 1.
 String dropdownValue = 'Мини погрузчики и складская техника';
@@ -51,7 +54,7 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
     fetchAds();
   }
 
-  static const double imageSize = 100.0;
+  static const double imageSize = 80.0;
   final List _images = List.generate(4, (index) => null);
   final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
@@ -108,17 +111,18 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -221,17 +225,18 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -327,18 +332,19 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
     }
   }
 
-  Future<void> _pickImageFromDB(int index, String? raw) async {
+  Future<void> _pickImageFromDB(int index, dynamic raw) async {
     if (raw == null || raw.isEmpty) return; // в БД нет картинки – выходим
 
     try {
       // 2.1. Получаем байты
       // Если сервер отдаёт URL – скачайте его через http.get().
       // Ниже пример, когда приходит Base64:
-      final Uint8List bytes = base64Decode(raw);
+      final Uint8List? bytes = await resolveImageBytes(raw);
+      if (bytes == null || bytes.isEmpty) return;
 
       // 2.2. Пишем во временный файл
       final dir = await getTemporaryDirectory();
-      final filePath = '${dir.path}/db_img_$index.png';
+      final filePath = '${dir.path}/db_img_${index}_${DateTime.now().microsecondsSinceEpoch}.jpg';
       final file = await File(filePath).writeAsBytes(bytes);
 
       final XFile xfile = XFile(file.path); // оборачиваем во «файлик»
@@ -355,12 +361,13 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+      format: CompressFormat.jpeg,
       );
 
       // 2.4. Кладём в стейт, чтобы виджеты перерисовались
       if (mounted) {
         setState(() {
-          _images[index] = compressed;
+          _images[index] = compressed ?? xfile;
           _originalImages[index] = xfile;
         });
       }
@@ -370,18 +377,19 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
     }
   }
 
-  Future<void> _pickImageFromDBdoc(int indexDoc, String? raw) async {
+  Future<void> _pickImageFromDBdoc(int indexDoc, dynamic raw) async {
     if (raw == null || raw.isEmpty) return; // в БД нет картинки – выходим
 
     try {
       // 2.1. Получаем байты
       // Если сервер отдаёт URL – скачайте его через http.get().
       // Ниже пример, когда приходит Base64:
-      final Uint8List bytes = base64Decode(raw);
+      final Uint8List? bytes = await resolveImageBytes(raw);
+      if (bytes == null || bytes.isEmpty) return;
 
       // 2.2. Пишем во временный файл
       final dir = await getTemporaryDirectory();
-      final filePath = '${dir.path}/db_img_$indexDoc.png';
+      final filePath = '${dir.path}/db_img_${indexDoc}_${DateTime.now().microsecondsSinceEpoch}.jpg';
       final file = await File(filePath).writeAsBytes(bytes);
 
       final XFile xfile = XFile(file.path); // оборачиваем во «файлик»
@@ -398,12 +406,13 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+      format: CompressFormat.jpeg,
       );
 
       // 2.4. Кладём в стейт, чтобы виджеты перерисовались
       if (mounted) {
         setState(() {
-          _imagesDoc[indexDoc] = compressed;
+          _imagesDoc[indexDoc] = compressed ?? xfile;
           _originalImagesDoc[indexDoc] = xfile;
         });
       }
@@ -465,13 +474,16 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
           for (var i = 0; i < 4; i++) {
             // 0,1,2,3
             final key = 'img${i + 1}'; // img1,img2,img3,img4
-            _pickImageFromDB(i, ad[key] as String?); // передаём 0-й индекс
+            _pickImageFromDB(i, ad[key]); // передаём 0-й индекс
           }
           for (var x = 0; x < 4; x++) {
             // 0,1,2,3
-            final keydoc = 'imgdoc${x + 1}'; // img1,img2,img3,img4
+            final keydocCamel = 'imgDoc${x + 1}';
+            final keydocLower = 'imgdoc${x + 1}';
             _pickImageFromDBdoc(
-                x, ad[keydoc] as String?); // передаём 0-й индекс
+              x,
+              ad[keydocCamel] ?? ad[keydocLower],
+            ); // передаём 0-й индекс
           }
 
           print('xxxz');
@@ -638,6 +650,8 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenahaursController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -671,6 +685,8 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenasmenaController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -704,6 +720,8 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -734,8 +752,11 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) => _imageSlot(index)),
                 ),
               ),
@@ -756,8 +777,11 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children:
                       List.generate(4, (indexDoc) => _imageSlotDoc(indexDoc)),
                 ),
@@ -768,8 +792,11 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
               padding: const EdgeInsets.all(
                   10), // Добавляет внутренний отступ к контейнеру
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) {
                     // Ваш контейнер с изображением или иконкой
                     return GestureDetector(

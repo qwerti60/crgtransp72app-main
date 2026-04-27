@@ -29,6 +29,171 @@ class _LoginState extends State<LoginPage> {
   var password;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  final TextEditingController _resetEmailController = TextEditingController();
+  final TextEditingController _resetCodeController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  bool _obscureNewPassword = true;
+
+  Future<void> _requestPasswordResetCode(String email) async {
+    final response = await http.post(
+      Uri.parse(Config.baseUrl).replace(path: '/api/request_password_reset.php'),
+      body: {'email': email.trim()},
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    );
+
+    final data = jsonDecode(response.body);
+    if (!mounted) return;
+
+    if (response.statusCode == 200 && data['status'] == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Код отправлен на e-mail')),
+      );
+      Navigator.of(context).pop();
+      _showConfirmResetDialog(email.trim());
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(data['message'] ?? 'Не удалось отправить код')),
+    );
+  }
+
+  Future<void> _confirmPasswordReset(String email, String code, String password) async {
+    final response = await http.post(
+      Uri.parse(Config.baseUrl).replace(path: '/api/confirm_password_reset.php'),
+      body: {
+        'email': email.trim(),
+        'code': code.trim(),
+        'new_password': password,
+      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    );
+
+    final data = jsonDecode(response.body);
+    if (!mounted) return;
+
+    if (response.statusCode == 200 && data['status'] == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Пароль успешно изменен')),
+      );
+      Navigator.of(context).pop();
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(data['message'] ?? 'Не удалось изменить пароль')),
+    );
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    _resetEmailController.clear();
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Восстановить пароль'),
+          content: TextFormField(
+            controller: _resetEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              hintText: 'Введите e-mail',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                final email = _resetEmailController.text.trim();
+                final isValidEmail = RegExp(
+                  r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
+                ).hasMatch(email);
+                if (!isValidEmail) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Введите корректный e-mail')),
+                  );
+                  return;
+                }
+                _requestPasswordResetCode(email);
+              },
+              child: const Text('Отправить'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showConfirmResetDialog(String email) async {
+    _resetCodeController.clear();
+    _newPasswordController.clear();
+    bool obscurePassword = true;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Подтверждение'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _resetCodeController,
+                    decoration: const InputDecoration(hintText: 'Код из e-mail'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _newPasswordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Новый пароль',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Отмена'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final code = _resetCodeController.text.trim();
+                    final newPassword = _newPasswordController.text;
+                    if (code.isEmpty || newPassword.length < 8) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Введите код и пароль не менее 8 символов'),
+                        ),
+                      );
+                      return;
+                    }
+                    _confirmPasswordReset(email, code, newPassword);
+                  },
+                  child: const Text('Сменить пароль'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _login() async {
     final prefs = await SharedPreferences.getInstance();
@@ -152,8 +317,8 @@ class _LoginState extends State<LoginPage> {
               margin: const EdgeInsets.only(top: 20.0),
               child: TextFormField(
                 controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
                   ),
@@ -165,6 +330,16 @@ class _LoginState extends State<LoginPage> {
                   hintText: 'Пароль',
                   fillColor: grayprprColor,
                   filled: true,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 onChanged: (value) {
                   password = value;
@@ -193,7 +368,18 @@ class _LoginState extends State<LoginPage> {
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 80.0),
+              margin: const EdgeInsets.only(top: 24.0),
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: blueaccentColor,
+                ),
+                onPressed: _showForgotPasswordDialog,
+                child: const Text('Восстановить пароль'),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 40.0),
               child: TextButton(
                 style: TextButton.styleFrom(
                   foregroundColor: blueaccentColor,

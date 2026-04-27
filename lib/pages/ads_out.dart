@@ -28,13 +28,16 @@ class AdWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // Используйте ad['column_name'] для получения данных из вашего объявления
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(8.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Здесь может быть ваш слайдер изображений
-          Expanded(
-            child: Text(
-                "Наименование: ${ad['name']}"), // Пример использования данных
+          Text(
+            "Наименование: ${ad['name'] ?? ''}",
+            softWrap: true,
+            overflow: TextOverflow.visible,
           ),
           // ... Добавьте другие поля
         ],

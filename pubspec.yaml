@@ -64,7 +64,9 @@ flutter_launcher_icons:
   android: "launcher_icon" # имя иконки для Android
   ios: true # для iOS
   image_path: "assets/images/icon/icon.png" # путь к вашей иконке
+  image_path_ios: "assets/images/icon/icon_ios_padded.png"
   min_sdk_android: 21 # минимальная версия Android SDK
+  adaptive_icon_foreground_inset: 28
   
   # Дополнительные настройки (опционально):
   adaptive_icon_background: "#ffffff" # цвет фона для адаптивных иконок Android

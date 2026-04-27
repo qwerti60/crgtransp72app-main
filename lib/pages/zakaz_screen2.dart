@@ -12,10 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../design/colors.dart';
-import 'get_vt.dart';
+import 'get_vt.dart' as performer_services;
 import 'vod_zak.dart';
 import 'zprofil_page.dart';
 import 'zprofil_zakaz.dart';
+import 'get_vt_z.dart' as customer_services;
 
 void main() {
   runApp(const MyAppZakazScreen());
@@ -31,7 +32,8 @@ class MyAppZakazScreen extends StatelessWidget {
 }
 
 class MyCustomScreen extends StatefulWidget {
-  const MyCustomScreen({super.key});
+  final int initialPage;
+  const MyCustomScreen({super.key, this.initialPage = 0});
 
   @override
   _MyCustomScreenState createState() => _MyCustomScreenState();
@@ -85,7 +87,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   Widget _getScreen(Map<String, dynamic>? orderInfo) {
     switch (_currentPage) {
       case 0:
-        return const MyAppI1z();
+        return const customer_services.MyImageGrid();
       case 1:
         if (orderInfo != null && orderInfo['result'] == true) {
           return OrderExecutionScreen(
@@ -107,6 +109,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   @override
   void initState() {
     super.initState();
+    _currentPage = widget.initialPage;
     getUserData().then((_) {
       setState(() {});
     }).catchError((err) {
@@ -132,6 +135,17 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
             orderInfo['result'] == true; // Проверяем наличие активной записи
 
         return Scaffold(
+          appBar: _currentPage == 0
+              ? AppBar(
+                  title: const Text(
+                    'Ищут услуги',
+                    style: TextStyle(
+                      color: whiteprColor,
+                    ),
+                  ),
+                  backgroundColor: blueaccentColor,
+                )
+              : null,
           body: Column(
             children: <Widget>[
               Expanded(child: _getScreen(orderInfo)),

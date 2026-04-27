@@ -1,10 +1,19 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/HistortScreen1z.dart';
+import 'package:crgtransp72app/pages/add_ob_gp1.dart';
+import 'package:crgtransp72app/pages/add_ob_vidt.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
+import 'package:crgtransp72app/pages/edit_ob_gp1.dart';
+import 'package:crgtransp72app/pages/edit_ob_gp_usl.dart';
+import 'package:crgtransp72app/pages/edit_ob_gp_usl_g.dart';
+import 'package:crgtransp72app/pages/edit_ob_gp_usl_t.dart';
+import 'package:crgtransp72app/pages/edit_ob_gr.dart';
+import 'package:crgtransp72app/pages/edit_ob_vidt.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
+import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -128,6 +137,44 @@ class _MyHomePageState extends State {
     }
   }
 
+  void editTruck(int id, BuildContext context, String tableName) async {
+    try {
+      // Логика редактирования записи
+      switch (tableName) {
+        // Использование switch-case улучшает читаемость кода
+        case 'orders':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => edit_ob_gp_usl(
+                        id: id,
+                      )));
+          break;
+        case 'orderst':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => edit_ob_gp_usl_t(
+                        id: id,
+                      )));
+          break;
+        case 'ordersg':
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => rdit_ob_gp_usl_g(
+                        id: id,
+                      )));
+          break;
+        default:
+          print(
+              'Unknown table name'); // Сообщение в консоль, если неизвестная таблица
+      }
+    } catch (e) {
+      debugPrint("Ошибка при редактировании: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,20 +188,24 @@ class _MyHomePageState extends State {
         backgroundColor: blueaccentColor,
       ),
       // Добавление FloatingActionButton
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      /*     floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
 
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Действие, производимое при нажатии на кнопку
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const changerol1()));
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const MenuzakScreen(
+                      pageProfile: 'changerol1') //changerol1()
+                  ));
           print('Нажата плавающая кнопка');
         },
         backgroundColor:
             Colors.blueAccent, // Поправил цвет на стандартный из Flutter
         child: const Icon(Icons.add), // Иконка на кнопке
       ),
-
+*/
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
@@ -197,13 +248,15 @@ class _MyHomePageState extends State {
                                 mainAxisAlignment: MainAxisAlignment
                                     .end, // Равнение элементов в конце (справа)
                                 children: [
-                                  /*IconButton(
+                                  IconButton(
                                     icon: const Icon(Icons.edit),
                                     onPressed: () {
-                                      // Действия по редактированию
+                                      print(
+                                          "ID: ${truck['id']}, Table Name: ${truck['table_name']}"); // Посмотрите, что реально приходит
+                                      editTruck(truck['id'], context,
+                                          truck['table_name']);
                                     },
-                                  ),*/
-
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
                                     onPressed: () {
@@ -246,7 +299,7 @@ class _MyHomePageState extends State {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Создано :',
+                                  Text('Создано/изменено :',
                                       style:
                                           DefaultTextStyle.of(context).style),
                                   Text('${truck['created_at']}',
@@ -255,7 +308,8 @@ class _MyHomePageState extends State {
                                 ],
                               ),
                             ),
-                            if (truck['vidt'] != null)
+                            if ((truck['vidt'] != null) &&
+                                (truck['vidt'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -272,7 +326,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['maxgruz'] != null)
+                            if ((truck['maxgruz'] != null) &&
+                                (truck['maxgruz'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -289,7 +344,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['city'] != null)
+                            if ((truck['city'] != null) &&
+                                (truck['city'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -378,7 +434,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['city1'] != null)
+                            if ((truck['city1'] != null) &&
+                                (truck['city1'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -395,7 +452,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['vidk'] != null)
+                            if ((truck['vidk'] != null) &&
+                                (truck['vidk'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -412,7 +470,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['zagr'] != null)
+                            if ((truck['zagr'] != null) &&
+                                (truck['zagr'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -429,7 +488,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['gruzch'] != null)
+                            if ((truck['gruzch'] != null) &&
+                                (truck['gruzch'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -446,7 +506,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['typepr'] != null)
+                            if ((truck['typepr'] != null) &&
+                                (truck['typepr'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -463,7 +524,8 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if (truck['cena'] != null)
+                            if ((truck['cena'] != null) &&
+                                (truck['cena'] != ''))
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -594,29 +656,90 @@ class _MyHomePageState extends State {
   }
 
   Future<void> showDeleteDialog(BuildContext context, int truckId, bd) async {
-    bool? result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Удалить объявление безвозвратно?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Нет'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Да'),
-            ),
-          ],
-        );
-      },
-    );
+    try {
+      // Используем правильный контекст
+      final result = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false, // Диалог нельзя закрыть свайпом
+        builder: (context) {
+          // Обратите внимание на использование внутреннего контекста
+          return AlertDialog(
+            title: const Text('Удалить объявление безвозвратно?'),
+            content: Text(
+                'Вы уверены, что хотите удалить объявление ?'), // Дополнительное сообщение
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(
+                    context, false), // Важно использовать внутренний контекст
+                child: const Text('Нет'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                    context, true), // Важно использовать внутренний контекст
+                child: const Text('Да'),
+              ),
+            ],
+          );
+        },
+      );
 
-    if (result == true) {
-      deleteTruck(truckId, context, bd);
+      if (result == true) {
+        deleteTruck(truckId, bd); // Удаляем запись, если выбран вариант "Да"
+      }
+    } catch (e) {
+      print("Error showing dialog: $e"); // Логируем возможные ошибки
     }
   }
+
+  Future<void> deleteTruck(int truckId, int bd) async {
+    try {
+      final response = await http.post(
+        Uri.parse(Config.baseUrl).replace(path: '/api/delete_zakaz.php'),
+        body: {
+          'id': truckId.toString(),
+          'bd': bd.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // сообщение о успехе
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Объявление успешно удалено!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        // 1. ждём, пока получим новые данные
+        await fetchAds(bd);
+
+        // 2. сообщаем фреймворку, что данные изменились
+        if (mounted) {
+          setState(() {}); // без async-кода внутри!
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ошибка при удалении объявления!'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Возникла проблема при удалении объявления!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  } /*
 
   Future<void> deleteTruck(int truckId, context, int bd) async {
     print('bd'); // Url к вашему API
@@ -657,5 +780,5 @@ class _MyHomePageState extends State {
         backgroundColor: Colors.red,
       ));
     }
-  }
+  }*/
 }

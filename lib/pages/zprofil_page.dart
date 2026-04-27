@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
@@ -86,10 +87,8 @@ class zprofil_nameForm extends State<zprofil_name> {
               TextButton(
                 child: const Text("Оформить"),
                 onPressed: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SubscriptionScreen()));
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const PaymentScreen()));
                 },
               ),
             ],
@@ -204,6 +203,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
+                    print('[zprofil_page] tap: Избранное');
                     Navigator.push(
                         context,
                         MaterialPageRoute(

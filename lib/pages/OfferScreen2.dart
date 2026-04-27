@@ -4,6 +4,9 @@ import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'decimal_text_input_formatter.dart';
+import 'customer_bottom_nav.dart';
 
 import '../design/colors.dart';
 //import 'reguser1_name.dart';
@@ -202,6 +205,8 @@ class _OfferscreenForm extends State<OfferScreen2> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -339,6 +344,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
           ],
         ),
       ),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
     );
   }
 

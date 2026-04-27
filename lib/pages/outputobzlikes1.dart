@@ -7,7 +7,7 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
-import 'package:crgtransp72app/pages/review_screenz.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -42,6 +42,19 @@ class outputobzlikes1 extends StatelessWidget {
   }
 }
 
+// Use this widget when page is shown inside existing app shell/menu.
+class Outputobzlikes1Page extends StatelessWidget {
+  final String nameImg;
+  final int base;
+  const Outputobzlikes1Page(
+      {super.key, required this.nameImg, required this.base});
+
+  @override
+  Widget build(BuildContext context) {
+    return MyHomePage(nameImg: nameImg, base: base);
+  }
+}
+
 class MyHomePage extends StatefulWidget {
   final String nameImg;
 
@@ -73,18 +86,21 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  late Future<List> _adsFuture;
 
   @override
   void initState() {
     super
         .initState(); // Assign nameImg from widget to a local variable if needed:
     String nameImg = widget.nameImg;
+    print('[outputobzlikes1] initState opened');
     bd = 1;
     //String city = widget.city;
 
     //super.initState();
+    _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-    fetchAds(userId);
+    _adsFuture = fetchAds(userId);
   }
 
   int userId = 0;
@@ -105,6 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
+          _adsFuture = fetchAds(userId);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -196,17 +213,20 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List> fetchAds(int idUser) async {
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/getads_likes.php',
-        queryParameters: {
-          'idusers': userId.toString(),
+    final uri = Uri.parse(Config.baseUrl).replace(
+      path: '/api/getads_likes.php',
+      queryParameters: {
+        'idusers': userId.toString(),
+        'usersid': userId.toString(),
 //          'nameImg': nameImg,
-          //        'bd': bd
-          //          .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+        //        'bd': bd
+        //          .toString(), // Добавляем переменную bd как строку в параметры запроса
+      },
     );
+    print('[outputobzlikes1] fetchAds url: $uri');
+    final response = await http.get(uri);
+    print('[outputobzlikes1] fetchAds status: ${response.statusCode}');
+    print('[outputobzlikes1] fetchAds body: ${response.body}');
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
@@ -321,7 +341,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(userId),
+                future: _adsFuture,
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -425,11 +445,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(
+                                            final bool updatedLike =
+                                                await toggleLike(
                                                 truck['idusers'].toString(),
                                                 truck['id'].toString(),
                                                 bd!);
-                                            setState(() {});
+                                            if (!mounted) return;
+                                            setState(() {
+                                              final data = snapshot.data;
+                                              if (!updatedLike &&
+                                                  data != null) {
+                                                data.removeWhere((item) =>
+                                                    (item['idusers'] ?? '')
+                                                        .toString() ==
+                                                    (truck['idusers'] ?? '')
+                                                        .toString());
+                                              }
+                                            });
                                           },
                                         ),
                                         if (truck['firstName'] != null)
@@ -449,7 +481,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) =>
-                                                            ReviewScreenz(
+                                                            ReviewScreen(
                                                                 userId: truck[
                                                                         'iduserp']
                                                                     .toString())),

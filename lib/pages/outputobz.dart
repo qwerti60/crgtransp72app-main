@@ -8,7 +8,7 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
-import 'package:crgtransp72app/pages/review_screenz.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +18,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'customer_bottom_nav.dart';
+import 'like_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class outputobz extends StatelessWidget {
@@ -28,13 +30,7 @@ class outputobz extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(nameImg: nameImg, city: city),
-    );
+    return MyHomePage(nameImg: nameImg, city: city);
   }
 }
 
@@ -69,6 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  late Future<List> _adsFuture;
 
   @override
   void initState() {
@@ -79,8 +76,9 @@ class _MyHomePageState extends State<MyHomePage> {
     String city = widget.city;
 
     //super.initState();
+    _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-    fetchAds(city, nameImg, userId);
+    _adsFuture = fetchAds(city, nameImg, userId);
   }
 
   int userId = 0;
@@ -101,6 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
+          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -110,9 +109,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
+  Future<bool> checkOfferExists(dynamic userId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer.php?iduser=${userId.toString()}&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -153,42 +152,32 @@ class _MyHomePageState extends State<MyHomePage> {
 //bool? isLiked = false;
 
   bool isLiked = false;
+  final Map<String, bool> _likedOverrides = {};
 
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
-    );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        return isLiked;
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
 
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.statusCode}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
+  bool _likedForTruck(Map truck) {
+    final String key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
     }
+    return _isLikedValue(truck['success']);
+  }
+
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
+    isLiked = await toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: true,
+    );
+    return isLiked;
   }
 
   Future<List> fetchAds(String city, String nameImg, int userId) async {
@@ -239,19 +228,6 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         backgroundColor: blueaccentColor,
       ),
-      // Добавление FloatingActionButton
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Действие, производимое при нажатии на кнопку
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const changerol()));
-          print('Нажата плавающая кнопка');
-        },
-        backgroundColor:
-            Colors.blueAccent, // Поправил цвет на стандартный из Flutter
-        child: const Icon(Icons.add), // Иконка на кнопке
-      ),
-
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
@@ -262,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-                future: fetchAds(widget.city, widget.nameImg, userId),
+                future: _adsFuture,
                 builder: (context, snapshot) {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -348,27 +324,40 @@ class _MyHomePageState extends State<MyHomePage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final bool isNarrow = constraints.maxWidth < 380;
+
+                                    final Widget infoBlock = Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
                                         IconButton(
                                           icon: Icon(
-                                            truck['success'] == 'true'
+                                            _likedForTruck(truck)
                                                 ? Icons.favorite
                                                 : Icons.favorite_border,
-                                            color: truck['success'] == 'true'
+                                            color: _likedForTruck(truck)
                                                 ? Colors.red
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(truck['iduser'],
-                                                truck['id'], bd!);
-                                            setState(() {});
+                                            final String key =
+                                                (truck['id'] ?? '').toString();
+                                            final bool currentLiked =
+                                                _likedForTruck(truck);
+                                            setState(() {
+                                              _likedOverrides[key] =
+                                                  !currentLiked;
+                                            });
+                                            final bool updated = await toggleLike(
+                                                truck['iduser'],
+                                                truck['id'],
+                                                bd!);
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _likedOverrides[key] = updated;
+                                            });
                                           },
                                         ),
                                         if (truck['firstName'] != null)
@@ -388,7 +377,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) =>
-                                                            ReviewScreenz(
+                                                            ReviewScreen(
                                                                 userId: truck[
                                                                         'iduserp']
                                                                     .toString())),
@@ -453,25 +442,53 @@ class _MyHomePageState extends State<MyHomePage> {
                                             ],
                                           ),
                                       ],
-                                    ),
-                                    GestureDetector(
+                                    );
+
+                                    final Widget phoneBlock = GestureDetector(
                                       onTap: () {
                                         _makePhoneCall(truck['phone']);
                                       },
                                       child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Icon(Icons.phone),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            '${truck['phone']}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                          SizedBox(
+                                            width: 130,
+                                            child: Text(
+                                              '${truck['phone']}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    )
-                                  ],
+                                    );
+
+                                    if (isNarrow) {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          infoBlock,
+                                          const SizedBox(height: 8),
+                                          Center(child: phoneBlock),
+                                        ],
+                                      );
+                                    }
+
+                                    return Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        infoBlock,
+                                        phoneBlock,
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                               if (images
@@ -812,7 +829,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                       OfferScreen2(
-                                                          userid: truck['id'],
+                                                          userid: truck['id']
+                                                              .toString(),
                                                           useridobj:
                                                               truck['iduser'],
                                                           bd: bd), // Изменение экрана
@@ -853,7 +871,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                       OfferScreen2(
-                                                          userid: truck['id'],
+                                                          userid: truck['id']
+                                                              .toString(),
                                                           useridobj:
                                                               truck['iduser'],
                                                           bd: bd),
@@ -882,9 +901,8 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
 
-      // нужное расположение
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 

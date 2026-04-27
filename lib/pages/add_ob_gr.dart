@@ -1,6 +1,8 @@
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'decimal_text_input_formatter.dart';
 
 import '../design/colors.dart';
 import '../config.dart';
@@ -35,6 +37,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
   List _vidt = [];
   String? _selectedVidt;
   List _cities = [];
+  bool _isSubmitting = false;
   String? _selectedCity;
   String strData = '';
   String city = '';
@@ -46,7 +49,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
     getUserData();
   }
 
-  static const double imageSize = 100.0;
+  static const double imageSize = 80.0;
   final List _images = List.generate(4, (index) => null);
   final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
@@ -103,17 +106,18 @@ class add_ob_vidtForm extends State<add_ob_gr> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -216,17 +220,18 @@ class add_ob_vidtForm extends State<add_ob_gr> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -285,7 +290,10 @@ class add_ob_vidtForm extends State<add_ob_gr> {
     }
   }
 
-  void uploadData() async {
+  Future<void> uploadData() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
     var uri = Uri.parse('http://ivnovav.ru/api/add_ob_gr.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
@@ -333,6 +341,9 @@ class add_ob_vidtForm extends State<add_ob_gr> {
       );
     } else {
       print('Failed!');
+    }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -420,6 +431,8 @@ class add_ob_vidtForm extends State<add_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenahaursController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -453,6 +466,8 @@ class add_ob_vidtForm extends State<add_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenasmenaController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -486,6 +501,8 @@ class add_ob_vidtForm extends State<add_ob_gr> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -516,8 +533,11 @@ class add_ob_vidtForm extends State<add_ob_gr> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) => _imageSlot(index)),
                 ),
               ),
@@ -538,8 +558,11 @@ class add_ob_vidtForm extends State<add_ob_gr> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children:
                       List.generate(4, (indexDoc) => _imageSlotDoc(indexDoc)),
                 ),
@@ -550,8 +573,11 @@ class add_ob_vidtForm extends State<add_ob_gr> {
               padding: const EdgeInsets.all(
                   10), // Добавляет внутренний отступ к контейнеру
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) {
                     // Ваш контейнер с изображением или иконкой
                     return GestureDetector(
@@ -599,7 +625,7 @@ class add_ob_vidtForm extends State<add_ob_gr> {
                       shape: const BeveledRectangleBorder(
                           borderRadius: BorderRadius.all(Radius.circular(3))),
                     ),
-                    onPressed: () async {
+                    onPressed: _isSubmitting ? null : () async {
                       String cenahaurs = _cenahaursController.text;
                       String cenasmena = _cenasmenaController.text;
                       String cenakm = _cenakmController.text;
@@ -614,9 +640,9 @@ class add_ob_vidtForm extends State<add_ob_gr> {
                         return;
                       }
 
-                      uploadData();
+                      await uploadData();
                     },
-                    child: const Text('Продолжить')),
+                    child: Text(_isSubmitting ? 'Сохранение...' : 'Продолжить')),
               ),
             ),
           ],

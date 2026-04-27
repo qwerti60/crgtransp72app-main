@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'like_helper.dart';
 
 import 'changerol_page.dart';
 import 'sendNotification.dart';
@@ -427,10 +428,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         const Icon(Icons.phone),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          '${truck['phone']}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        Flexible(
+                                          child: Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -668,43 +673,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool isLiked = false;
-  Future<bool> toggleLike(String idUser, String id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+  Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
+    isLiked = await toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: true,
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print('7777');
-        print(userId);
-        return isLiked;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
+    return isLiked;
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {

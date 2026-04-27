@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../design/colors.dart';
@@ -20,6 +21,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'ads2.dart';
+import 'image_bytes_helper.dart';
+import 'decimal_text_input_formatter.dart';
 
 class edit_ob_gp_usl extends StatefulWidget {
   final int id;
@@ -35,7 +38,7 @@ class edit_ob_gp_usl extends StatefulWidget {
 class _add_ob_gpForm extends State<edit_ob_gp_usl> {
   final TextEditingController _cenakmController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
-  static const double imageSize = 100.0;
+  static const double imageSize = 80.0;
   List _vidk = [];
   String? _selectedVidkuzov;
   List _cities = [];
@@ -150,17 +153,18 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
 
     if (pickedFile != null) {
 // Генерируем новое имя файла для сжатого изображения
-      String dir = p.dirname(pickedFile.path);
-      String extension = p.extension(pickedFile.path);
-      String newFileName =
-          '${p.basenameWithoutExtension(pickedFile.path)}_compressed$extension';
-      String newPath = p.join(dir, newFileName);
+      final String dir = p.dirname(pickedFile.path);
+      final String newPath = p.join(
+        dir,
+        '${p.basenameWithoutExtension(pickedFile.path)}_compressed.jpg',
+      );
       XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
         pickedFile.path,
         newPath, // Использовать новый путь для сжатого файла
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+        format: CompressFormat.jpeg,
       );
 
       setState(() {
@@ -378,18 +382,19 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
     }
   }
 
-  Future<void> _pickImageFromDB(int index, String? raw) async {
+  Future<void> _pickImageFromDB(int index, dynamic raw) async {
     if (raw == null || raw.isEmpty) return; // в БД нет картинки – выходим
 
     try {
       // 2.1. Получаем байты
       // Если сервер отдаёт URL – скачайте его через http.get().
       // Ниже пример, когда приходит Base64:
-      final Uint8List bytes = base64Decode(raw);
+      final Uint8List? bytes = await resolveImageBytes(raw);
+      if (bytes == null || bytes.isEmpty) return;
 
       // 2.2. Пишем во временный файл
       final dir = await getTemporaryDirectory();
-      final filePath = '${dir.path}/db_img_$index.png';
+      final filePath = '${dir.path}/db_img_${index}_${DateTime.now().microsecondsSinceEpoch}.jpg';
       final file = await File(filePath).writeAsBytes(bytes);
 
       final XFile xfile = XFile(file.path); // оборачиваем во «файлик»
@@ -406,12 +411,13 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
         minWidth: 100,
         minHeight: 100,
         quality: 88,
+      format: CompressFormat.jpeg,
       );
 
       // 2.4. Кладём в стейт, чтобы виджеты перерисовались
       if (mounted) {
         setState(() {
-          _images[index] = compressed;
+          _images[index] = compressed ?? xfile;
           _originalImages[index] = xfile;
         });
       }
@@ -510,7 +516,7 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
           for (var i = 0; i < 4; i++) {
             // 0,1,2,3
             final key = 'img${i + 1}'; // img1,img2,img3,img4
-            _pickImageFromDB(i, ad[key] as String?); // передаём 0-й индекс
+            _pickImageFromDB(i, ad[key]); // передаём 0-й индекс
           }
 
           print('xxxz');
@@ -1033,6 +1039,8 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
               margin: const EdgeInsets.only(top: 10.0),
               child: TextFormField(
                 controller: _cenakmController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalTextInputFormatter()],
                 decoration: const InputDecoration(
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(5.0)),
@@ -1124,8 +1132,11 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl> {
             ),
             Container(
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: List.generate(4, (index) => _imageSlot(index)),
                 ),
               ),

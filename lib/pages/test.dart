@@ -74,16 +74,16 @@ class _HistortScreenState extends State<HistortScreen> {
 
         setState(() {
           userId = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city = data['city'];
-          phone = data['phone'];
-          email = data['email'];
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
-          orderid = data['order_id'];
-          orderuserid = data['user_id'];
+          orderid = data['order_id']?.toString() ?? '';
+          orderuserid = data['user_id']?.toString() ?? '';
         });
         print('object');
         print(orderid);
@@ -172,19 +172,24 @@ class _HistortScreenState extends State<HistortScreen> {
 }
 
 Widget buildProfilePage(String pageProfile, {required String orderId}) {
+  print('[HistortScreen/test] pageProfile: $pageProfile');
   switch (pageProfile) {
     case 'zprofil_ld':
       return const zprofil_ld();
     case 'Ads1App':
-      return const Ads1App();
+      return const Ads1Page();
     case 'zprofil_zayavki':
       return const zprofil_zayavki(nameImg: '', base: 1);
     case 'hist':
       return history_isp(nameImg: orderId, bd: 1);
     case 'izbrannoe':
-      return outputobzlikes1(nameImg: '', base: 1);
+      return const Outputobzlikes1Page(nameImg: '', base: 1);
+    case 'outputobzlikes':
+      return const Outputobzlikes1Page(nameImg: '', base: 1);
     case 'Subscription':
       return const SubscriptionScreen();
+    case 'profileMain':
+      return const zprofil_name2();
     default:
       return const SizedBox.shrink();
   }
