@@ -10,6 +10,8 @@
 	<string>Crgtransp72app</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -30,6 +32,12 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Нам нужен доступ к камере, чтобы сделать фотографию профиля, документов, техники.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Нам нужен доступ к медиатеке для сохранения и обработки выбранных изображений.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Нам нужен доступ к вашей медиатеке, чтобы вы могли выбрать фотографию для загрузки.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -53,15 +61,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-<!-- Чтение/выбор фото -->
-	<key>NSPhotoLibraryUsageDescription</key>
-		<string>Нам нужен доступ к вашей медиатеке, чтобы вы могли выбрать фотографию для загрузки.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>Нам нужен доступ к медиатеке для сохранения и обработки выбранных изображений.</string>
-	<key>NSCameraUsageDescription</key>
-		<string>Нам нужен доступ к камере, чтобы сделать фотографию профиля, документов, техники.</string>
 </dict>
-
 </plist>

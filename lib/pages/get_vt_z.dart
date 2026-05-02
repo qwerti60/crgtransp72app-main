@@ -22,7 +22,7 @@ class MyAppI1z extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Объявления',
+            'Техника',
             style: TextStyle(
               color: whiteprColor,
             ),
@@ -43,6 +43,38 @@ class MyAppI1z extends StatelessWidget {
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
         bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
       ),
+    );
+  }
+}
+
+// Use this widget when the screen is opened inside another shell
+// that already has BottomNavigationBar.
+class MyAppI1zPage extends StatelessWidget {
+  const MyAppI1zPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Техника',
+          style: TextStyle(
+            color: whiteprColor,
+          ),
+        ),
+        backgroundColor: blueaccentColor,
+      ),
+      body: const MyImageGrid(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => const changerol()));
+          print('Нажата плавающая кнопка');
+        },
+        backgroundColor: blueaccentColor,
+        child: const Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 }

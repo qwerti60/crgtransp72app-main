@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
+import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/SendReviewForm.dart';
 import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
@@ -11,6 +12,7 @@ import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
+import 'package:crgtransp72app/pages/zakaz_screen1.dart' as customer_home;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -50,6 +52,30 @@ class _HistortScreenState extends State<HistortScreen1z> {
   ];
 
   void _selectTab(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const customer_home.MyApp()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+    if (index == 1 &&
+        hasActiveOrder &&
+        activeOrderUserId.isNotEmpty &&
+        activeOrderId.isNotEmpty) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderExecutionScreenzak(
+            userId: activeOrderUserId,
+            orderId: activeOrderId,
+          ),
+        ),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
     setState(() {
       _currentIndex = index;
       _pages[index] ??= _builders[index]();
@@ -57,6 +83,8 @@ class _HistortScreenState extends State<HistortScreen1z> {
   }
 
   bool hasActiveOrder = false; // Переменная для отслеживания активности заказа
+  String activeOrderUserId = '';
+  String activeOrderId = '';
 
   Future<void> getUserData() async {
     try {
@@ -99,7 +127,7 @@ class _HistortScreenState extends State<HistortScreen1z> {
 
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
-        'https://ivnovav.ru/api/check_order_status1.php?userIdok=$userIdok');
+        '${Config.baseUrl}/api/check_order_statusisp.php?userIdok=$userIdok');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -138,6 +166,13 @@ class _HistortScreenState extends State<HistortScreen1z> {
 
         final orderInfo = snapshot.data!;
         hasActiveOrder = orderInfo['result'] == true;
+        activeOrderUserId = orderInfo['user_id']?.toString() ?? '';
+        activeOrderId = orderInfo['order_id']?.toString() ?? '';
+        if (widget.pageProfile == 'SendReviewForm') {
+          hasActiveOrder = true;
+          activeOrderUserId = widget.userId1;
+          activeOrderId = widget.orderId;
+        }
 
         return Scaffold(
           body: _currentIndex == null
@@ -151,7 +186,7 @@ class _HistortScreenState extends State<HistortScreen1z> {
             items: [
               const BottomNavigationBarItem(
                 icon: Icon(Icons.fire_truck),
-                label: 'Объявления',
+                label: 'Услуги',
               ),
               BottomNavigationBarItem(
                 icon: Icon(
@@ -207,6 +242,7 @@ Widget buildProfilePage(String pageProfile, userId1, orderId123, String uidok) {
       return OrderExecutionScreen(
         userId: uid.toString(), // Передаем userId
         orderId: oid ?? '', // Передаем orderId
+        showBottomNav: false,
       );
 */
     case 'SendReviewForm':
@@ -219,6 +255,7 @@ Widget buildProfilePage(String pageProfile, userId1, orderId123, String uidok) {
       return outputobz(
         nameImg: uid,
         city: oid,
+        showBottomNav: false,
       );
     case 'list_predloj_na_obj_isp':
       return list_predloj_na_obj_isp(

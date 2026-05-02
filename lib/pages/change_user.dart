@@ -32,6 +32,8 @@ Future<bool?> checkSubscription(int userId) async {
 
 void navigateIfNeeded(BuildContext context, int userId) async {
   final subscriptionStatus = await checkSubscription(userId);
+  if (!context.mounted) return;
+
   if (subscriptionStatus == true) {
     Navigator.pushAndRemoveUntil(
       context,

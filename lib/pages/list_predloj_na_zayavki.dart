@@ -4,7 +4,7 @@ import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
-import 'package:crgtransp72app/pages/review_screenz.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'like_helper.dart';
 
 import 'changerol_page.dart';
 import 'sendNotification.dart';
@@ -87,6 +88,23 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int userId = 0;
+  final Map<String, bool> _likedOverrides = {};
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  bool _likedForTruck(Map truck) {
+    final String key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
+
   Future<void> getUserData() async {
     final token = await getSecurefcm_token(); // Await the secure token
     if (token == null) {
@@ -149,11 +167,12 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_predloj_na_obj_isp.php',
+        path: '/api/list_predloj_na_zayavki_new.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
           'nameImg': nameImg,
+          'debug': '1',
           'bd': bd
               .toString(), // Добавляем переменную bd как строку в параметры запроса
         },
@@ -165,7 +184,20 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       try {
         final parsed = json.decode(response.body);
-        return parsed;
+        if (parsed is List) {
+          return parsed;
+        }
+        if (parsed is Map<String, dynamic>) {
+          final debug = parsed['debug'];
+          if (debug != null) {
+            print('[list_predloj_na_zayavki][debug] $debug');
+          }
+          final data = parsed['data'];
+          if (data is List) {
+            return data;
+          }
+        }
+        throw Exception('Неожиданный формат ответа');
 
         //getUserDataAds(idusers1);
       } catch (e) {
@@ -315,521 +347,439 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
 
                 if (snapshot.hasData) {
-                  return ListView.builder(
-                      itemCount: snapshot.data?.length,
-                      itemBuilder: (context, index) {
-                        var truck = snapshot.data![index];
-                        if (truck == null)
-                          Text(
-                            'В этом разделе нет объявлений',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          );
-                        List<Uint8List> images = [];
+                  final items = (snapshot.data as List).cast<dynamic>();
+                  print(
+                      '[list_predloj_na_zayavki] Найдено предложений: ${items.length}');
+                  if (items.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'В этом разделе нет предложений',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  }
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                            itemCount: items.length,
+                            itemBuilder: (context, index) {
+                              var truck = items[index];
+                              if (truck is! Map) {
+                                return const SizedBox.shrink();
+                              }
+                              if (truck == null)
+                                Text(
+                                  'В этом разделе нет объявлений',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                );
+                              List<Uint8List> images = [];
 
-                        // Добавляем изображения в список images, только если они не null
-                        for (var imgKey in ['img1', 'img2', 'img3', 'img4']) {
+                              // Добавляем изображения в список images, только если они не null
+                              for (var imgKey in [
+                                'img1',
+                                'img2',
+                                'img3',
+                                'img4'
+                              ]) {
 // В цикле forEach
-                          if (truck[imgKey] != null) {
-                            String base64String =
-                                truck[imgKey]; // Получаем строку base64
-                            Uint8List bytes = base64Decode(
-                                base64String); // Декодируем строку в список байтов
-                            images.add(
-                                bytes); // Добавляем полученный список байтов в список изображений
-                          }
-                        }
-                        String base64Stringf = '';
-                        Uint8List? truckImage;
-                        bool isLiked = false; // Состояние кнопки like
-                        // Проверяем существует ли изображение fotouser
-                        if (truck['fotouser'] != null) {
-                          base64Stringf =
-                              truck['fotouser']; // Получаем строку base64
-                          truckImage = base64Decode(
-                              base64Stringf); // Декодируем строку в список байтов
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment
-                              .stretch, // Для выравнивания содержимого в начале
+                                if (truck[imgKey] != null) {
+                                  String base64String =
+                                      truck[imgKey]; // Получаем строку base64
+                                  Uint8List bytes = base64Decode(
+                                      base64String); // Декодируем строку в список байтов
+                                  images.add(
+                                      bytes); // Добавляем полученный список байтов в список изображений
+                                }
+                              }
+                              String base64Stringf = '';
+                              Uint8List? truckImage;
+                              // Проверяем существует ли изображение fotouser
+                              if (truck['fotouser'] != null) {
+                                base64Stringf =
+                                    truck['fotouser']; // Получаем строку base64
+                                try {
+                                  truckImage = base64Decode(base64Stringf);
+                                } catch (_) {
+                                  truckImage = null;
+                                }
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .stretch, // Для выравнивания содержимого в начале
 
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.only(
-                                top: 10, // Отступ сверху
-                                bottom: 10, // Отступ снизу
-                              ),
-                              child: SizedBox(
-                                width: 100,
-                                height: 100,
-                                child: base64Stringf != ''
-                                    ? Image.memory(
-                                        truckImage!,
-                                        //truckImage=null;
-                                        //fit: BoxFit.cover,
-                                      )
-                                    : Image.asset(
-                                        'assets/images/fotouser.png', // Путь к вашему изображению
-                                        width: 100, // Ширина 100
-                                        height: 100, // Высота 100
-                                      ), //ндартное изображение
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          truck['success'] == 'true'
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color: truck['success'] == 'true'
-                                              ? Colors.red
-                                              : Colors.grey,
-                                        ),
-                                        onPressed: () async {
-                                          await toggleLike(
-                                              truck['iduser'].toString(),
-                                              truck['id'].toString(),
-                                              widget.bd);
-                                          setState(() {});
-                                        },
-                                      ),
-                                      if (truck['firstName'] != null)
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                  Container(
+                                    margin: const EdgeInsets.only(
+                                      top: 10, // Отступ сверху
+                                      bottom: 10, // Отступ снизу
+                                    ),
+                                    child: SizedBox(
+                                      width: 100,
+                                      height: 100,
+                                      child: (base64Stringf != '' &&
+                                              truckImage != null)
+                                          ? Image.memory(
+                                              truckImage,
+                                              //truckImage=null;
+                                              //fit: BoxFit.cover,
+                                            )
+                                          : Image.asset(
+                                              'assets/images/fotouser.png', // Путь к вашему изображению
+                                              width: 100, // Ширина 100
+                                              height: 100, // Высота 100
+                                            ), //ндартное изображение
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
-                                            Text(
-                                              '${truck['firstName']} ${truck['lastName']}',
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
+                                            IconButton(
+                                              icon: Icon(
+                                                _likedForTruck(truck)
+                                                    ? Icons.favorite
+                                                    : Icons.favorite_border,
+                                                color: _likedForTruck(truck)
+                                                    ? Colors.red
+                                                    : Colors.grey,
+                                              ),
+                                              onPressed: () async {
+                                                if (userId <= 0) return;
+                                                final String key =
+                                                    (truck['id'] ?? '')
+                                                        .toString();
+                                                final dynamic ownerId =
+                                                    truck['iduser'] ??
+                                                        truck['idusers'] ??
+                                                        truck['iduserp'];
+                                                if (ownerId == null) return;
+
+                                                final bool currentLiked =
+                                                    _likedForTruck(truck);
+                                                setState(() {
+                                                  _likedOverrides[key] =
+                                                      !currentLiked;
+                                                });
+
+                                                final bool updated =
+                                                    await toggleLike(
+                                                  ownerId,
+                                                  truck['id'],
+                                                  widget.bd,
+                                                );
+                                                if (!mounted) return;
+                                                setState(() {});
+                                                setState(() {
+                                                  _likedOverrides[key] =
+                                                      updated;
+                                                });
+                                              },
                                             ),
-                                            Row(
-                                              children: [
-                                                Row(
-                                                  children:
-                                                      List.generate(5, (index) {
-                                                    return Icon(
-                                                      index <
-                                                              (truck['rating'] ??
-                                                                  0)
-                                                          ? Icons.star
-                                                          : Icons.star_border,
-                                                      color: Colors.amber,
-                                                      size: 16,
-                                                    );
-                                                  }),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${truck['rating'] ?? 0.0}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
+                                            if (truck['firstName'] != null)
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '${truck['firstName']} ${truck['lastName']}',
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            ReviewScreenz(
-                                                          userId: truck['iduserp']
-                                                              .toString(),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Row(
+                                                  Row(
                                                     children: [
-                                                      const Icon(
-                                                        Icons.comment_outlined,
-                                                        size: 16,
-                                                        color: Colors.grey,
+                                                      Row(
+                                                        children: List.generate(
+                                                            5, (index) {
+                                                          return Icon(
+                                                            index <
+                                                                    (truck['rating'] ??
+                                                                        0)
+                                                                ? Icons.star
+                                                                : Icons
+                                                                    .star_border,
+                                                            color: Colors.amber,
+                                                            size: 16,
+                                                          );
+                                                        }),
                                                       ),
-                                                      const SizedBox(width: 2),
+                                                      const SizedBox(width: 4),
                                                       Text(
-                                                        '${truck['reviewsCount'] ?? 0}',
+                                                        '${truck['rating'] ?? 0.0}',
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                           color: Colors.grey,
                                                         ),
                                                       ),
+                                                      const SizedBox(width: 8),
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  ReviewScreen(
+                                                                userId: truck[
+                                                                        'iduserp']
+                                                                    .toString(),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        child: Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons
+                                                                  .comment_outlined,
+                                                              size: 16,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 2),
+                                                            Text(
+                                                              '${truck['reviewsCount'] ?? 0}',
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontSize: 14,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
                                                     ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
+                                                ],
+                                              ),
                                           ],
                                         ),
-                                    ],
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      _makePhoneCall(truck['phone']);
-                                    },
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.phone),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            '${truck['phone']}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            _makePhoneCall(
+                                                (truck['phone'] ?? '')
+                                                    .toString());
+                                          },
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.phone),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${truck['phone'] ?? ''}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
+                                        )
                                       ],
                                     ),
-                                  )
-                                ],
-                              ),
-                            ),
-                            if (images
-                                .isNotEmpty) // Условие проверки наличия изображений
-                              CarouselSlider.builder(
-                                itemCount: images.length,
-                                itemBuilder: (BuildContext context,
-                                        int itemIndex, int pageViewIndex) =>
-                                    SizedBox(
-                                  width: MediaQuery.of(context)
-                                      .size
-                                      .width, // Задаем ширину равную ширине экрана
-                                  child: Image.memory(
-                                    images[itemIndex],
-                                    fit: BoxFit
-                                        .cover, // Измените здесь на BoxFit.fill, если хотите, чтобы картинка растягивалась без сохранения пропорций
                                   ),
-                                ),
-                                options: CarouselOptions(
-                                  autoPlay: true,
-                                  enlargeCenterPage: true,
-                                  viewportFraction:
-                                      1.0, // Уже установлено, позволяет заполнить всю доступную ширину
-                                  aspectRatio:
-                                      2.0, // Можно адаптировать в зависимости от желаемых пропорций
-                                ),
-                              ),
-                            if (truck['namefirm'] == null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('Частное лицо',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (truck['namefirm'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Компания:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['namefirm']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (truck['innStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('ИНН:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['innStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (truck['ogrnStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('ОГРН:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['ogrnStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (truck['kppStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('КПП:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['kppStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Город:',
-                                      style:
-                                          DefaultTextStyle.of(context).style),
-                                  Text('${truck['city']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                            if (truck['cena'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Прелагаемая стоимость:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['cena']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (truck['about'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Предлагаю:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['about']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20.0),
-                              margin: const EdgeInsets.only(top: 20.0),
-                              child: FutureBuilder<bool>(
-                                future: checkIsp(
-                                    widget.nameImg,
-                                    widget.bd,
-                                    truck[
-                                        'iduserp']), // Функция проверки наличия оферты
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const SizedBox(
-                                        height: 50,
-                                        child: Center(
-                                            child:
-                                                CircularProgressIndicator()));
-                                  }
-
-                                  final bool hasOffer = snapshot.data ?? false;
-
-                                  Widget buttonWidget = SizedBox(
-                                    width: double
-                                        .infinity, // Кнопка растянута на всю доступную ширину
-                                    child: TextButton(
-                                      style: TextButton.styleFrom(
-                                        fixedSize:
-                                            const Size(double.infinity, 50),
-                                        foregroundColor: whiteprColor,
-                                        backgroundColor: blueaccentColor,
-                                        disabledForegroundColor: grayprprColor,
-                                        shape: const BeveledRectangleBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(3))),
+                                  if (images
+                                      .isNotEmpty) // Условие проверки наличия изображений
+                                    CarouselSlider.builder(
+                                      itemCount: images.length,
+                                      itemBuilder: (BuildContext context,
+                                              int itemIndex,
+                                              int pageViewIndex) =>
+                                          SizedBox(
+                                        width: MediaQuery.of(context)
+                                            .size
+                                            .width, // Задаем ширину равную ширине экрана
+                                        child: Image.memory(
+                                          images[itemIndex],
+                                          fit: BoxFit
+                                              .cover, // Измените здесь на BoxFit.fill, если хотите, чтобы картинка растягивалась без сохранения пропорций
+                                        ),
                                       ),
-                                      onPressed: () async {
-                                        if (hasOffer) {
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString(),
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded', // явно указываем тип данных
-                                              },
-                                            );
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                            debugPrint(
-                                                'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                            if (response.statusCode == 200) {
-                                              final Map data =
-                                                  jsonDecode(response.body)
-                                                      as Map;
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    //'', // первый позиционный параметр data
-                                                    deviceToken: data[
-                                                        'fcm_token'], // обязательный именованный параметр
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'Исполнитель откакзался от предложения!',
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e, s) {
-                                            debugPrint(
-                                                'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                            _showSnack(context, 'Ошибка: $e');
-                                          }
-                                        } else {
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString(),
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded', // явно указываем тип данных
-                                              },
-                                            );
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                            debugPrint(
-                                                'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                            if (response.statusCode == 200) {
-                                              final Map data =
-                                                  jsonDecode(response.body)
-                                                      as Map;
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    //'', // первый позиционный параметр data
-                                                    deviceToken: data[
-                                                        'fcm_token'], // обязательный именованный параметр
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'Ваш зкакз принят исполнителем!',
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e, s) {
-                                            debugPrint(
-                                                'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                            _showSnack(context, 'Ошибка: $e');
-                                          }
-                                        }
-                                      },
-                                      child: Text(hasOffer
-                                          ? 'Отказаться от предложения'
-                                          : 'Принять предложение'),
+                                      options: CarouselOptions(
+                                        autoPlay: true,
+                                        enlargeCenterPage: true,
+                                        viewportFraction:
+                                            1.0, // Уже установлено, позволяет заполнить всю доступную ширину
+                                        aspectRatio:
+                                            2.0, // Можно адаптировать в зависимости от желаемых пропорций
+                                      ),
                                     ),
-                                  );
+                                  if (truck['namefirm'] == null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('Частное лицо',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  if (truck['namefirm'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Компания:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['namefirm']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  if (truck['innStr'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('ИНН:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['innStr']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  if (truck['ogrnStr'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('ОГРН:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['ogrnStr']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  if (truck['kppStr'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('КПП:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['kppStr']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Город:',
+                                            style: DefaultTextStyle.of(context)
+                                                .style),
+                                        Text('${truck['city']}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                  if (truck['cena'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Прелагаемая стоимость:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['cena']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  if (truck['about'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Предлагаю:',
+                                              style:
+                                                  DefaultTextStyle.of(context)
+                                                      .style),
+                                          Text('${truck['about']}',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20.0),
+                                    margin: const EdgeInsets.only(top: 20.0),
+                                    child: FutureBuilder<bool>(
+                                      future: checkIsp(
+                                          widget.nameImg,
+                                          widget.bd,
+                                          truck[
+                                              'iduserp']), // Функция проверки наличия оферты
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const SizedBox(
+                                              height: 50,
+                                              child: Center(
+                                                  child:
+                                                      CircularProgressIndicator()));
+                                        }
 
-                                  if (hasOffer) {
-                                    buttonWidget = Column(children: [
-                                      buttonWidget,
-                                      Container(
-                                        margin:
-                                            const EdgeInsets.only(top: 20.0),
-                                        child: SizedBox(
+                                        final bool hasOffer =
+                                            snapshot.data ?? false;
+
+                                        Widget buttonWidget = SizedBox(
                                           width: double
-                                              .infinity, // Вторая кнопка также имеет полную ширину
+                                              .infinity, // Кнопка растянута на всю доступную ширину
                                           child: TextButton(
                                             style: TextButton.styleFrom(
                                               fixedSize: const Size(
@@ -845,107 +795,274 @@ class _MyHomePageState extends State<MyHomePage> {
                                                               Radius.circular(
                                                                   3))),
                                             ),
-
                                             onPressed: () async {
-                                              debugPrint(
-                                                  'Нажали на кнопку'); // 1. Проверяем вызов
+                                              if (hasOffer) {
+                                                await updateOffer(
+                                                    widget.bd,
+                                                    widget.nameImg,
+                                                    userId,
+                                                    truck['iduserp']);
+                                                try {
+                                                  final response =
+                                                      await http.post(
+                                                    Uri.parse(
+                                                        '${Config.baseUrl}/api/notification.php'),
+                                                    body: {
+                                                      'iduserp':
+                                                          truck['iduserp']
+                                                              .toString(),
+                                                    },
+                                                    headers: {
+                                                      'Content-Type':
+                                                          'application/x-www-form-urlencoded', // явно указываем тип данных
+                                                    },
+                                                  );
+                                                  print(truck['iduserp']);
+                                                  debugPrint(
+                                                      'Status: ${response.statusCode}'); // 2. Лог кода ответа
+                                                  debugPrint(
+                                                      'Body : ${response.body}'); // 3. Лог тела ответа
 
-                                              try {
-                                                final response =
-                                                    await http.post(
-                                                  Uri.parse(
-                                                      '${Config.baseUrl}/api/notification.php'),
-                                                  body: {
-                                                    'iduserp': truck['iduserp']
-                                                        .toString()
-                                                  },
-                                                  headers: {
-                                                    'Content-Type':
-                                                        'application/x-www-form-urlencoded'
-                                                  },
-                                                );
-
-                                                print(truck['iduserp']);
-                                                debugPrint(
-                                                    'Status: ${response.statusCode}'); // 2. Лог кода ответа
-                                                debugPrint(
-                                                    'Body : ${response.body}'); // 3. Лог тела ответа
-
-                                                if (response.statusCode ==
-                                                    200) {
-                                                  final Map<String, dynamic>
-                                                      data =
-                                                      jsonDecode(response.body);
-
-                                                  if (data['fcm_token'] !=
-                                                      null) {
-                                                    // Отправляем уведомление, если токен есть
-                                                    try {
-                                                      await sendNotificationV1(
-                                                        deviceToken:
-                                                            data['fcm_token'],
-                                                        title:
-                                                            'Привет от crgtransp72app!',
-                                                        body:
-                                                            'Ваш заказ начали выполнять!',
-                                                      );
-                                                      print(
-                                                          'Уведомление отправлено');
-                                                    } catch (e) {
-                                                      print(
-                                                          'Ошибка при отправке уведомления: $e');
+                                                  if (response.statusCode ==
+                                                      200) {
+                                                    final Map data = jsonDecode(
+                                                        response.body) as Map;
+                                                    if (data['fcm_token'] !=
+                                                        null) {
+                                                      try {
+                                                        await sendNotificationV1(
+                                                          //'', // первый позиционный параметр data
+                                                          deviceToken: data[
+                                                              'fcm_token'], // обязательный именованный параметр
+                                                          title:
+                                                              'Привет от crgtransp72app!',
+                                                          body:
+                                                              'Исполнитель откакзался от предложения!',
+                                                        );
+                                                        print(
+                                                            'Уведомление отправлено');
+                                                      } catch (e) {
+                                                        print(
+                                                            'Ошибка при отправке: $e');
+                                                      }
+                                                    } else {
+                                                      _showSnack(context,
+                                                          'Токен не найден в ответе');
                                                     }
                                                   } else {
                                                     _showSnack(context,
-                                                        'Токен не найден в ответе');
+                                                        'Сервер вернул: ${response.statusCode}');
                                                   }
-                                                } else {
-                                                  _showSnack(context,
-                                                      'Сервер вернул: ${response.statusCode}');
+                                                } catch (e, s) {
+                                                  debugPrint(
+                                                      'Ошибка сети: $e\n$s'); // 4. Ловим исключения
+                                                  _showSnack(
+                                                      context, 'Ошибка: $e');
                                                 }
+                                              } else {
+                                                await updateOffer(
+                                                    widget.bd,
+                                                    widget.nameImg,
+                                                    userId,
+                                                    truck['iduserp']);
 
-                                                // Переход выполняем вне зависимости от наличия токена
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          //HistortScreen(
-                                                          OrderExecutionScreen(
-                                                            //pageProfile:
-                                                            //  'OrderExecutionScreen',
-                                                            userId:
-                                                                truck['iduserp']
-                                                                    .toString(),
-                                                            orderId: widget
-                                                                    .nameImg ??
-                                                                '', // Обеспечиваем значение по умолчанию
-                                                          )),
-                                                );
-                                                print(
-                                                    'userIdiii111 : ${truck['iduserp'].toString()}');
-                                                print(
-                                                    'orderIdiii111  : ${widget.nameImg}');
-                                              } catch (e, s) {
-                                                debugPrint(
-                                                    'Ошибка сети: $e\n$s'); // 4. Ловим исключения
-                                                _showSnack(
-                                                    context, 'Ошибка: $e');
+                                                try {
+                                                  final response =
+                                                      await http.post(
+                                                    Uri.parse(
+                                                        '${Config.baseUrl}/api/notification.php'),
+                                                    body: {
+                                                      'iduserp':
+                                                          truck['iduserp']
+                                                              .toString(),
+                                                    },
+                                                    headers: {
+                                                      'Content-Type':
+                                                          'application/x-www-form-urlencoded', // явно указываем тип данных
+                                                    },
+                                                  );
+                                                  print(truck['iduserp']);
+                                                  debugPrint(
+                                                      'Status: ${response.statusCode}'); // 2. Лог кода ответа
+                                                  debugPrint(
+                                                      'Body : ${response.body}'); // 3. Лог тела ответа
+
+                                                  if (response.statusCode ==
+                                                      200) {
+                                                    final Map data = jsonDecode(
+                                                        response.body) as Map;
+                                                    if (data['fcm_token'] !=
+                                                        null) {
+                                                      try {
+                                                        await sendNotificationV1(
+                                                          //'', // первый позиционный параметр data
+                                                          deviceToken: data[
+                                                              'fcm_token'], // обязательный именованный параметр
+                                                          title:
+                                                              'Привет от crgtransp72app!',
+                                                          body:
+                                                              'Ваш зкакз принят исполнителем!',
+                                                        );
+                                                        print(
+                                                            'Уведомление отправлено');
+                                                      } catch (e) {
+                                                        print(
+                                                            'Ошибка при отправке: $e');
+                                                      }
+                                                    } else {
+                                                      _showSnack(context,
+                                                          'Токен не найден в ответе');
+                                                    }
+                                                  } else {
+                                                    _showSnack(context,
+                                                        'Сервер вернул: ${response.statusCode}');
+                                                  }
+                                                } catch (e, s) {
+                                                  debugPrint(
+                                                      'Ошибка сети: $e\n$s'); // 4. Ловим исключения
+                                                  _showSnack(
+                                                      context, 'Ошибка: $e');
+                                                }
                                               }
-                                            }, // ───────────────────────────────────────────────────────── child
-                                            child:
-                                                const Text('Начать выполнение'),
+                                            },
+                                            child: Text(hasOffer
+                                                ? 'Отказаться от предложения'
+                                                : 'Принять предложение'),
                                           ),
-                                        ),
-                                      ),
-                                    ]);
-                                  }
+                                        );
 
-                                  return buttonWidget;
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      });
+                                        if (hasOffer) {
+                                          buttonWidget = Column(children: [
+                                            buttonWidget,
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                  top: 20.0),
+                                              child: SizedBox(
+                                                width: double
+                                                    .infinity, // Вторая кнопка также имеет полную ширину
+                                                child: TextButton(
+                                                  style: TextButton.styleFrom(
+                                                    fixedSize: const Size(
+                                                        double.infinity, 50),
+                                                    foregroundColor:
+                                                        whiteprColor,
+                                                    backgroundColor:
+                                                        blueaccentColor,
+                                                    disabledForegroundColor:
+                                                        grayprprColor,
+                                                    shape: const BeveledRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.all(
+                                                                Radius.circular(
+                                                                    3))),
+                                                  ),
+
+                                                  onPressed: () async {
+                                                    debugPrint(
+                                                        'Нажали на кнопку'); // 1. Проверяем вызов
+
+                                                    try {
+                                                      final response =
+                                                          await http.post(
+                                                        Uri.parse(
+                                                            '${Config.baseUrl}/api/notification.php'),
+                                                        body: {
+                                                          'iduserp':
+                                                              truck['iduserp']
+                                                                  .toString()
+                                                        },
+                                                        headers: {
+                                                          'Content-Type':
+                                                              'application/x-www-form-urlencoded'
+                                                        },
+                                                      );
+
+                                                      print(truck['iduserp']);
+                                                      debugPrint(
+                                                          'Status: ${response.statusCode}'); // 2. Лог кода ответа
+                                                      debugPrint(
+                                                          'Body : ${response.body}'); // 3. Лог тела ответа
+
+                                                      if (response.statusCode ==
+                                                          200) {
+                                                        final Map<String,
+                                                                dynamic> data =
+                                                            jsonDecode(
+                                                                response.body);
+
+                                                        if (data['fcm_token'] !=
+                                                            null) {
+                                                          // Отправляем уведомление, если токен есть
+                                                          try {
+                                                            await sendNotificationV1(
+                                                              deviceToken: data[
+                                                                  'fcm_token'],
+                                                              title:
+                                                                  'Привет от crgtransp72app!',
+                                                              body:
+                                                                  'Ваш заказ начали выполнять!',
+                                                            );
+                                                            print(
+                                                                'Уведомление отправлено');
+                                                          } catch (e) {
+                                                            print(
+                                                                'Ошибка при отправке уведомления: $e');
+                                                          }
+                                                        } else {
+                                                          _showSnack(context,
+                                                              'Токен не найден в ответе');
+                                                        }
+                                                      } else {
+                                                        _showSnack(context,
+                                                            'Сервер вернул: ${response.statusCode}');
+                                                      }
+
+                                                      // Переход выполняем вне зависимости от наличия токена
+                                                      Navigator.of(context)
+                                                          .push(
+                                                        MaterialPageRoute(
+                                                            builder: (_) =>
+                                                                //HistortScreen(
+                                                                OrderExecutionScreen(
+                                                                  //pageProfile:
+                                                                  //  'OrderExecutionScreen',
+                                                                  userId: truck[
+                                                                          'iduserp']
+                                                                      .toString(),
+                                                                  orderId: widget
+                                                                          .nameImg ??
+                                                                      '', // Обеспечиваем значение по умолчанию
+                                                                )),
+                                                      );
+                                                      print(
+                                                          'userIdiii111 : ${truck['iduserp'].toString()}');
+                                                      print(
+                                                          'orderIdiii111  : ${widget.nameImg}');
+                                                    } catch (e, s) {
+                                                      debugPrint(
+                                                          'Ошибка сети: $e\n$s'); // 4. Ловим исключения
+                                                      _showSnack(context,
+                                                          'Ошибка: $e');
+                                                    }
+                                                  }, // ───────────────────────────────────────────────────────── child
+                                                  child: const Text(
+                                                      'Начать выполнение'),
+                                                ),
+                                              ),
+                                            ),
+                                          ]);
+                                        }
+
+                                        return buttonWidget;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                      ),
+                    ],
+                  );
                 } else if (snapshot.hasError) {
                   return Text("${snapshot.error}");
                 }
@@ -959,45 +1076,14 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  bool isLiked = false;
   Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final response = await http.get(
-      Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like1.php',
-        queryParameters: {
-          'usersid': userId.toString(),
-          'idusers': idUser,
-          'id': id,
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
-        },
-      ),
+    return toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: true,
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print('7777');
-        print(userId);
-        return isLiked;
-
-        //
-        getUserDataAds(userId);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {

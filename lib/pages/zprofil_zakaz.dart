@@ -4,7 +4,7 @@ import 'package:crgtransp72app/pages/OfferScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/review_screenz.dart';
+import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -154,6 +154,22 @@ class _MyHomePageState extends State<MyHomePage> {
 //bool? isLiked = false;
 
   bool isLiked = false;
+  final Map<String, bool> _likedOverrides = {};
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  bool _likedForTruck(Map truck) {
+    final String key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
 
   Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
     isLiked = await toggleLikeRequest(
@@ -169,12 +185,13 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg, int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/getofferuserz.php',
+        path: '/api/getofferuserz_new.php',
         queryParameters: {
           'nameImg': nameImg,
           'bd': bd.toString(), // Преобразуем в строку
-          'useId':
-              userId.toString() // Преобразуем в строку, если userId это число
+          // Поддержка обоих вариантов параметра на бэкенде.
+          'useId': userId.toString(),
+          'usersid': userId.toString(),
         },
       ),
     );
@@ -370,17 +387,53 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         IconButton(
                                           icon: Icon(
-                                            truck['success'] == 'true'
+                                            _likedForTruck(truck)
                                                 ? Icons.favorite
                                                 : Icons.favorite_border,
-                                            color: truck['success'] == 'true'
+                                            color: _likedForTruck(truck)
                                                 ? Colors.red
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(truck['iduser'],
-                                                truck['id'], bd!);
-                                            setState(() {});
+                                            if (userId <= 0) {
+                                              if (!mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Не удалось определить пользователя. Перезайдите в аккаунт.',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
+                                            final String key =
+                                                (truck['id'] ?? '').toString();
+                                            final dynamic ownerId =
+                                                truck['iduser'] ??
+                                                    truck['idusers'] ??
+                                                    truck['iduserp'];
+                                            if (ownerId == null) return;
+
+                                            final bool currentLiked =
+                                                _likedForTruck(truck);
+                                            setState(() {
+                                              _likedOverrides[key] =
+                                                  !currentLiked;
+                                            });
+
+                                            final bool updated =
+                                                await toggleLike(
+                                              ownerId,
+                                              truck['id'],
+                                              bd!,
+                                            );
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _likedOverrides[key] = updated;
+                                            });
                                           },
                                         ),
                                         if (truck['firstName'] != null)
@@ -425,10 +478,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         context,
                                                         MaterialPageRoute(
                                                           builder: (context) =>
-                                                              ReviewScreenz(
-                                                            userId: truck[
-                                                                    'iduser']
-                                                                .toString(),
+                                                              ReviewScreen(
+                                                            userId:
+                                                                truck['iduser']
+                                                                    .toString(),
                                                           ),
                                                         ),
                                                       );

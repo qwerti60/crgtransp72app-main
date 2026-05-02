@@ -16,9 +16,13 @@ import 'package:crgtransp72app/design/colors.dart';
 class OrderExecutionScreen extends StatefulWidget {
   final String userId;
   final String orderId;
+  final bool showBottomNav;
 
   const OrderExecutionScreen(
-      {Key? key, required this.userId, required this.orderId})
+      {Key? key,
+      required this.userId,
+      required this.orderId,
+      this.showBottomNav = true})
       : super(key: key);
 
   @override
@@ -57,7 +61,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
-          userIdok = data['idusers'];
+          userIdok = data['idusers']?.toString() ?? '';
         });
         print('вывод idiok: $userIdok');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -331,6 +335,38 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _onBottomNavTap(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => hist.HistortScreen(pageProfile: 'Ads1App'),
+        ),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    if (index == 1) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
+        ),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => hist.HistortScreen(pageProfile: 'profileMain'),
+      ),
+      (Route<dynamic> route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -385,9 +421,13 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                               onPressed: () {
                                 final parsedUserIdOk = int.tryParse(widget
                                     .orderId); // Пробуем преобразовать строку в int
+                                final currentUserId = userIdok.isNotEmpty
+                                    ? userIdok
+                                    : userId.toString();
                                 print(
-                                    'Current User ID: ${widget.userId.toString()}'); //141
-                                print('Target User ID: $userId'); //140
+                                    'Current User ID: $currentUserId'); // текущий пользователь
+                                print(
+                                    'Target User ID: ${widget.userId}'); // заказчик
                                 print(
                                     'Parsed User ID Ok: $parsedUserIdOk'); //106
 
@@ -397,8 +437,8 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                                     MaterialPageRoute(
                                       builder: (_) => HistortScreen1(
                                           pageProfile: 'SendReviewForm',
-                                          userId1: widget.userId.toString(),
-                                          orderId: userId.toString(),
+                                          userId1: currentUserId,
+                                          orderId: widget.userId.toString(),
                                           parsedUserIdOk:
                                               parsedUserIdOk.toString()),
                                     ),
@@ -468,6 +508,27 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                 ],
               ),
             ),
+      bottomNavigationBar: widget.showBottomNav
+          ? BottomNavigationBar(
+              currentIndex: 1,
+              onTap: _onBottomNavTap,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.fire_truck),
+                  label: 'Объявления',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.subject),
+                  label: 'Заявки',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.account_circle),
+                  label: 'Профиль',
+                ),
+              ],
+            )
+          : null,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/SearchFormisp.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/get_vt.dart';
@@ -68,6 +69,23 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   void _selectTab(int index) {
+    if (index == 1 &&
+        hasActiveOrder &&
+        activeOrderUserId.isNotEmpty &&
+        activeOrderId.isNotEmpty) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderExecutionScreenzak(
+            userId: activeOrderUserId,
+            orderId: activeOrderId,
+          ),
+        ),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
     setState(() {
       _currentIndex = index;
       _pages[index] ??= _builders[index]();
@@ -78,9 +96,9 @@ class _MainScreenState extends State<MainScreen> {
       {required String orderId}) {
     switch (pageProfile) {
       case 'zprofil_ld':
-        return const zprofil_ld();
+        return const zprofil_ld(showBottomNav: false);
       case 'Ads2App':
-        return const Ads2App();
+        return const Ads2App(showBottomNav: false);
       case 'outputobzlikes':
         print('[menuzak] route: outputobzlikes -> outputobzlikes1');
         return const Outputobzlikes1Page(nameImg: '', base: 1);
@@ -138,6 +156,14 @@ class _MainScreenState extends State<MainScreen> {
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
           orderid = data['order_id']?.toString() ?? '';
         });
+
+        final orderInfo = await checkOrderStatus(userId.toString());
+        if (!mounted) return;
+        setState(() {
+          hasActiveOrder = orderInfo['result'] == true;
+          activeOrderUserId = orderInfo['user_id']?.toString() ?? '';
+          activeOrderId = orderInfo['order_id']?.toString() ?? '';
+        });
       } else {
         throw Exception(
             'Failed to load user data with status code: ${response.statusCode}}');
@@ -148,10 +174,12 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   bool hasActiveOrder = false; // Переменная для отслеживания активности заказа
+  String activeOrderUserId = '';
+  String activeOrderId = '';
 
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
-        '${Config.baseUrl}/api/check_order_status1.php?userIdok=$userIdok');
+        '${Config.baseUrl}/api/check_order_statusisp.php?userIdok=$userIdok');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -176,7 +204,7 @@ class _MainScreenState extends State<MainScreen> {
         type: BottomNavigationBarType.fixed,
         items: [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.fire_truck), label: 'Объявления'),
+              icon: Icon(Icons.fire_truck), label: 'Услуги'),
           BottomNavigationBarItem(
             icon: Icon(
               Icons.subject,

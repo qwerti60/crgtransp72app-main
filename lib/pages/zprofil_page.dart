@@ -6,13 +6,13 @@ import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
-import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/subscription_screen.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
 import 'ads2.dart';
+import 'list_predloj_na_obj_isp.dart';
 import 'loginpage.dart';
 import 'rent_z.dart';
 import 'zprofil_ld.dart';
@@ -228,6 +228,25 @@ class zprofil_nameForm extends State<zprofil_name> {
                   },
                   child: const Text('Мои объявления')),
             ),
+           /* Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => list_predloj_na_obj_isp(
+                                  nameImg: userId.toString(),
+                                  bd: 1,
+                                  useCustomerMenu: true,
+                                )));
+                  },
+                  child: const Text('Статус заказа')),
+            ),*/
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -240,23 +259,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                         context,
                         MaterialPageRoute(
                             builder: (_) =>
-                                const MenuzakScreen(pageProfile: 'Ads2App')));
-                  },
-                  child: const Text('Статус заказа')),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: TexticonsColor,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const MenuzakScreen(
-                                pageProfile: 'outputobzlikes')));
+                                OutputobzlikesPage(nameImg: '', base: 1)));
                   },
                   child: const Text('Избранное')),
             ),

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'decimal_text_input_formatter.dart';
 import 'customer_bottom_nav.dart';
+import 'performer_bottom_nav.dart';
 
 import '../design/colors.dart';
 //import 'reguser1_name.dart';
@@ -46,6 +47,7 @@ class OfferScreen2 extends StatefulWidget {
 class _OfferscreenForm extends State<OfferScreen2> {
   final TextEditingController _cenakmController = TextEditingController();
   final TextEditingController _aboutController = TextEditingController();
+  bool _hasExistingOffer = false;
   late String useridobj,
       userid; // Используйте правильные типы данных для вашей переменной
   late int bd;
@@ -58,31 +60,42 @@ class _OfferscreenForm extends State<OfferScreen2> {
     bd = widget.bd;
 
     getUserData();
-    /////  checkOfferExists(userId, userIdp as String, bd);
-    fetchOfferData(useridobj, userid);
   }
 
-  Future<void> fetchOfferData(String useridobj, String userId) async {
+  /// [iduserp] — id исполнителя (кто откликается), [listingId] — id объявления (`userid` с карточки).
+  Future<void> fetchOfferData(String iduserp, String listingId) async {
     final response = await http.post(
-      Uri.parse(
-          '${Config.baseUrl}/api/fetch_offer.php'), // заменить на ваш сервер
-      body: {'iduserp': '$useridobj', 'userId': '$userId'},
+      Uri.parse('${Config.baseUrl}/api/fetch_offer.php'),
+      body: {
+        'iduserp': iduserp,
+        'userId': listingId,
+        'bd': bd.toString(),
+      },
     );
 
     if (response.statusCode == 200) {
       var data = jsonDecode(response.body);
 
-      _cenakmController.text = data['cena'] ?? '';
+      final String cena = (data['cena'] ?? '').toString();
+      final String about = (data['about'] ?? '').toString();
+      _cenakmController.text = cena;
+      _aboutController.text = about;
+      if (mounted) {
+        setState(() {
+          _hasExistingOffer = cena.trim().isNotEmpty || about.trim().isNotEmpty;
+        });
+      }
       print(_cenakmController.text);
-      _aboutController.text = data['about'] ?? '';
       print(_aboutController.text);
     } else {
+      if (mounted) {
+        setState(() {
+          _hasExistingOffer = false;
+        });
+      }
       print(
           'Ошибка при получении данных пользователя: Статус-код: ${response.statusCode}, Тело: ${response.body}');
     }
-    // print('вывод idp: $iduserp');
-    print('вывод id: $userId');
-    print('вывод bd: $useridobj');
   }
 
   String firstName = '';
@@ -106,8 +119,9 @@ class _OfferscreenForm extends State<OfferScreen2> {
         print('Ошибка: ${data['error']}');
       } else {
         // Обновляем поля класса и UI
+        final int idp = int.tryParse(data['idusers'].toString()) ?? 0;
         setState(() {
-          userIdp = data['idusers'];
+          userIdp = idp;
           firstName = data['firstName'];
           lastName = data['lastName'];
           middleName = data['middleName'];
@@ -116,6 +130,9 @@ class _OfferscreenForm extends State<OfferScreen2> {
           email = data['email'];
         });
         print('вывод id: $userIdp');
+        if (idp > 0) {
+          await fetchOfferData(idp.toString(), userid);
+        }
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
     } else {
@@ -123,39 +140,32 @@ class _OfferscreenForm extends State<OfferScreen2> {
     }
   }
 
-  void uploadData() async {
-    var uri = Uri.parse('http://ivnovav.ru/api/add_offer.php');
+  /// true, если предложение успешно отправлено на сервер.
+  Future<bool> uploadData() async {
+    if (userIdp <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Не удалось определить пользователя.')));
+      }
+      return false;
+    }
+    final uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
 
-// Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
       ..fields['cena'] = _cenakmController.text
       ..fields['about'] = _aboutController.text
-      ..fields['iduserp'] = widget.useridobj // userIdp.toString()
-      ..fields['iduser'] = userid //ид объявы
+      ..fields['iduserp'] = userIdp.toString()
+      ..fields['iduser'] = userid
       ..fields['bd'] = bd.toString();
 
     var response = await request.send();
 
     if (response.statusCode == 200) {
       print('Uploaded!');
-      print('Uploaded!');
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const zprofil_zayavki(
-            nameImg: '',
-            base: 1,
-          ),
-        ),
-      );
-    } else {
-      print('Failed!');
+      return true;
     }
-    print('userIdp');
-    print(userIdp);
-    print('userid');
-    print(userid);
-    print(bd);
+    print('Failed!');
+    return false;
   }
 
   Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
@@ -173,8 +183,8 @@ class _OfferscreenForm extends State<OfferScreen2> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Предложите услуги',
+        title: Text(
+          _hasExistingOffer ? 'Редактировать услугу' : 'Предложить услугу',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -285,10 +295,10 @@ class _OfferscreenForm extends State<OfferScreen2> {
                         return;
                       }
 
-                      // Отправляем данные
-                      uploadData();
+                      final ok = await uploadData();
+                      if (!ok || !mounted) return;
 
-                      // Выполняем HTTP-запрос и отправляем уведомление
+                      // Уведомление заказчику (id заказчика — widget.useridobj)
                       try {
                         final response1 = await http.post(
                           Uri.parse('${Config.baseUrl}/api/notification.php'),
@@ -297,18 +307,13 @@ class _OfferscreenForm extends State<OfferScreen2> {
                             'Content-Type': 'application/x-www-form-urlencoded'
                           },
                         );
-                        debugPrint('userid : ${userid}'); // вывод тела ответа
+                        debugPrint('listing id: $userid');
+                        debugPrint('заказчик id: ${widget.useridobj}');
+                        debugPrint('исполнитель id: $userIdp');
 
-                        debugPrint('userId : ${userId}'); // вывод тела ответа
-                        debugPrint(
-                            'userIdp : ${widget.useridobj}'); // вывод тела ответа
-
-                        //  print(data['iduserp']); // вывод id пользователя
-                        debugPrint(
-                            'Status: ${response1.statusCode}'); // вывод статуса ответа
-                        debugPrint(
-                            'Body : ${response1.body}'); // вывод тела ответа
-                        debugPrint('userid : ${userIdp}'); // вывод тела ответа
+                        debugPrint('Status: ${response1.statusCode}');
+                        debugPrint('Body : ${response1.body}');
+                        debugPrint('userid : ${userIdp}');
 
                         if (response1.statusCode == 200) {
                           final Map<String, dynamic> datafdcm =
@@ -337,6 +342,18 @@ class _OfferscreenForm extends State<OfferScreen2> {
                       } catch (err) {
                         print('Общая ошибка: $err');
                       }
+
+                      if (!mounted) return;
+                      Navigator.of(context, rootNavigator: true)
+                          .pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => zprofil_zayavki(
+                            nameImg: '',
+                            base: bd,
+                          ),
+                        ),
+                        (Route<dynamic> route) => false,
+                      );
                     },
                     child: const Text('Отправить предложение')),
               ),
@@ -344,7 +361,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
           ],
         ),
       ),
-      bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
+      bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
     );
   }
 

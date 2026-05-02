@@ -20,17 +20,27 @@ import '../config.dart';
 import '../design/colors.dart';
 import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
+import 'performer_bottom_nav.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class outputobz extends StatelessWidget {
   final String nameImg;
   final String city;
+  final bool showBottomNav;
 
-  const outputobz({super.key, required this.nameImg, required this.city});
+  const outputobz(
+      {super.key,
+      required this.nameImg,
+      required this.city,
+      this.showBottomNav = true});
 
   @override
   Widget build(BuildContext context) {
-    return MyHomePage(nameImg: nameImg, city: city);
+    return MyHomePage(
+      nameImg: nameImg,
+      city: city,
+      showBottomNav: showBottomNav,
+    );
   }
 }
 
@@ -38,7 +48,12 @@ class MyHomePage extends StatefulWidget {
   final String nameImg;
 
   final String city;
-  const MyHomePage({super.key, required this.nameImg, required this.city});
+  final bool showBottomNav;
+  const MyHomePage(
+      {super.key,
+      required this.nameImg,
+      required this.city,
+      this.showBottomNav = true});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -109,9 +124,11 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(dynamic userId, dynamic truckId, int bd) async {
+  /// [performerUserId] — id залогиненного исполнителя (кто смотрит список), не iduser заказчика в объявлении.
+  Future<bool> checkOfferExists(
+      dynamic performerUserId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=${userId.toString()}&truck=${truckId.toString()}&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -187,8 +204,9 @@ class _MyHomePageState extends State<MyHomePage> {
         queryParameters: {
           'nameImg': nameImg,
           'city': city, // Преобразуем в строку
-          'useId':
-              userId.toString() // Преобразуем в строку, если userId это число
+          // Поддержка обоих вариантов параметра на бэкенде.
+          'useId': userId.toString(),
+          'usersid': userId.toString(),
         },
       ),
     );
@@ -326,7 +344,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                     const EdgeInsets.symmetric(horizontal: 20),
                                 child: LayoutBuilder(
                                   builder: (context, constraints) {
-                                    final bool isNarrow = constraints.maxWidth < 380;
+                                    final bool isNarrow =
+                                        constraints.maxWidth < 380;
 
                                     final Widget infoBlock = Row(
                                       mainAxisAlignment:
@@ -342,18 +361,35 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
+                                            if (userId <= 0) {
+                                              if (!mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Не удалось определить пользователя. Перезайдите в аккаунт.',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
                                             final String key =
                                                 (truck['id'] ?? '').toString();
+                                            final dynamic ownerId =
+                                                truck['iduser'] ??
+                                                    truck['idusers'];
+                                            if (ownerId == null) return;
                                             final bool currentLiked =
                                                 _likedForTruck(truck);
                                             setState(() {
                                               _likedOverrides[key] =
                                                   !currentLiked;
                                             });
-                                            final bool updated = await toggleLike(
-                                                truck['iduser'],
-                                                truck['id'],
-                                                bd!);
+                                            final bool updated =
+                                                await toggleLike(
+                                                    ownerId, truck['id'], bd!);
                                             if (!mounted) return;
                                             setState(() {
                                               _likedOverrides[key] = updated;
@@ -373,14 +409,19 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                               GestureDetector(
                                                 onTap: () {
+                                                  final reviewUserId =
+                                                      truck['review_user_id'] ??
+                                                          truck['idusers'] ??
+                                                          truck['iduser'];
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) =>
                                                             ReviewScreen(
-                                                                userId: truck[
-                                                                        'iduserp']
-                                                                    .toString())),
+                                                                userId: reviewUserId
+                                                                    .toString(),
+                                                                showBottomNav:
+                                                                    true)),
                                                   );
                                                 },
                                                 child: Row(
@@ -797,8 +838,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                 padding: const EdgeInsets.all(
                                     8.0), // Добавьте отступы вокруг FutureBuilder
                                 child: FutureBuilder<bool>(
-                                  future: checkOfferExists(
-                                      truck['iduser'], truck['id'], bd!),
+                                  future: userId > 0
+                                      ? checkOfferExists(
+                                          userId, truck['id'], bd!)
+                                      : Future.value(false),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData && snapshot.data!) {
                                       // Если запись существует
@@ -901,8 +944,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
-
+      bottomNavigationBar: widget.showBottomNav
+          ? const PerformerBottomNav(currentIndex: 0)
+          : null,
     );
   }
 

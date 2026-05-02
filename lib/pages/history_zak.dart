@@ -173,6 +173,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       try {
         final parsed = json.decode(response.body);
+        if (parsed is List) {
+          return parsed.where((item) {
+            if (item is! Map) return true;
+            return item['iduserp'].toString() != userId.toString();
+          }).toList();
+        }
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -208,6 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return OrderExecutionScreen(
             userId: orderInfo?['user_id'],
             orderId: orderInfo?['order_id'],
+            showBottomNav: false,
           );
         } else {
           return const Ads1App();
@@ -323,122 +330,137 @@ class _MyHomePageState extends State<MyHomePage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          truck['success'] == 'true'
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color: truck['success'] == 'true'
-                                              ? Colors.red
-                                              : Colors.grey,
-                                        ),
-                                        onPressed: () async {
-                                          await toggleLike(
-                                              truck['iduser'].toString(),
-                                              truck['id'].toString(),
-                                              widget.bd);
-                                          setState(() {});
-                                        },
-                                      ),
-                                      if (truck['firstName'] != null)
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${truck['firstName']} ${truck['lastName']}',
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          ReviewScreenz(
-                                                              userId: truck[
-                                                                      'iduserp']
-                                                                  .toString())),
-                                                );
-                                              },
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Row(
-                                                    children: List.generate(5,
-                                                        (index) {
-                                                      final double parsedRating = truck[
-                                                                  'avg_rating'] !=
-                                                              null
-                                                          ? double.tryParse(truck[
-                                                                      'avg_rating']
-                                                                  .toString()) ??
-                                                              0.0
-                                                          : 0.0;
-                                                      return Icon(
-                                                        index < parsedRating
-                                                            ? Icons.star
-                                                            : Icons.star_border,
-                                                        color: Colors.amber,
-                                                        size: 16,
-                                                      );
-                                                    }),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${truck['avg_rating'] ?? 0.0}',
-                                                    style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.grey),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                          Icons
-                                                              .comment_outlined,
-                                                          size: 16,
-                                                          color: Colors.grey),
-                                                      const SizedBox(width: 2),
-                                                      Text(
-                                                        '${truck['reviewsCount'] ?? 0}',
-                                                        style: const TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.grey),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      _makePhoneCall(truck['phone']);
-                                    },
+                                  Expanded(
                                     child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        const Icon(Icons.phone),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            '${truck['phone']}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                        IconButton(
+                                          icon: Icon(
+                                            truck['success'] == 'true'
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: truck['success'] == 'true'
+                                                ? Colors.red
+                                                : Colors.grey,
+                                          ),
+                                          onPressed: () async {
+                                            await toggleLike(
+                                                truck['iduser'].toString(),
+                                                truck['id'].toString(),
+                                                widget.bd);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        if (truck['firstName'] != null)
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${truck['firstName']} ${truck['lastName']}',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ReviewScreenz(
+                                                                userId: truck[
+                                                                        'iduserp']
+                                                                    .toString())),
+                                                  );
+                                                },
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Row(
+                                                      children: List.generate(5,
+                                                          (index) {
+                                                        final double
+                                                            parsedRating =
+                                                            truck['avg_rating'] !=
+                                                                    null
+                                                                ? double.tryParse(
+                                                                        truck['avg_rating']
+                                                                            .toString()) ??
+                                                                    0.0
+                                                                : 0.0;
+                                                        return Icon(
+                                                          index < parsedRating
+                                                              ? Icons.star
+                                                              : Icons
+                                                                  .star_border,
+                                                          color: Colors.amber,
+                                                          size: 16,
+                                                        );
+                                                      }),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '${truck['avg_rating'] ?? 0.0}',
+                                                      style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.grey),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                            Icons
+                                                                .comment_outlined,
+                                                            size: 16,
+                                                            color: Colors.grey),
+                                                        const SizedBox(
+                                                            width: 2),
+                                                        Text(
+                                                          '${truck['reviewsCount'] ?? 0}',
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .grey),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    flex: 0,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _makePhoneCall(truck['phone']);
+                                      },
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.phone),
+                                          const SizedBox(width: 4),
+                                          SizedBox(
+                                            width: 112,
+                                            child: Text(
+                                              '${truck['phone']}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   )
                                 ],

@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
 import 'performer_bottom_nav.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,7 +29,13 @@ void main() {
 class zprofil_zayavki extends StatelessWidget {
   final String nameImg;
   final int base;
-  const zprofil_zayavki({super.key, required this.nameImg, required this.base});
+  final bool useCustomerMenu;
+  const zprofil_zayavki({
+    super.key,
+    required this.nameImg,
+    required this.base,
+    this.useCustomerMenu = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +44,11 @@ class zprofil_zayavki extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(nameImg: nameImg, base: base),
+      home: MyHomePage(
+        nameImg: nameImg,
+        base: base,
+        useCustomerMenu: useCustomerMenu,
+      ),
     );
   }
 }
@@ -46,7 +57,13 @@ class MyHomePage extends StatefulWidget {
   final String nameImg;
 
   final int base;
-  const MyHomePage({super.key, required this.nameImg, required this.base});
+  final bool useCustomerMenu;
+  const MyHomePage({
+    super.key,
+    required this.nameImg,
+    required this.base,
+    required this.useCustomerMenu,
+  });
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -82,10 +99,9 @@ class _MyHomePageState extends State<MyHomePage> {
     String nameImg = widget.nameImg;
     bd ??= widget.base;
 
-    //super.initState();
     _adsFuture = Future.value(<dynamic>[]);
     getUserData();
-    _adsFuture = fetchAds(bd!, nameImg, userId);
+    // Загрузка объявлений только после getUserData (id исполнителя), иначе useId=0 и список пустой.
   }
 
   int userId = 0;
@@ -104,9 +120,10 @@ class _MyHomePageState extends State<MyHomePage> {
         print('Ошибка: ${data['error']}');
       } else {
         // Обновляем поля класса и UI
+        final int uid = int.tryParse(data['idusers']?.toString() ?? '') ?? 0;
         setState(() {
-          userId = data['idusers'];
-          _adsFuture = fetchAds(bd!, widget.nameImg, userId);
+          userId = uid;
+          _adsFuture = uid > 0 ? fetchAds(uid) : Future.value(<dynamic>[]);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -116,15 +133,40 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
+  Future<bool> checkOfferExists(
+      dynamic performerUserId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
     } else {
       throw Exception('Failed to load data');
     }
+  }
+
+  Future<bool> checkAcceptedOffer(
+      dynamic orderId, int bd, dynamic performerUserId) async {
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}/api/check_isp.php'),
+      body: {
+        'idusers': orderId.toString(),
+        'bd': bd.toString(),
+        'iduserp': performerUserId.toString(),
+      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to check offer acceptance');
+    }
+
+    final data = json.decode(response.body);
+    final dynamic raw = data['isp'];
+    if (raw is bool) return raw;
+    if (raw is num) return raw == 1;
+    if (raw is String) return raw == '1' || raw.toLowerCase() == 'true';
+    return false;
   }
 
   Future<void> getUserDataAds(idUser) async {
@@ -160,6 +202,22 @@ class _MyHomePageState extends State<MyHomePage> {
 //bool? isLiked = false;
 
   bool isLiked = false;
+  final Map<String, bool> _likedOverrides = {};
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  bool _likedForTruck(Map truck) {
+    final String key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
 
   Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
     isLiked = await toggleLikeRequest(
@@ -172,44 +230,27 @@ class _MyHomePageState extends State<MyHomePage> {
     return isLiked;
   }
 
-  Future<List> fetchAds(int bd, String nameImg, int userId) async {
-    final Map<String, String> queryParameters = {
-      'bd': bd.toString(),
-      'useId': userId.toString(),
-    };
-    if (nameImg.trim().isNotEmpty) {
-      queryParameters['nameImg'] = nameImg;
-    }
-
+  Future<List> fetchAds(int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/getofferusern.php',
-        queryParameters: queryParameters,
+        path: '/api/getofferusern_new.php',
+        queryParameters: {
+          'useId': userId.toString(),
+        },
       ),
     );
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        print(parsed);
-        print(response.body); // Просмотреть полный ответ
-        print('uu77${userId}');
-        print('uu77${nameImg}');
-        return parsed;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to load ads');
     }
+    if (response.body.isEmpty) {
+      throw Exception('Пустой ответ от сервера');
+    }
+    final parsed = json.decode(response.body);
+    if (parsed is! List) {
+      throw Exception('Ошибка формата ответа');
+    }
+    print('Найдено заявок: ${parsed.length} для userId=$userId');
+    return parsed;
   }
 
   @override
@@ -217,7 +258,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Предложения заказчиков',
+          'Предложения',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -341,17 +382,53 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         IconButton(
                                           icon: Icon(
-                                            truck['success'] == 'true'
+                                            _likedForTruck(truck)
                                                 ? Icons.favorite
                                                 : Icons.favorite_border,
-                                            color: truck['success'] == 'true'
+                                            color: _likedForTruck(truck)
                                                 ? Colors.red
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(truck['iduser'],
-                                                truck['id'], bd!);
-                                            setState(() {});
+                                            if (userId <= 0) {
+                                              if (!mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Не удалось определить пользователя. Перезайдите в аккаунт.',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
+                                            final String key =
+                                                (truck['id'] ?? '').toString();
+                                            final dynamic ownerId =
+                                                truck['iduser'] ??
+                                                    truck['idusers'] ??
+                                                    truck['iduserp'];
+                                            if (ownerId == null) return;
+
+                                            final bool currentLiked =
+                                                _likedForTruck(truck);
+                                            setState(() {
+                                              _likedOverrides[key] =
+                                                  !currentLiked;
+                                            });
+
+                                            final bool updated =
+                                                await toggleLike(
+                                              ownerId,
+                                              truck['id'],
+                                              bd!,
+                                            );
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _likedOverrides[key] = updated;
+                                            });
                                           },
                                         ),
                                         if (truck['firstName'] != null)
@@ -442,17 +519,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                         _makePhoneCall(truck['phone']);
                                       },
                                       child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Icon(Icons.phone),
                                           const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              '${truck['phone']}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                          Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ],
@@ -478,7 +554,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                   ),
                                   options: CarouselOptions(
-                                    autoPlay: true,
+                                    autoPlay: false,
                                     enlargeCenterPage: true,
                                     viewportFraction:
                                         1.0, // Уже установлено, позволяет заполнить всю доступную ширину
@@ -762,20 +838,266 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ],
                                   ),
                                 ),
-                              Container(
-                                color: Colors.white, // По желанию добавьте фон
-                                padding: const EdgeInsets.all(
-                                    8.0), // Добавьте отступы вокруг FutureBuilder
+                              Builder(
+                                builder: (context) {
+                                  final int cardBd = int.tryParse(
+                                          truck['bd']?.toString() ?? '') ??
+                                      (bd ?? widget.base);
+                                  final int editBd = widget.base;
+                                  final int deleteBd = widget.base;
+                                  return Container(
+                                    color:
+                                        Colors.white, // По желанию добавьте фон
+                                    padding: const EdgeInsets.all(
+                                        8.0), // Добавьте отступы вокруг блока кнопок
+                                    child: FutureBuilder<bool>(
+                                      future: Future.value(true),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasData &&
+                                            snapshot.data!) {
+                                          return Column(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 20.0),
+                                                margin: const EdgeInsets.only(
+                                                    top: 20.0),
+                                                child: SizedBox(
+                                                  width: double.infinity,
+                                                  child: TextButton(
+                                                    style: TextButton.styleFrom(
+                                                      fixedSize: const Size(
+                                                          double.infinity, 50),
+                                                      foregroundColor:
+                                                          whiteprColor,
+                                                      backgroundColor:
+                                                          blueaccentColor,
+                                                      disabledForegroundColor:
+                                                          grayprprColor,
+                                                      shape:
+                                                          const BeveledRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.all(
+                                                                Radius.circular(
+                                                                    3)),
+                                                      ),
+                                                    ),
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              OfferScreen2(
+                                                            userid: truck['id']
+                                                                .toString(),
+                                                            useridobj:
+                                                                truck['iduser']
+                                                                    .toString(),
+                                                            bd: editBd, // как в outputobz: контекст текущего раздела
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                        'Редактировать предложение'),
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 20.0),
+                                                margin: const EdgeInsets.only(
+                                                    top: 20.0),
+                                                child: SizedBox(
+                                                  width: double.infinity,
+                                                  child: TextButton(
+                                                    style: TextButton.styleFrom(
+                                                      fixedSize: const Size(
+                                                          double.infinity, 50),
+                                                      foregroundColor:
+                                                          whiteprColor,
+                                                      backgroundColor:
+                                                          readColor, // Меняем фон кнопки на красный
+                                                      disabledForegroundColor:
+                                                          grayprprColor,
+                                                      shape:
+                                                          const BeveledRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.all(
+                                                                Radius.circular(
+                                                                    3)),
+                                                      ),
+                                                    ),
+                                                    onPressed: () async {
+                                                      bool confirmed =
+                                                          await showDialog<
+                                                                  bool>(
+                                                                context:
+                                                                    context,
+                                                                builder:
+                                                                    (context) =>
+                                                                        AlertDialog(
+                                                                  title: const Text(
+                                                                      "Подтверждение удаления"),
+                                                                  content:
+                                                                      const Text(
+                                                                          "Вы уверены, что хотите удалить предложение?"),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      child: const Text(
+                                                                          "Отмена"),
+                                                                      onPressed: () => Navigator.pop(
+                                                                          context,
+                                                                          false),
+                                                                    ),
+                                                                    TextButton(
+                                                                      child: const Text(
+                                                                          "Да, удалить"),
+                                                                      onPressed: () => Navigator.pop(
+                                                                          context,
+                                                                          true),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ) ??
+                                                              false;
 
-                                child: FutureBuilder<bool>(
-                                  future: checkOfferExists(
-                                      truck['iduser']!, truck['id'], bd!),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.hasData && snapshot.data!) {
-                                      // Если запись существует
-                                      return Column(
-                                        children: [
-                                          Container(
+                                                      if (confirmed) {
+                                                        // Отправляем запрос на удаление записи
+                                                        var response =
+                                                            await http.post(
+                                                          Uri.parse(
+                                                              '${Config.baseUrl}/api/deleteoffer.php'), // Здесь укажите ваш API адрес
+                                                          body: {
+                                                            'iduserp': userId
+                                                                .toString(),
+                                                            'iduser':
+                                                                truck['id']
+                                                                    .toString(),
+                                                            'bd': deleteBd
+                                                                .toString(),
+                                                          },
+                                                        );
+                                                        print(
+                                                            'truckid ${truck['id']}');
+                                                        print(
+                                                            'truckiduser ${userId}');
+                                                        print('bd ${deleteBd}');
+                                                        if (response
+                                                                .statusCode ==
+                                                            200) {
+                                                          // Запись успешно удалена
+                                                          setState(() {
+                                                            _adsFuture =
+                                                                fetchAds(
+                                                                    userId);
+                                                          });
+                                                          print(
+                                                              'Запись успешно удалена');
+                                                        } else {
+                                                          print(
+                                                              'Ошибка при удалении записи');
+                                                        }
+                                                      }
+                                                    },
+                                                    child: const Text(
+                                                        'Удалить предложение'),
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 20.0),
+                                                margin: const EdgeInsets.only(
+                                                    top: 20.0),
+                                                child: FutureBuilder<bool>(
+                                                  future: checkAcceptedOffer(
+                                                      truck['id'],
+                                                      cardBd,
+                                                      userId),
+                                                  builder: (context,
+                                                      acceptedSnapshot) {
+                                                    if (acceptedSnapshot
+                                                            .connectionState ==
+                                                        ConnectionState
+                                                            .waiting) {
+                                                      return const SizedBox(
+                                                        height: 50,
+                                                        child: Center(
+                                                          child:
+                                                              CircularProgressIndicator(),
+                                                        ),
+                                                      );
+                                                    }
+
+                                                    final bool canStart =
+                                                        acceptedSnapshot.data ??
+                                                            false;
+                                                    return SizedBox(
+                                                      width: double.infinity,
+                                                      child: TextButton(
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          fixedSize: const Size(
+                                                              double.infinity,
+                                                              50),
+                                                          foregroundColor:
+                                                              whiteprColor,
+                                                          backgroundColor:
+                                                              canStart
+                                                                  ? blueaccentColor
+                                                                  : Colors.grey,
+                                                          disabledForegroundColor:
+                                                              grayprprColor,
+                                                          shape:
+                                                              const BeveledRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.all(
+                                                                    Radius
+                                                                        .circular(
+                                                                            3)),
+                                                          ),
+                                                        ),
+                                                        onPressed: canStart
+                                                            ? () {
+                                                                Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder:
+                                                                        (context) =>
+                                                                            OrderExecutionScreen(
+                                                                      userId: truck[
+                                                                              'iduserp']
+                                                                          .toString(),
+                                                                      orderId: truck[
+                                                                              'id']
+                                                                          .toString(),
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                                print(
+                                                                    'trid ${truck['id']}');
+                                                                print(
+                                                                    'uid $userId');
+                                                                print(
+                                                                    'uid ${truck['iduser']}');
+                                                              }
+                                                            : null,
+                                                        child: Text(canStart
+                                                            ? 'Начать выполнение'
+                                                            : 'Ожидает принятия заказчиком'),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        } else {
+                                          return Container(
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 20.0),
                                             margin: const EdgeInsets.only(
@@ -804,215 +1126,26 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     MaterialPageRoute(
                                                       builder: (context) =>
                                                           OfferScreen2(
-                                                        userid: truck['id'],
+                                                        userid: truck['id']
+                                                            .toString(),
                                                         useridobj:
-                                                            truck['iduser'],
-                                                        bd: bd, // Изменение экрана
+                                                            truck['iduser']
+                                                                .toString(),
+                                                        bd: editBd,
                                                       ),
                                                     ),
                                                   );
                                                 },
                                                 child: const Text(
-                                                    'Редактировать предложение'),
+                                                    'Предложить свои услуги'),
                                               ),
                                             ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 20.0),
-                                            margin: const EdgeInsets.only(
-                                                top: 20.0),
-                                            child: SizedBox(
-                                              width: double.infinity,
-                                              child: TextButton(
-                                                style: TextButton.styleFrom(
-                                                  fixedSize: const Size(
-                                                      double.infinity, 50),
-                                                  foregroundColor: whiteprColor,
-                                                  backgroundColor:
-                                                      readColor, // Меняем фон кнопки на красный
-                                                  disabledForegroundColor:
-                                                      grayprprColor,
-                                                  shape:
-                                                      const BeveledRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.all(
-                                                            Radius.circular(3)),
-                                                  ),
-                                                ),
-                                                onPressed: () async {
-                                                  bool confirmed =
-                                                      await showDialog<bool>(
-                                                            context: context,
-                                                            builder:
-                                                                (context) =>
-                                                                    AlertDialog(
-                                                              title: const Text(
-                                                                  "Подтверждение удаления"),
-                                                              content: const Text(
-                                                                  "Вы уверены, что хотите удалить предложение?"),
-                                                              actions: [
-                                                                TextButton(
-                                                                  child: const Text(
-                                                                      "Отмена"),
-                                                                  onPressed: () =>
-                                                                      Navigator.pop(
-                                                                          context,
-                                                                          false),
-                                                                ),
-                                                                TextButton(
-                                                                  child: const Text(
-                                                                      "Да, удалить"),
-                                                                  onPressed: () =>
-                                                                      Navigator.pop(
-                                                                          context,
-                                                                          true),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ) ??
-                                                          false;
-
-                                                  if (confirmed) {
-                                                    // Отправляем запрос на удаление записи
-                                                    var response =
-                                                        await http.post(
-                                                      Uri.parse(
-                                                          '${Config.baseUrl}/api/deleteoffer.php'), // Здесь укажите ваш API адрес
-                                                      body: jsonEncode({
-                                                        'iduserp': userId, //140
-                                                        'iduser':
-                                                            truck['id'], //33
-                                                        'bd': bd, //3
-                                                      }),
-                                                    );
-                                                    print(
-                                                        'truckid ${truck['id']}');
-                                                    print(
-                                                        'truckiduser ${userId}');
-                                                    print('bd ${bd}');
-                                                    if (response.statusCode ==
-                                                        200) {
-                                                      // Запись успешно удалена
-                                                      setState(() {
-                                                        //isLoading = false; // Выключаем загрузчик
-                                                      });
-                                                      print(
-                                                          'Запись успешно удалена');
-                                                    } else {
-                                                      print(
-                                                          'Ошибка при удалении записи');
-                                                    }
-                                                  }
-                                                },
-                                                child: const Text(
-                                                    'Удалить предложение'),
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 20.0),
-                                            margin: const EdgeInsets.only(
-                                                top: 20.0),
-                                            child: SizedBox(
-                                              width: double.infinity,
-                                              child: TextButton(
-                                                style: TextButton.styleFrom(
-                                                  fixedSize: const Size(
-                                                      double.infinity, 50),
-                                                  foregroundColor: whiteprColor,
-                                                  backgroundColor:
-                                                      blueaccentColor,
-                                                  disabledForegroundColor:
-                                                      grayprprColor,
-                                                  shape:
-                                                      const BeveledRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.all(
-                                                            Radius.circular(3)),
-                                                  ),
-                                                ),
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          OrderExecutionScreen(
-                                                        //pageProfile:
-                                                        //  'OrderExecutionScreen',
-                                                        userId: truck['iduser']
-                                                            .toString(),
-                                                        orderId: truck['id']
-                                                                .toString() ??
-                                                            '', // Обеспечиваем значение по умолчанию
-                                                      ), /*OfferScreen(
-                                                        userid: truck['id'],
-                                                        useridobj:
-                                                            truck['iduser'],
-                                                        bd: bd, // Изменение экрана
-                                                      ),*/
-                                                    ),
-                                                  );
-                                                  print(
-                                                      'trid ${truck['id']}'); //33
-                                                  print('uid ${userId}'); //140
-                                                  print(
-                                                      'uid ${truck['iduser']}');
-
-                                                  ///141
-                                                },
-                                                child: const Text(
-                                                    'Начать выполнение'),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    } else {
-                                      // Если записи нет
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20.0),
-                                        margin:
-                                            const EdgeInsets.only(top: 20.0),
-                                        child: SizedBox(
-                                          width: double.infinity,
-                                          child: TextButton(
-                                            style: TextButton.styleFrom(
-                                              fixedSize: const Size(
-                                                  double.infinity, 50),
-                                              foregroundColor: whiteprColor,
-                                              backgroundColor: blueaccentColor,
-                                              disabledForegroundColor:
-                                                  grayprprColor,
-                                              shape:
-                                                  const BeveledRectangleBorder(
-                                                borderRadius: BorderRadius.all(
-                                                    Radius.circular(3)),
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      OfferScreen2(
-                                                          userid: truck['id'],
-                                                          useridobj:
-                                                              truck['iduser'],
-                                                          bd: bd),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text(
-                                                'Предложить свои услуги'),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
                               )
                             ],
                           );
@@ -1027,7 +1160,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: const PerformerBottomNav(currentIndex: 1),
+      bottomNavigationBar: widget.useCustomerMenu
+          ? const CustomerBottomNav(currentIndex: 1)
+          : const PerformerBottomNav(currentIndex: 1),
 
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
@@ -1091,7 +1226,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         ///initState();
         setState(() {
-          _adsFuture = fetchAds(bd!, widget.nameImg, userId);
+          _adsFuture = fetchAds(userId);
         });
       } else {
         // Ошибка, можно показать сообщение об ошибке

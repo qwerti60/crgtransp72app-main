@@ -56,3 +56,9 @@ key.properties
 .env
 .env.*
 !.env.example
+
+# Backend secrets and user-uploaded files
+/api/databd.php
+/api/dbconnection.php
+/api/payment-proxy.php
+/api/uploads/

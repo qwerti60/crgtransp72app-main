@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../design/colors.dart';
+import 'changerol_page.dart';
 import 'get_vt.dart' as performer_services;
 import 'vod_zak.dart';
 import 'zprofil_page.dart';
@@ -93,6 +94,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
           return OrderExecutionScreen(
             userId: orderInfo['user_id'],
             orderId: orderInfo['order_id'],
+            showBottomNav: false,
           );
         } else {
           return const SearchForm(); //Ads1App();
@@ -138,7 +140,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
           appBar: _currentPage == 0
               ? AppBar(
                   title: const Text(
-                    'Ищут услуги',
+                    'Техника',
                     style: TextStyle(
                       color: whiteprColor,
                     ),
@@ -146,6 +148,21 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
                   backgroundColor: blueaccentColor,
                 )
               : null,
+          floatingActionButton: _currentPage == 0
+              ? FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const changerol(),
+                      ),
+                    );
+                  },
+                  backgroundColor: blueaccentColor,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
           body: Column(
             children: <Widget>[
               Expanded(child: _getScreen(orderInfo)),

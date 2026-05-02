@@ -8,6 +8,7 @@ import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
+import 'package:crgtransp72app/pages/zakaz_screen1.dart' as customer_home;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -43,13 +44,21 @@ class _HistortScreenState extends State<HistortScreen12z> {
   final List<Widget?> _pages = List.filled(3, null, growable: false);
 
   late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
+    () => const MyImageGrid(),
     () => SearchForm(),
     //() => zprofil_zayavki(nameImg: '', base: 1),
     () => zprofil_name2(),
   ];
 
   void _selectTab(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const customer_home.MyApp()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
     setState(() {
       _currentIndex = index;
       _pages[index] ??= _builders[index]();
@@ -187,6 +196,7 @@ Widget buildProfilePage(
       return outputobz(
         nameImg: orderId,
         city: userId1,
+        showBottomNav: false,
       ); // Возвращаем виджет сразу же
     case 'Subscription':
       return const SubscriptionScreen();

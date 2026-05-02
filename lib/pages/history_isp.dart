@@ -161,8 +161,8 @@ class _MyHomePageState extends State<MyHomePage> {
         path: '/api/list_history_isp.php',
         queryParameters: {
           'usersid': userId.toString(),
-          'idusers': idUser?.toString() ?? '',
-          'nameImg': nameImg,
+          'idusers': userId.toString(),
+          'nameImg': userId.toString(),
           'bd': bd
               .toString(), // Добавляем переменную bd как строку в параметры запроса
         },
@@ -170,13 +170,19 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     print('usersid id: $userId');
     print('idUser id: $idUser');
-    print('nameImg id 55: $nameImg');
+    print('nameImg id 55: ${userId.toString()}');
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
         throw Exception('Пустой ответ от сервера');
       }
       try {
         final parsed = json.decode(response.body);
+        if (parsed is List) {
+          return parsed.where((item) {
+            if (item is! Map) return true;
+            return item['iduser'].toString() != userId.toString();
+          }).toList();
+        }
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -212,6 +218,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return OrderExecutionScreen(
             userId: orderInfo?['user_id'],
             orderId: orderInfo?['order_id'],
+            showBottomNav: false,
           );
         } else {
           return const Ads1App();
@@ -337,88 +344,129 @@ class _MyHomePageState extends State<MyHomePage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          truck['success'] == 'true'
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color: truck['success'] == 'true'
-                                              ? Colors.red
-                                              : Colors.grey,
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            _likedForTruck(truck)
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: _likedForTruck(truck)
+                                                ? Colors.red
+                                                : Colors.grey,
+                                          ),
+                                          onPressed: () async {
+                                            if (userId <= 0) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Не удалось определить пользователя. Перезайдите в аккаунт.',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
+                                            final String key =
+                                                (truck['id'] ?? '').toString();
+                                            final dynamic ownerId =
+                                                truck['iduser'] ??
+                                                    truck['idusers'] ??
+                                                    truck['iduserp'];
+                                            final dynamic itemId = truck['id'];
+                                            if (ownerId == null ||
+                                                itemId == null ||
+                                                key.isEmpty) {
+                                              return;
+                                            }
+
+                                            final bool currentLiked =
+                                                _likedForTruck(truck);
+                                            setState(() {
+                                              _likedOverrides[key] =
+                                                  !currentLiked;
+                                            });
+
+                                            final bool updated =
+                                                await toggleLike(
+                                                    ownerId, itemId, widget.bd);
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _likedOverrides[key] = updated;
+                                            });
+                                          },
                                         ),
-                                        onPressed: () async {
-                                          await toggleLike(
-                                              truck['iduser'].toString(),
-                                              truck['id'].toString(),
-                                              widget.bd);
-                                          setState(() {});
-                                        },
-                                      ),
-                                      if (truck['firstName'] != null)
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${truck['firstName']} ${truck['lastName']}',
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          ReviewScreen(
-                                                              userId: truck[
-                                                                      'iduserp']
-                                                                  .toString())),
-                                                );
-                                              },
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Row(
-                                                    children: List.generate(5,
-                                                        (index) {
-                                                      final double parsedRating = truck[
-                                                                  'avg_rating'] !=
-                                                              null
-                                                          ? double.tryParse(truck[
-                                                                      'avg_rating']
-                                                                  .toString()) ??
-                                                              0.0
-                                                          : 0.0;
-                                                      return Icon(
-                                                        index < parsedRating
-                                                            ? Icons.star
-                                                            : Icons.star_border,
-                                                        color: Colors.amber,
-                                                        size: 16,
-                                                      );
-                                                    }),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${truck['avg_rating'] ?? 0.0}',
-                                                    style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.grey),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Row(
+                                        if (truck['firstName'] != null)
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${truck['firstName']} ${truck['lastName']}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    final reviewUserId = truck[
+                                                            'review_user_id'] ??
+                                                        truck['iduser'];
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              ReviewScreen(
+                                                                  userId: reviewUserId
+                                                                      .toString())),
+                                                    );
+                                                  },
+                                                  child: Wrap(
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    spacing: 4,
                                                     children: [
+                                                      ...List.generate(5,
+                                                          (index) {
+                                                        final double
+                                                            parsedRating =
+                                                            truck['avg_rating'] !=
+                                                                    null
+                                                                ? double.tryParse(
+                                                                        truck['avg_rating']
+                                                                            .toString()) ??
+                                                                    0.0
+                                                                : 0.0;
+                                                        return Icon(
+                                                          index < parsedRating
+                                                              ? Icons.star
+                                                              : Icons
+                                                                  .star_border,
+                                                          color: Colors.amber,
+                                                          size: 16,
+                                                        );
+                                                      }),
+                                                      Text(
+                                                        '${truck['avg_rating'] ?? 0.0}',
+                                                        style: const TextStyle(
+                                                            fontSize: 14,
+                                                            color: Colors.grey),
+                                                      ),
                                                       const Icon(
                                                           Icons
                                                               .comment_outlined,
                                                           size: 16,
                                                           color: Colors.grey),
-                                                      const SizedBox(width: 2),
                                                       Text(
                                                         '${truck['reviewsCount'] ?? 0}',
                                                         style: const TextStyle(
@@ -427,32 +475,36 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       ),
                                                     ],
                                                   ),
-                                                ],
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      _makePhoneCall(truck['phone']);
-                                    },
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.phone),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            '${truck['phone']}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                                )
+                                              ],
                                             ),
                                           ),
-                                        ),
                                       ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _makePhoneCall(truck['phone']);
+                                      },
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.phone),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              '${truck['phone']}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )
                                 ],
@@ -687,6 +739,23 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool isLiked = false;
+  final Map<String, bool> _likedOverrides = {};
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  bool _likedForTruck(Map truck) {
+    final String key = (truck['id'] ?? '').toString();
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
+
   Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
     isLiked = await toggleLikeRequest(
       usersId: userId,

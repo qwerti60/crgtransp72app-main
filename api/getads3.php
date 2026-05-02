@@ -68,6 +68,7 @@ switch ($table) {
 $sql = "
     SELECT a.*,
            u.idusers AS idusers,
+           u.idusers AS review_user_id,
            u.fotouser,
            u.firstName,
            u.lastName,

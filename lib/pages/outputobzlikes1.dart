@@ -7,7 +7,8 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
-import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -213,15 +214,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List> fetchAds(int idUser) async {
+    final queryParameters = {
+      'usersid': idUser.toString(),
+      'nameImg': widget.nameImg,
+      'bd': widget.base.toString(),
+    };
+    const path = '/api/getads_likes_new.php';
+
     final uri = Uri.parse(Config.baseUrl).replace(
-      path: '/api/getads_likes.php',
-      queryParameters: {
-        'idusers': userId.toString(),
-        'usersid': userId.toString(),
-//          'nameImg': nameImg,
-        //        'bd': bd
-        //          .toString(), // Добавляем переменную bd как строку в параметры запроса
-      },
+      path: path,
+      queryParameters: queryParameters,
     );
     print('[outputobzlikes1] fetchAds url: $uri');
     final response = await http.get(uri);
@@ -447,19 +449,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                           onPressed: () async {
                                             final bool updatedLike =
                                                 await toggleLike(
-                                                truck['idusers'].toString(),
-                                                truck['id'].toString(),
-                                                bd!);
+                                              (truck['iduser'] ??
+                                                      truck['idusers'])
+                                                  .toString(),
+                                              truck['id'].toString(),
+                                              widget.base,
+                                            );
                                             if (!mounted) return;
                                             setState(() {
                                               final data = snapshot.data;
                                               if (!updatedLike &&
                                                   data != null) {
                                                 data.removeWhere((item) =>
-                                                    (item['idusers'] ?? '')
-                                                        .toString() ==
-                                                    (truck['idusers'] ?? '')
-                                                        .toString());
+                                                    ((item['iduser'] ??
+                                                                item['idusers'])
+                                                            .toString() ==
+                                                        (truck['iduser'] ??
+                                                                truck[
+                                                                    'idusers'])
+                                                            .toString()) &&
+                                                    (item['id'] ?? '')
+                                                            .toString() ==
+                                                        (truck['id'] ?? '')
+                                                            .toString());
                                               }
                                             });
                                           },
@@ -477,13 +489,17 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                               GestureDetector(
                                                 onTap: () {
+                                                  final reviewUserId =
+                                                      truck['iduserp'];
+                                                  if (reviewUserId == null) {
+                                                    return;
+                                                  }
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                         builder: (context) =>
-                                                            ReviewScreen(
-                                                                userId: truck[
-                                                                        'iduserp']
+                                                            ReviewScreenz(
+                                                                userId: reviewUserId
                                                                     .toString())),
                                                   );
                                                 },
@@ -605,6 +621,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+      bottomNavigationBar: const PerformerBottomNav(currentIndex: 2),
 
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,

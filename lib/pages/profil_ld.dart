@@ -244,55 +244,6 @@ class profil_ldForm extends State<profil_ld> {
                 ),
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: const Text(
-                'Банковская карта',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black38,
-                  fontSize: 16.0,
-                ),
-                textAlign: TextAlign.left,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              margin: const EdgeInsets.only(top: 10.0),
-              child: TextFormField(
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                    borderSide: BorderSide(color: blueaccentColor),
-                  ),
-                  hintText: '0000 0000 0000 0000',
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                    style: TextButton.styleFrom(
-                      fixedSize: const Size(double.infinity, 50),
-                      foregroundColor: whiteprColor,
-                      backgroundColor: GreenColor,
-                      disabledForegroundColor: grayprprColor,
-                      shape: const BeveledRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(3))),
-                    ),
-                    onPressed: () {},
-                    child: const Text('Привязать карту')),
-              ),
-            ),
           ],
         ),
       ),

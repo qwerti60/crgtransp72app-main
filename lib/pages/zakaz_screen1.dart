@@ -24,16 +24,18 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final int initialPage;
+  const MyApp({super.key, this.initialPage = 0});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: MyCustomScreen());
+    return MaterialApp(home: MyCustomScreen(initialPage: initialPage));
   }
 }
 
 class MyCustomScreen extends StatefulWidget {
-  const MyCustomScreen({super.key});
+  final int initialPage;
+  const MyCustomScreen({super.key, this.initialPage = 0});
 
   @override
   _MyCustomScreenState createState() => _MyCustomScreenState();
@@ -95,6 +97,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
           return OrderExecutionScreenzak(
             userId: orderInfo['user_id'],
             orderId: orderInfo['order_id'],
+            showBottomNav: false,
           );
         } else {
           return const SearchFormisp(); // Ads1App();
@@ -111,6 +114,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   @override
   void initState() {
     super.initState();
+    _currentPage = widget.initialPage;
     getUserData().then((_) {
       setState(() {});
     }).catchError((err) {
@@ -173,9 +177,11 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
             currentIndex: _currentPage,
             selectedIconTheme: const IconThemeData(color: violetColor),
             onTap: (index) {
-              setState(() {
-                _currentPage = index;
-              });
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => MyApp(initialPage: index)),
+                (Route<dynamic> route) => false,
+              );
             },
           ),
         );

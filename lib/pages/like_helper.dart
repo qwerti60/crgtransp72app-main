@@ -13,7 +13,7 @@ Future<bool> toggleLikeRequest({
 }) async {
   final List<String> candidatePaths = usePerformerEndpoint
       ? ['/api/toggle_like.php', '/api/toggle_like2.php']
-      : ['/api/toggle_like1.php'];
+      : ['/api/toggle_like1.php', '/api/toggle_like.php'];
 
   http.Response? response;
   for (final path in candidatePaths) {

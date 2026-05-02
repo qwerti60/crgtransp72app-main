@@ -5,6 +5,7 @@ import 'package:crgtransp72app/pages/add_ob_gp1.dart';
 import 'package:crgtransp72app/pages/add_ob_vidt.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
+import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/edit_ob_gp1.dart';
 import 'package:crgtransp72app/pages/edit_ob_gp_usl.dart';
 import 'package:crgtransp72app/pages/edit_ob_gp_usl_g.dart';
@@ -27,7 +28,9 @@ void main() {
 }
 
 class Ads2App extends StatelessWidget {
-  const Ads2App({super.key});
+  final bool showBottomNav;
+
+  const Ads2App({super.key, this.showBottomNav = true});
 
   @override
   Widget build(BuildContext context) {
@@ -36,19 +39,21 @@ class Ads2App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(),
+      home: MyHomePage(showBottomNav: showBottomNav),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  final bool showBottomNav;
+
+  const MyHomePage({super.key, this.showBottomNav = true});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State {
+class _MyHomePageState extends State<MyHomePage> {
   String? _selectedType;
   int? bd;
 
@@ -652,6 +657,9 @@ class _MyHomePageState extends State {
           ),
         ],
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const CustomerBottomNav(currentIndex: 2)
+          : null,
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/SendReviewForm.dart' hide Config;
 import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
 import 'package:crgtransp72app/pages/change_user.dart';
+import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
@@ -18,10 +19,14 @@ import 'package:crgtransp72app/design/colors.dart';
 class OrderExecutionScreenzak extends StatefulWidget {
   final String userId;
   final String orderId;
+  final bool showBottomNav;
 
-  const OrderExecutionScreenzak(
-      {Key? key, required this.userId, required this.orderId})
-      : super(key: key);
+  const OrderExecutionScreenzak({
+    Key? key,
+    required this.userId,
+    required this.orderId,
+    this.showBottomNav = true,
+  }) : super(key: key);
 
   @override
   _OrderExecutionScreenState createState() => _OrderExecutionScreenState();
@@ -59,7 +64,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
-          userIdok = data['idusers'];
+          userIdok = data['idusers']?.toString() ?? '';
         });
         print('вывод idiok: $userIdok');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -344,6 +349,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
             style: const TextStyle(color: whiteprColor)),
         backgroundColor: blueaccentColor,
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const CustomerBottomNav(currentIndex: 1)
+          : null,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Center(

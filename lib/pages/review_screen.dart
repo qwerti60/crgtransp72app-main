@@ -2,14 +2,16 @@ import 'dart:convert';
 
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
 class ReviewScreen extends StatefulWidget {
   final String userId;
+  final bool showBottomNav;
 
-  ReviewScreen({required this.userId});
+  ReviewScreen({required this.userId, this.showBottomNav = false});
 
   @override
   _ReviewScreenState createState() => _ReviewScreenState();
@@ -97,6 +99,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
           return Center(child: CircularProgressIndicator());
         },
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const PerformerBottomNav(currentIndex: 0)
+          : null,
     );
   }
 }

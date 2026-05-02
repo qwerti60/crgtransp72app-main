@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,15 +14,18 @@ import '../config.dart';
 import '../design/colors.dart';
 
 import 'changerol_page.dart';
+import 'customer_bottom_nav.dart';
 
 class list_predloj_na_obj_isp extends StatelessWidget {
   final String nameImg;
   final int bd; // добавляем параметр base
+  final bool useCustomerMenu;
 
   const list_predloj_na_obj_isp({
     Key? key,
     required this.nameImg,
     required this.bd, // добавляем обязательное поле
+    this.useCustomerMenu = false,
   }) : super(key: key);
 
   @override
@@ -32,7 +35,11 @@ class list_predloj_na_obj_isp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(nameImg: nameImg, bd: bd),
+      home: MyHomePage(
+        nameImg: nameImg,
+        bd: bd,
+        useCustomerMenu: useCustomerMenu,
+      ),
     );
   }
 }
@@ -40,7 +47,13 @@ class list_predloj_na_obj_isp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   final String nameImg;
   final int bd;
-  const MyHomePage({super.key, required this.nameImg, required this.bd});
+  final bool useCustomerMenu;
+  const MyHomePage({
+    super.key,
+    required this.nameImg,
+    required this.bd,
+    required this.useCustomerMenu,
+  });
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -99,7 +112,7 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
-          userId = data['idusers'];
+          userId = int.tryParse(data['idusers'].toString()) ?? 0;
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -121,17 +134,17 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
-          idUser = data['idusers'] ?? "default_id";
-          firstName = data['firstName'] ?? "Нет имени";
-          lastName = data['lastName'] ?? "Нет фамилии";
-          middleName = data['middleName'] ?? "Нет отчества";
-          city = data['city'] ?? "Нет города";
-          phone = data['phone'] ?? "Нет телефона";
-          email = data['email'] ?? "Нет email";
-          namefirm = data['namefirm'] ?? "Нет назвония фирмы";
-          innStr = data['innStr'] ?? "Нет ИНН";
-          ogrnStr = data['ogrnStr'] ?? "Нет ОГРН";
-          kppStr = data['kppStr'] ?? "Нет КПП";
+          idUser = data['idusers'];
+          firstName = data['firstName']?.toString() ?? "Нет имени";
+          lastName = data['lastName']?.toString() ?? "Нет фамилии";
+          middleName = data['middleName']?.toString() ?? "Нет отчества";
+          city = data['city']?.toString() ?? "Нет города";
+          phone = data['phone']?.toString() ?? "Нет телефона";
+          email = data['email']?.toString() ?? "Нет email";
+          namefirm = data['namefirm']?.toString() ?? "Нет назвония фирмы";
+          innStr = data['innStr']?.toString() ?? "Нет ИНН";
+          ogrnStr = data['ogrnStr']?.toString() ?? "Нет ОГРН";
+          kppStr = data['kppStr']?.toString() ?? "Нет КПП";
           print(namefirm);
         });
 
@@ -145,10 +158,10 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_predloj_na_obj_isp.php',
+        path: '/api/list_predloj_na_obj_isp_new.php',
         queryParameters: {
           'usersid': userId.toString(),
-          'idusers': idUser,
+          'idusers': (idUser ?? '').toString(),
           'nameImg': nameImg,
           'bd': bd
               .toString(), // Добавляем переменную bd как строку в параметры запроса
@@ -208,6 +221,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Если формат неожиданный – сигнализируем об ошибке
     throw Exception('Unexpected value of "isp": $raw');
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   @override
@@ -279,6 +302,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           truckImage = base64Decode(
                               base64Stringf); // Декодируем строку в список байтов
                         }
+                        final double rating = _toDouble(truck['rating']);
+                        final int reviewsCount = _toInt(truck['reviewsCount']);
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment
                               .stretch, // Для выравнивания содержимого в начале
@@ -312,117 +337,134 @@ class _MyHomePageState extends State<MyHomePage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          truck['success'] == 'true'
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color: truck['success'] == 'true'
-                                              ? Colors.red
-                                              : Colors.grey,
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            truck['success'] == 'true'
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: truck['success'] == 'true'
+                                                ? Colors.red
+                                                : Colors.grey,
+                                          ),
+                                          onPressed: () async {
+                                            await toggleLike(
+                                                truck['iduser'].toString(),
+                                                truck['id'].toString(),
+                                                widget.bd);
+                                            setState(() {});
+                                          },
                                         ),
-                                        onPressed: () async {
-                                          await toggleLike(
-                                              truck['iduser'].toString(),
-                                              truck['id'].toString(),
-                                              widget.bd);
-                                          setState(() {});
-                                        },
-                                      ),
-                                      if (truck['firstName'] != null)
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${truck['firstName']} ${truck['lastName']}',
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            Row(
+                                        if (truck['firstName'] != null)
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Row(
-                                                  children:
-                                                      List.generate(5, (index) {
-                                                    return Icon(
-                                                      index <
-                                                              (truck['rating'] ??
-                                                                  0)
-                                                          ? Icons.star
-                                                          : Icons.star_border,
-                                                      color: Colors.amber,
-                                                      size: 16,
-                                                    );
-                                                  }),
-                                                ),
-                                                const SizedBox(width: 4),
                                                 Text(
-                                                  '${truck['rating'] ?? 0.0}',
+                                                  '${truck['firstName']} ${truck['lastName']}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
-                                                  ),
+                                                      fontWeight:
+                                                          FontWeight.bold),
                                                 ),
-                                                const SizedBox(width: 8),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            ReviewScreen(
-                                                          userId: truck['iduserp']
-                                                              .toString(),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.comment_outlined,
+                                                Wrap(
+                                                  crossAxisAlignment:
+                                                      WrapCrossAlignment.center,
+                                                  spacing: 4,
+                                                  children: [
+                                                    ...List.generate(5,
+                                                        (index) {
+                                                      return Icon(
+                                                        index < rating
+                                                            ? Icons.star
+                                                            : Icons.star_border,
+                                                        color: Colors.amber,
                                                         size: 16,
+                                                      );
+                                                    }),
+                                                    Text(
+                                                      rating.toStringAsFixed(1),
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
                                                         color: Colors.grey,
                                                       ),
-                                                      const SizedBox(width: 2),
-                                                      Text(
-                                                        '${truck['reviewsCount'] ?? 0}',
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey,
-                                                        ),
+                                                    ),
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                ReviewScreenz(
+                                                              userId: truck[
+                                                                      'iduserp']
+                                                                  .toString(),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons
+                                                                .comment_outlined,
+                                                            size: 16,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 2),
+                                                          Text(
+                                                            '$reviewsCount',
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 14,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                        ),
-                                    ],
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      _makePhoneCall(truck['phone']);
-                                    },
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.phone),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            '${truck['phone']}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _makePhoneCall(truck['phone']);
+                                      },
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.phone),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              '${truck['phone']}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   )
                                 ],
@@ -594,7 +636,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               margin: const EdgeInsets.only(top: 20.0),
                               child: FutureBuilder<bool>(
                                 future: checkIsp(widget.nameImg, widget.bd,
-                                    truck['iduserp']),
+                                    int.tryParse(truck['iduserp'].toString()) ??
+                                        0),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
                                       ConnectionState.waiting) {
@@ -743,7 +786,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                       },
                                       child: Text(hasOffer
                                           ? 'Отказаться от предложения'
-                                          : 'Принять предложение'),
+                                          : 'П1ринять предложение'),
                                     ),
                                   );
                                 },
@@ -762,6 +805,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+      bottomNavigationBar: widget.useCustomerMenu
+          ? const CustomerBottomNav(currentIndex: 1)
+          : null,
     );
   }
 
@@ -810,8 +856,8 @@ class _MyHomePageState extends State<MyHomePage> {
         .replace(path: '/api/toggle_like1.php')
         .replace(queryParameters: {
       'usersid': userId.toString(),
-      'idusers': idUser,
-      'id': id,
+      'idusers': idUser.toString(),
+      'id': id.toString(),
       'bd': bd.toString(),
     });
 

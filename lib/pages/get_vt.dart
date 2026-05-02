@@ -22,7 +22,7 @@ class MyAppI1 extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Объявления',
+            'Услуги',
             style: TextStyle(
               color: whiteprColor,
             ),

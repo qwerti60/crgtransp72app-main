@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 
 import '../design/colors.dart';
@@ -18,7 +19,9 @@ import 'package:image/image.dart' as img;
 import 'dart:async';
 
 class zprofil_ld extends StatefulWidget {
-  const zprofil_ld({super.key});
+  final bool showBottomNav;
+
+  const zprofil_ld({super.key, this.showBottomNav = true});
   @override
   zprofil_ldForm createState() => zprofil_ldForm();
 }
@@ -455,58 +458,12 @@ class zprofil_ldForm extends State<zprofil_ld> {
                 ),
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: const Text(
-                'Банковская карта',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black38,
-                  fontSize: 16.0,
-                ),
-                textAlign: TextAlign.left,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              margin: const EdgeInsets.only(top: 10.0),
-              child: TextFormField(
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                    borderSide: BorderSide(color: blueaccentColor),
-                  ),
-                  hintText: '0000 0000 0000 0000',
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                    style: TextButton.styleFrom(
-                      fixedSize: const Size(double.infinity, 50),
-                      foregroundColor: whiteprColor,
-                      backgroundColor: violetColor,
-                      disabledForegroundColor: grayprprColor,
-                      shape: const BeveledRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(3))),
-                    ),
-                    onPressed: () {},
-                    child: const Text('Привязать карту')),
-              ),
-            ),
           ],
         ),
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const CustomerBottomNav(currentIndex: 2)
+          : null,
     );
   }
 }

@@ -213,12 +213,12 @@ class zprofil_nameForm extends State<zprofil_name2> {
                   ),
                   onPressed: () {
                     Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const HistortScreen(
-                                pageProfile:
-                                    'outputobzlikes') //outputobzlikes1(nameImg: '', base: 1)
-                            ));
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const Outputobzlikes1Page(nameImg: '', base: 1),
+                      ),
+                    );
                   },
                   child: const Text('Избранные заказчики')),
             ),

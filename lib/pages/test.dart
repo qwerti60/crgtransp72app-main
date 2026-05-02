@@ -35,12 +35,13 @@ class _HistortScreenState extends State<HistortScreen> {
 
   final List<Widget?> _pages = List.filled(3, null, growable: false);
   late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
+    () => const MyAppI1zPage(),
     () => hasActiveOrder
         ? OrderExecutionScreen(
             userId: orderuserid, //orderInfo!['user_id'].toString(),
-            orderId: orderid //orderInfo!['order_id'].toString()
-            )
+            orderId: orderid, //orderInfo!['order_id'].toString()
+            showBottomNav: false,
+          )
         : SearchForm(),
     () => zprofil_name2(),
   ];
@@ -134,6 +135,10 @@ class _HistortScreenState extends State<HistortScreen> {
 
         final orderInfo = snapshot.data!;
         hasActiveOrder = orderInfo['result'] == true;
+        if (hasActiveOrder) {
+          orderid = orderInfo['order_id']?.toString() ?? orderid;
+          orderuserid = orderInfo['user_id']?.toString() ?? orderuserid;
+        }
 
         return Scaffold(
           //       body: _currentIndex == null

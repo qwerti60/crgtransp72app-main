@@ -9,6 +9,7 @@ import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
+import 'package:crgtransp72app/pages/zakaz_screen1.dart' as customer_home;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -43,15 +44,25 @@ class _HistortScreenState extends State<HistortScreen1> {
 
   final List<Widget?> _pages = List.filled(4, null, growable: false);
   late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
+    () => const MyImageGrid(),
     () => hasActiveOrder
         ? OrderExecutionScreen(
-            userId: orderInfo!['user_id'], orderId: orderInfo!['order_id'])
+            userId: orderInfo!['user_id'],
+            orderId: orderInfo!['order_id'],
+            showBottomNav: false)
         : SearchForm(),
     () => zprofil_name2(),
   ];
 
   void _selectTab(int index) {
+    if (index == 0) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const customer_home.MyApp()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
     setState(() {
       _currentIndex = index;
       _pages[index] ??= _builders[index]();
@@ -209,6 +220,7 @@ Widget buildProfilePage(String pageProfile, userId1, orderId123, String uidok) {
       return outputobz(
         nameImg: userId1,
         city: orderId123,
+        showBottomNav: false,
       );
     default:
       return const SizedBox.shrink();

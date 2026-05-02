@@ -234,6 +234,7 @@ class _SearchFormispState extends State<SearchFormisp> {
                             // или outputobz, если класс с маленькой буквы
                             nameImg: selectedServiceName!,
                             city: selectedCityName!,
+                            showBottomNav: true,
                           ),
                         ),
                       );
