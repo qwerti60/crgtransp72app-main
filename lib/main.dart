@@ -2,12 +2,6 @@ import 'package:crgtransp72app/pages/start_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Импортируем core
 import 'package:firebase_messaging/firebase_messaging.dart'; // Импортируем messaging
-import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:http/http.dart' as http;
-import 'package:googleapis_auth/googleapis_auth.dart';
 
 Future<void> _initializeFirebase() async {
   await Firebase.initializeApp(); // Инициализируем Firebase
@@ -101,17 +95,6 @@ Future<void> initPush() async {
     debugPrint(
         'Заголовок: ${message.notification?.title}, Сообщение: ${message.notification?.body}');
   });
-}
-
-late final ServiceAccountCredentials credentials;
-late final String projectId;
-
-Future<void> initFcmSender() async {
-  final jsonStr = await rootBundle.loadString('assets/service_account.json');
-  final saMap = jsonDecode(jsonStr) as Map<String, dynamic>;
-
-  credentials = ServiceAccountCredentials.fromJson(saMap);
-  projectId = saMap['crgtransp72app'] as String;
 }
 
 void main() async {
