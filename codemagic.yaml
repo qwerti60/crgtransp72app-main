@@ -18,7 +18,8 @@ workflows:
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
-          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          plutil -lint ios/Runner/GoogleService-Info.plist
       - name: Get Flutter packages
         script: |
           flutter pub get
@@ -45,6 +46,7 @@ workflows:
       - name: Apply code signing profiles
         script: |
           xcode-project use-profiles
+          plutil -lint /Users/builder/export_options.plist
       - name: Build iOS IPA
         script: |
           flutter build ipa \
