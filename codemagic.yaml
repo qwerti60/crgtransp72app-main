@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: codemagic
     environment:
+      groups:
+        - Secret
       flutter: stable
       xcode: latest
       cocoapods: default
