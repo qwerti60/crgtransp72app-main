@@ -10,6 +10,7 @@ import '../config.dart';
 import '../design/dimension.dart';
 import 'change_user.dart';
 import 'changestatis_page.dart';
+import 'get_vt_z.dart' show MyImageGrid;
 import 'gruz_vodit.dart';
 //import 'profil_page.dart';
 import 'rent_z.dart';
@@ -37,7 +38,8 @@ class _LoginState extends State<LoginPage> {
 
   Future<void> _requestPasswordResetCode(String email) async {
     final response = await http.post(
-      Uri.parse(Config.baseUrl).replace(path: '/api/request_password_reset.php'),
+      Uri.parse(Config.baseUrl)
+          .replace(path: '/api/request_password_reset.php'),
       body: {'email': email.trim()},
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );
@@ -59,9 +61,11 @@ class _LoginState extends State<LoginPage> {
     );
   }
 
-  Future<void> _confirmPasswordReset(String email, String code, String password) async {
+  Future<void> _confirmPasswordReset(
+      String email, String code, String password) async {
     final response = await http.post(
-      Uri.parse(Config.baseUrl).replace(path: '/api/confirm_password_reset.php'),
+      Uri.parse(Config.baseUrl)
+          .replace(path: '/api/confirm_password_reset.php'),
       body: {
         'email': email.trim(),
         'code': code.trim(),
@@ -144,7 +148,8 @@ class _LoginState extends State<LoginPage> {
                 children: [
                   TextFormField(
                     controller: _resetCodeController,
-                    decoration: const InputDecoration(hintText: 'Код из e-mail'),
+                    decoration:
+                        const InputDecoration(hintText: 'Код из e-mail'),
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -154,7 +159,9 @@ class _LoginState extends State<LoginPage> {
                       hintText: 'Новый пароль',
                       suffixIcon: IconButton(
                         icon: Icon(
-                          obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: () {
                           setDialogState(() {
@@ -178,7 +185,8 @@ class _LoginState extends State<LoginPage> {
                     if (code.isEmpty || newPassword.length < 8) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Введите код и пароль не менее 8 символов'),
+                          content:
+                              Text('Введите код и пароль не менее 8 символов'),
                         ),
                       );
                       return;
@@ -332,7 +340,9 @@ class _LoginState extends State<LoginPage> {
                   filled: true,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
@@ -379,6 +389,25 @@ class _LoginState extends State<LoginPage> {
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 16.0),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.fire_truck_outlined),
+                label: const Text('Смотреть технику без регистрации'),
+                style: ButtonStyle(
+                  foregroundColor: WidgetStateProperty.all(blueaccentColor),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GuestEquipmentScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 40.0),
               child: TextButton(
                 style: TextButton.styleFrom(
@@ -412,6 +441,24 @@ class _LoginState extends State<LoginPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class GuestEquipmentScreen extends StatelessWidget {
+  const GuestEquipmentScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Техника',
+          style: TextStyle(color: whiteprColor),
+        ),
+        backgroundColor: blueaccentColor,
+      ),
+      body: const MyImageGrid(),
     );
   }
 }

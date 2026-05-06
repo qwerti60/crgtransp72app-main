@@ -11,6 +11,7 @@ import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
+import 'account_deletion.dart';
 import 'ads2.dart';
 import 'list_predloj_na_obj_isp.dart';
 import 'loginpage.dart';
@@ -228,7 +229,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                   },
                   child: const Text('Мои объявления')),
             ),
-           /* Container(
+            /* Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
               child: TextButton(
@@ -289,6 +290,17 @@ class zprofil_nameForm extends State<zprofil_name> {
                 ),
                 onPressed: () => _showExitConfirmationDialog(context),
                 child: const Text('Выйти из аккаунта'),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 12.0),
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                onPressed: () => showDeleteAccountDialog(context),
+                child: const Text('Удалить аккаунт'),
               ),
             ),
             Container(
