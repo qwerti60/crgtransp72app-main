@@ -32,7 +32,15 @@ workflows:
           keychain initialize
       - name: Create certificate private key
         script: |
-          echo "$CERTIFICATE_PRIVATE_KEY_BASE64" | base64 --decode > /tmp/ios_distribution_private_key
+          if [ -z "$CERTIFICATE_PRIVATE_KEY_BASE64" ]; then
+            echo "CERTIFICATE_PRIVATE_KEY_BASE64 is empty. Add it to the Secret variable group in Codemagic."
+            exit 1
+          fi
+          printf '%s' "$CERTIFICATE_PRIVATE_KEY_BASE64" | base64 --decode > /tmp/ios_distribution_private_key
+          if ! grep -q "BEGIN.*PRIVATE KEY" /tmp/ios_distribution_private_key; then
+            echo "CERTIFICATE_PRIVATE_KEY_BASE64 did not decode to a PEM private key."
+            exit 1
+          fi
           chmod 600 /tmp/ios_distribution_private_key
       - name: Fetch iOS signing files
         script: |
