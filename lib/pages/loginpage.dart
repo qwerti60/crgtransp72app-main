@@ -458,7 +458,7 @@ class GuestEquipmentScreen extends StatelessWidget {
         ),
         backgroundColor: blueaccentColor,
       ),
-      body: const MyImageGrid(),
+      body: const MyImageGrid(isGuestMode: true),
     );
   }
 }

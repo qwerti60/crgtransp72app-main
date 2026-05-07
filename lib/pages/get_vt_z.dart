@@ -80,13 +80,15 @@ class MyAppI1zPage extends StatelessWidget {
 }
 
 class MyImageGrid extends StatefulWidget {
-  const MyImageGrid({super.key});
+  final bool isGuestMode;
+
+  const MyImageGrid({super.key, this.isGuestMode = false});
 
   @override
   _MyImageGridState createState() => _MyImageGridState();
 }
 
-class _MyImageGridState extends State {
+class _MyImageGridState extends State<MyImageGrid> {
   late Future<List<ImageData>> imagesVidt;
   late Future<List<ImageData>> imagesVidg;
   late Future<List<ImageData>> imagesGruzchik;
@@ -136,6 +138,17 @@ class _MyImageGridState extends State {
                   itemBuilder: (BuildContext context, int index) {
                     return GestureDetector(
                       onTap: () {
+                        if (widget.isGuestMode) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Для перехода к заявкам и профилю войдите в аккаунт',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
                         int base =
                             0; // Объявление переменной за пределами условного блока
 
