@@ -323,15 +323,9 @@ class _add_ob_gpForm extends State<edit_ob_gp_usl_t> {
     if (response.statusCode == 200) {
       print('Uploaded!');
       print('Uploaded!');
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const Ads2App(),
-          //MenuzakScreen(
-          //  pageProfile:
-          //    'Ads2App'), //HistortScreen(pageProfile: 'Ads1App'), //Ads2App(),
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     } else {
       print('Failed!');
     }

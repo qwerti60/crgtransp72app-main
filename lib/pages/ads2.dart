@@ -70,12 +70,14 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  /// Не `late`: иначе после hot reload / до первого `setState` из `getUserData` возможен LateInitializationError.
+  Future<List<dynamic>> _adsFuture = Future.value(<dynamic>[]);
+
   @override
   void initState() {
     bd ??= 1;
     super.initState();
     getUserData();
-    fetchAds(bd!);
   }
 
   Future<void> getUserData() async {
@@ -101,6 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
           city = data['city'];
           phone = data['phone'];
           email = data['email'];
+          _adsFuture = fetchAds(bd!);
           print(idusers);
         });
 
@@ -142,13 +145,14 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void editTruck(int id, BuildContext context, String tableName) async {
+  Future<void> editTruck(int id, BuildContext context, String tableName) async {
     try {
+      bool? updated;
       // Логика редактирования записи
       switch (tableName) {
         // Использование switch-case улучшает читаемость кода
         case 'orders':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => edit_ob_gp_usl(
@@ -156,7 +160,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       )));
           break;
         case 'orderst':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => edit_ob_gp_usl_t(
@@ -164,7 +168,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       )));
           break;
         case 'ordersg':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => rdit_ob_gp_usl_g(
@@ -174,6 +178,11 @@ class _MyHomePageState extends State<MyHomePage> {
         default:
           print(
               'Unknown table name'); // Сообщение в консоль, если неизвестная таблица
+      }
+      if (updated == true && mounted) {
+        setState(() {
+          _adsFuture = fetchAds(bd!);
+        });
       }
     } catch (e) {
       debugPrint("Ошибка при редактировании: $e");
@@ -219,7 +228,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(bd!),
+              future: _adsFuture,
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   return ListView.builder(
@@ -720,12 +729,10 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         }
 
-        // 1. ждём, пока получим новые данные
-        await fetchAds(bd);
-
-        // 2. сообщаем фреймворку, что данные изменились
         if (mounted) {
-          setState(() {}); // без async-кода внутри!
+          setState(() {
+            _adsFuture = fetchAds(bd);
+          });
         }
       } else {
         if (mounted) {

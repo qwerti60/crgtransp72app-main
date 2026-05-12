@@ -369,6 +369,23 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthorized = userIdok.isNotEmpty;
+    final navItems = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.fire_truck),
+        label: 'Объявления',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.subject),
+        label: 'Заявки',
+      ),
+      if (isAuthorized)
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.account_circle),
+          label: 'Профиль',
+        ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(),
@@ -513,20 +530,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
               currentIndex: 1,
               onTap: _onBottomNavTap,
               type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.fire_truck),
-                  label: 'Объявления',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.subject),
-                  label: 'Заявки',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.account_circle),
-                  label: 'Профиль',
-                ),
-              ],
+              items: navItems,
             )
           : null,
     );

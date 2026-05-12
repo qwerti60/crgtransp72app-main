@@ -12,9 +12,6 @@ if ($namex === '') {
     exit;
 }
 
-// Получаем текущую дату
-$currentDate = date('Y-m-d'); // Формат даты MySQL: YYYY-MM-DD
-
 // Конфигурация справочников
 $lookups = [
     'vidt' => ['mainTable' => 'add_ob_vidt', 'mainCol' => 'vidt'],
@@ -54,25 +51,33 @@ try {
         exit;
     }
 
-    // Основной запрос к таблице
+    // Счётчики по городам должны совпадать с get_ads2_new.php (тот же набор объявлений).
+    // Раньше: flag=1, без offer_data, без GROUP BY для gp/vidt — в скобках было меньше, чем в списке.
     if ($mainTable === 'add_ob_gr') {
-        // Специальный случай для add_ob_gr
-        $sql = "SELECT city, COUNT(*) AS cnt
-                FROM add_ob_gr
-                WHERE iduser != ? AND flag = 1
-                GROUP BY city";
+        $sql = "SELECT a.city, COUNT(DISTINCT a.id) AS cnt
+                FROM add_ob_gr AS a
+                LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
+                WHERE a.iduser IS NOT NULL
+                  AND a.iduser != ?
+                  AND od.id IS NULL
+                GROUP BY a.city
+                ORDER BY a.city COLLATE utf8mb4_unicode_ci";
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception($conn->error);
-        $stmt->bind_param('s', $useId); // Только один параметр передается
+        $stmt->bind_param('s', $useId);
     } else {
-        // Общий случай для других таблиц
-        $sql = "SELECT city, COUNT(*) AS cnt
-                FROM {$mainTable}
-                WHERE {$mainColumn} = ? AND iduser != ? AND flag = 1
-               ORDER BY city COLLATE utf8_unicode_ci";
+        $sql = "SELECT a.city, COUNT(DISTINCT a.id) AS cnt
+                FROM {$mainTable} AS a
+                LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
+                WHERE a.{$mainColumn} = ?
+                  AND a.iduser IS NOT NULL
+                  AND a.iduser != ?
+                  AND od.id IS NULL
+                GROUP BY a.city
+                ORDER BY a.city COLLATE utf8mb4_unicode_ci";
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception($conn->error);
-        $stmt->bind_param('ss', $namex, $useId); // Два параметра передаются
+        $stmt->bind_param('ss', $namex, $useId);
     }
 
     $stmt->execute();

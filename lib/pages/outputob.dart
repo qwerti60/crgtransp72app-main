@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:crgtransp72app/pages/OfferScreen.dart';
-import 'package:crgtransp72app/pages/OfferScreenZ.dart';
+import 'package:crgtransp72app/pages/OfferScreen2.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -17,17 +17,26 @@ import '../design/colors.dart';
 
 import 'changerol_page.dart';
 import 'like_helper.dart';
+import 'loginpage.dart';
 
 class outputob extends StatelessWidget {
   final String nameImg;
   final String city;
   final bool showBottomNav;
 
+  /// Если `true` — меню заказчика; если `false` — меню грузоперевозчика.
+  final bool useCustomerNavigation;
+
+  /// Запрос объявлений без фильтра по городу (`all_cities=1` в get_ads2_new.php).
+  final bool ignoreCityFilter;
+
   const outputob(
       {super.key,
       required this.nameImg,
       required this.city,
-      this.showBottomNav = false});
+      this.showBottomNav = false,
+      this.useCustomerNavigation = true,
+      this.ignoreCityFilter = false});
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +44,8 @@ class outputob extends StatelessWidget {
       nameImg: nameImg,
       city: city,
       showBottomNav: showBottomNav,
+      useCustomerNavigation: useCustomerNavigation,
+      ignoreCityFilter: ignoreCityFilter,
     );
   }
 }
@@ -43,12 +54,16 @@ class MyHomePage extends StatefulWidget {
   final String city;
   final String nameImg;
   final bool showBottomNav;
+  final bool useCustomerNavigation;
+  final bool ignoreCityFilter;
 
   const MyHomePage(
       {super.key,
       required this.nameImg,
       required this.city,
-      this.showBottomNav = false});
+      this.showBottomNav = false,
+      this.useCustomerNavigation = true,
+      this.ignoreCityFilter = false});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -78,6 +93,40 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _invalidResponseSnackShown = false;
   final Map<String, bool> _likedOverrides = {};
   late Future<List> _adsFuture;
+
+  bool get _isAuthorized => userId > 0;
+
+  Future<void> _showAuthRequiredDialog() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Требуется авторизация'),
+          content: const Text(
+            'Эта функция доступна только для зарегистрированных пользователей.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
+              child: const Text('Авторизация'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showInvalidResponseSnack() {
     if (_invalidResponseSnackShown || !mounted) return;
@@ -189,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkOfferExists(int userId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=${truckId.toString()}&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer_zakaz.php?iduser=$userId&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -198,16 +247,82 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> _confirmDeleteOfferZakaz(
+    BuildContext context,
+    int listingId,
+    int bdVal,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить заявку?'),
+        content: const Text(
+          'Ваше предложение по этому объявлению будет удалено. При необходимости вы сможете оформить новое.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    if (userId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось определить пользователя.')),
+      );
+      return;
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/api/delete_offer_zakaz.php'),
+        body: {
+          'iduserp': userId.toString(),
+          'iduser': listingId.toString(),
+          'bd': bdVal.toString(),
+        },
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Заявка удалена')),
+        );
+        setState(() {
+          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка сервера: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
+    }
+  }
+
   Future<List> fetchAds(String city, String nameImg, int userId) async {
+    final queryParameters = <String, String>{
+      'nameImg': nameImg,
+      'city': city,
+      'useId': userId.toString(),
+      'usersid': userId.toString(),
+    };
+    if (widget.ignoreCityFilter) {
+      queryParameters['all_cities'] = '1';
+    }
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/get_ads2_new.php',
-        queryParameters: {
-          'nameImg': nameImg,
-          'city': city,
-          'useId': userId.toString(),
-          'usersid': userId.toString(),
-        },
+        queryParameters: queryParameters,
       ),
     );
     if (response.statusCode == 200) {
@@ -258,7 +373,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       // Добавление FloatingActionButton
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
+          if (!_isAuthorized) {
+            await _showAuthRequiredDialog();
+            return;
+          }
+
           // Действие, производимое при нажатии на кнопку
           Navigator.push(context,
               MaterialPageRoute(builder: (context) => const changerol1()));
@@ -413,8 +533,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   MaterialPageRoute(
                                                       builder: (context) =>
                                                           ReviewScreenz(
-                                                              userId: reviewUserId
-                                                                  .toString())),
+                                                            userId: reviewUserId
+                                                                .toString(),
+                                                            showBottomNav:
+                                                                widget.showBottomNav,
+                                                          )),
                                                 );
                                               },
                                               child: Row(
@@ -825,7 +948,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                     checkOfferExists(userId, truck['id'], bd!),
                                 builder: (context, snapshot) {
                                   if (snapshot.hasData && snapshot.data!) {
-                                    // Если запись существует
                                     return Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 20.0),
@@ -837,7 +959,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                             fixedSize:
                                                 const Size(double.infinity, 50),
                                             foregroundColor: whiteprColor,
-                                            backgroundColor: blueaccentColor,
+                                            backgroundColor:
+                                                Colors.red.shade700,
                                             disabledForegroundColor:
                                                 grayprprColor,
                                             shape: const BeveledRectangleBorder(
@@ -845,20 +968,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   Radius.circular(3)),
                                             ),
                                           ),
-                                          onPressed: () {
-                                            Navigator.push(
+                                          onPressed: () async {
+                                            if (!_isAuthorized) {
+                                              await _showAuthRequiredDialog();
+                                              return;
+                                            }
+                                            final listingId = int.tryParse(
+                                                    truck['id'].toString()) ??
+                                                0;
+                                            if (listingId <= 0) return;
+                                            await _confirmDeleteOfferZakaz(
                                               context,
-                                              MaterialPageRoute(
-                                                builder: (context) => OfferScreen(
-                                                    userid:
-                                                        truck['id'].toString(),
-                                                    useridobj: truck['iduser'],
-                                                    bd: bd), // Изменение экрана
-                                              ),
+                                              listingId,
+                                              bd!,
                                             );
                                           },
                                           child:
-                                              const Text('Редактировать заказ'),
+                                              const Text('Удалить заявку'),
                                         ),
                                       ),
                                     );
@@ -883,17 +1009,24 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   Radius.circular(3)),
                                             ),
                                           ),
-                                          onPressed: () {
+                                          onPressed: () async {
+                                            if (!_isAuthorized) {
+                                              await _showAuthRequiredDialog();
+                                              return;
+                                            }
+
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) =>
-                                                    OfferScreen(
+                                                    OfferScreen2(
                                                         userid: truck['id']
                                                             .toString(),
                                                         useridobj:
                                                             truck['iduser'],
-                                                        bd: bd),
+                                                        bd: bd,
+                                                        useCustomerNavigation:
+                                                            true),
                                               ),
                                             );
                                           },
@@ -919,7 +1052,9 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       bottomNavigationBar: widget.showBottomNav
-          ? const CustomerBottomNav(currentIndex: 0)
+          ? (widget.useCustomerNavigation
+              ? const CustomerBottomNav(currentIndex: 0)
+              : const PerformerBottomNav(currentIndex: 0))
           : null,
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,

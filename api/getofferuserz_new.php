@@ -2,12 +2,12 @@
 /**
  * Объявления исполнителей, на которые заказчик оставил заявку (offer_dataf).
  * id в offer_dataf.iduser — id объявления в orders / orderst / ordersg ИЛИ add_ob_*.
- * Таблицы reviewsisp и likes1 подключаются только если существуют.
+ * Таблицы reviewsisp и likes1 подключаются только если существуют (иначе prepare падал и ответ был []).
  * Сопоставление исполнителя с users: iduser в orders может быть varchar.
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../api/databd.php';
+require_once __DIR__ . '/databd.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -95,6 +95,7 @@ try {
         if (!$stmtOffers) {
             throw new RuntimeException($conn->error);
         }
+        // Строковый bind: iduserp в БД может быть CHAR/VARCHAR.
         $stmtOffers->bind_param('s', $useIdRaw);
     } else {
         $stmtOffers = $conn->prepare(
@@ -115,6 +116,7 @@ try {
             continue;
         }
         $rowBd = $fetchAll ? (int) $o['bd'] : $bd;
+        // Сначала категория из offer_dataf, затем 1/2/3 — если bd в строке неверный, объявление всё равно ищем.
         $bdsToTry = [];
         if ($rowBd >= 1 && $rowBd <= 3) {
             $bdsToTry[] = $rowBd;

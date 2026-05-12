@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:crgtransp72app/config.dart';
-import 'package:crgtransp72app/pages/loginpage.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,13 +48,8 @@ class _SplashScreenState extends State<SplashScreen> {
       print('token');
       print(token);
 
-      if (token == null) {
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginPage()));
-      } else {
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const change_user()));
-      }
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const change_user()));
     });
   }
 

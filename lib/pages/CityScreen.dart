@@ -63,11 +63,13 @@ class _CityScreenState extends State<CityScreen> {
       if (response.statusCode == 200 &&
           response.data != null &&
           response.data['cities'] != null) {
+        var loadedCities =
+            List<Map<String, dynamic>>.from(response.data['cities']);
+        loadedCities.sort(
+          (a, b) => a['city'].toString().compareTo(b['city'].toString()),
+        );
         setState(() {
-          cities = List.from(response.data['cities'])
-            ..sort((a, b) => a['city']
-                .toString()
-                .compareTo(b['city'].toString())); // Сортируем по алфавиту
+          cities = loadedCities;
         });
       }
     } catch (e) {
@@ -189,13 +191,14 @@ class _CityScreenState extends State<CityScreen> {
                         child: InkWell(
                       onTap: city['city'] != 'Город не найден'
                           ? () {
-                              Navigator.push(
-                                context,
+                              Navigator.of(context, rootNavigator: true).push(
                                 MaterialPageRoute(
-                                    builder: (_) => outputobz(
-                                          nameImg: widget.indexName,
-                                          city: city['city'],
-                                        )),
+                                  builder: (_) => outputobz(
+                                    nameImg: widget.indexName,
+                                    city: city['city'],
+                                    showBottomNav: true,
+                                  ),
+                                ),
                               );
                             }
                           : null, // Исключаем onTap для записи "Город не найден"

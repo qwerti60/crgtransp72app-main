@@ -1,13 +1,11 @@
 <?php
 /**
- * Объявления исполнителей, на которые заказчик оставил заявку (offer_dataf).
- * id в offer_dataf.iduser — id объявления в orders / orderst / ordersg ИЛИ add_ob_*.
- * Таблицы reviewsisp и likes1 подключаются только если существуют.
- * Сопоставление исполнителя с users: iduser в orders может быть varchar.
+ * Карточки исполнителей по заявкам заказчика (offer_dataf), без фильтра по городу.
+ * Формат полей как у get_ads2_new.php (avg_rating, reviewsCount, review_user_id, success).
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../api/databd.php';
+require_once __DIR__ . '/databd.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -16,14 +14,7 @@ if ($useIdRaw === '' && isset($_GET['usersid'])) {
     $useIdRaw = trim((string) $_GET['usersid']);
 }
 
-$fetchAll = isset($_GET['all']) && $_GET['all'] === '1';
-$bd       = isset($_GET['bd']) ? (int) $_GET['bd'] : 0;
-
 if ($useIdRaw === '') {
-    echo json_encode([], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-if (!$fetchAll && ($bd < 1 || $bd > 3)) {
     echo json_encode([], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -65,8 +56,6 @@ $successExpr = $hasLikes1
     ? "CASE WHEN EXISTS(SELECT 1 FROM likes1 l WHERE l.idusers = u.idusers AND l.id = a.id AND l.usersid = ?) THEN 'true' ELSE 'false' END"
     : "'false'";
 
-// LEFT JOIN: как в get_ads2_new.php — объявление из add_ob_* должно попадать в список,
-// даже если iduser не сматчился с users (иначе offer_dataf есть, а ответ пустой).
 $userJoin = 'LEFT JOIN users AS u ON u.idusers = CAST(NULLIF(NULLIF(TRIM(CAST(a.iduser AS CHAR)), \'\'), \'NULL\') AS UNSIGNED) AND CAST(NULLIF(NULLIF(TRIM(CAST(a.iduser AS CHAR)), \'\'), \'NULL\') AS UNSIGNED) > 0';
 
 $baseMap = [
@@ -88,24 +77,13 @@ foreach ($baseMap as $bdKey => $tables) {
 $fetchData = [];
 
 try {
-    if ($fetchAll) {
-        $stmtOffers = $conn->prepare(
-            'SELECT iduser AS listing_id, bd FROM offer_dataf WHERE iduserp = ?'
-        );
-        if (!$stmtOffers) {
-            throw new RuntimeException($conn->error);
-        }
-        $stmtOffers->bind_param('s', $useIdRaw);
-    } else {
-        $stmtOffers = $conn->prepare(
-            'SELECT DISTINCT iduser AS listing_id FROM offer_dataf WHERE iduserp = ? AND bd = ?'
-        );
-        if (!$stmtOffers) {
-            throw new RuntimeException($conn->error);
-        }
-        $stmtOffers->bind_param('si', $useIdRaw, $bd);
+    $stmtOffers = $conn->prepare(
+        'SELECT iduser AS listing_id, bd FROM offer_dataf WHERE iduserp = ?'
+    );
+    if (!$stmtOffers) {
+        throw new RuntimeException($conn->error);
     }
-
+    $stmtOffers->bind_param('s', $useIdRaw);
     $stmtOffers->execute();
     $rOffers = $stmtOffers->get_result();
 
@@ -114,7 +92,7 @@ try {
         if ($listingId <= 0) {
             continue;
         }
-        $rowBd = $fetchAll ? (int) $o['bd'] : $bd;
+        $rowBd = (int) $o['bd'];
         $bdsToTry = [];
         if ($rowBd >= 1 && $rowBd <= 3) {
             $bdsToTry[] = $rowBd;
@@ -136,6 +114,7 @@ try {
                 $sql = "
                 SELECT a.*,
                        u.idusers AS idusers,
+                       u.idusers AS review_user_id,
                        u.fotouser,
                        u.firstName,
                        u.lastName,
@@ -143,12 +122,15 @@ try {
                        u.city AS userCity,
                        u.phone,
                        u.email,
-                       {$ratingExpr} AS rating,
                        {$reviewsCountExpr} AS reviewsCount,
+                       {$reviewsCountExpr} AS review_count,
+                       {$ratingExpr} AS avg_rating,
+                       {$ratingExpr} AS rating,
                        {$successExpr} AS success
                 FROM {$tbl} AS a
                 {$userJoin}
                 WHERE a.id = ?
+                  AND a.iduser IS NOT NULL
                 LIMIT 1
             ";
 
@@ -176,9 +158,7 @@ try {
             continue;
         }
 
-        if ($fetchAll) {
-            $row['offer_bd'] = $foundBd;
-        }
+        $row['offer_bd']      = $foundBd;
         $row['offer_dataf_bd'] = $rowBd;
 
         $imgsToEncode = ['img1', 'img2', 'img3', 'img4', 'fotouser'];
@@ -188,6 +168,10 @@ try {
             }
         }
 
+        foreach (['imgdoc1', 'imgdoc2', 'imgdoc3', 'imgdoc4'] as $doc) {
+            unset($row[$doc]);
+        }
+
         $fetchData[] = $row;
     }
 
@@ -195,6 +179,7 @@ try {
         return ((int) ($b['id'] ?? 0)) <=> ((int) ($a['id'] ?? 0));
     });
 } catch (Throwable $e) {
+    error_log('get_ads_zakaz_customer: ' . $e->getMessage());
     $fetchData = [];
 }
 

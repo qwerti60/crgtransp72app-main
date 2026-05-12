@@ -45,7 +45,7 @@ class _HistortScreenState extends State<HistortScreen12z> {
 
   late final List<Widget Function()> _builders = [
     () => const MyImageGrid(),
-    () => SearchForm(),
+    () => const SearchForm(showBottomNav: false),
     //() => zprofil_zayavki(nameImg: '', base: 1),
     () => zprofil_name2(),
   ];

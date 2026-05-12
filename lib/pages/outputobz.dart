@@ -8,6 +8,7 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/loginpage.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
@@ -81,6 +82,40 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   late Future<List> _adsFuture;
+
+  bool get _isAuthorized => userId > 0;
+
+  Future<void> _showAuthRequiredDialog() async {
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Требуется авторизация'),
+          content: const Text(
+            'Эта функция доступна только для зарегистрированных пользователей.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
+              child: const Text('Авторизация'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -867,6 +902,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                             ),
                                             onPressed: () {
+                                              if (!_isAuthorized) {
+                                                _showAuthRequiredDialog();
+                                                return;
+                                              }
+
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
@@ -909,6 +949,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                             ),
                                             onPressed: () {
+                                              if (!_isAuthorized) {
+                                                _showAuthRequiredDialog();
+                                                return;
+                                              }
+
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(

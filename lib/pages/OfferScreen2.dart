@@ -2,6 +2,7 @@
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
+import 'package:crgtransp72app/pages/zprofil_zakaz.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,7 +23,6 @@ import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'ads2.dart';
 
 class OfferScreen2 extends StatefulWidget {
   final String userid;
@@ -30,12 +30,14 @@ class OfferScreen2 extends StatefulWidget {
   final dynamic bd;
 
   final dynamic useridobj;
+  final bool useCustomerNavigation;
   //final int bd;
   const OfferScreen2(
       {super.key,
       required this.userid,
       required this.bd,
-      required this.useridobj});
+      required this.useridobj,
+      this.useCustomerNavigation = false});
 
   @override
 
@@ -56,16 +58,16 @@ class _OfferscreenForm extends State<OfferScreen2> {
   void initState() {
     super.initState();
     userid = widget.userid;
-    useridobj = widget.useridobj;
+    useridobj = widget.useridobj.toString();
     bd = widget.bd;
 
     getUserData();
   }
 
-  /// [iduserp] — id исполнителя (кто откликается), [listingId] — id объявления (`userid` с карточки).
-  Future<void> fetchOfferData(String iduserp, String listingId) async {
+  /// Заказчик: [iduserp] — id заказчика, [listingId] — id объявления. Таблица **offer_dataf**.
+  Future<void> _fetchOfferDataCustomer(String iduserp, String listingId) async {
     final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/fetch_offer.php'),
+      Uri.parse('${Config.baseUrl}/api/fetch_offer_zakaz.php'),
       body: {
         'iduserp': iduserp,
         'userId': listingId,
@@ -78,10 +80,14 @@ class _OfferscreenForm extends State<OfferScreen2> {
 
       final String cena = (data['cena'] ?? '').toString();
       final String about = (data['about'] ?? '').toString();
+      final int? rowBd = int.tryParse((data['bd'] ?? '').toString());
       _cenakmController.text = cena;
       _aboutController.text = about;
       if (mounted) {
         setState(() {
+          if (rowBd != null && rowBd >= 1 && rowBd <= 3) {
+            bd = rowBd;
+          }
           _hasExistingOffer = cena.trim().isNotEmpty || about.trim().isNotEmpty;
         });
       }
@@ -95,6 +101,40 @@ class _OfferscreenForm extends State<OfferScreen2> {
       }
       print(
           'Ошибка при получении данных пользователя: Статус-код: ${response.statusCode}, Тело: ${response.body}');
+    }
+  }
+
+  /// Исполнитель: [iduserp] — id исполнителя, [listingId] — id объявления. Таблица **offer_data**.
+  Future<void> _fetchOfferDataPerformer(
+      int iduserp, String listingId, int bdVal) async {
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}/api/fetch_offer.php'),
+      body: {
+        'iduserp': iduserp.toString(),
+        'userId': listingId,
+        'bd': bdVal.toString(),
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final String cena = (data['cena'] ?? '').toString();
+      final String about = (data['about'] ?? '').toString();
+      _cenakmController.text = cena;
+      _aboutController.text = about;
+      if (mounted) {
+        setState(() {
+          _hasExistingOffer = cena.trim().isNotEmpty || about.trim().isNotEmpty;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _hasExistingOffer = false;
+        });
+      }
+      print(
+          'fetch_offer (исполнитель): ${response.statusCode} ${response.body}');
     }
   }
 
@@ -131,7 +171,11 @@ class _OfferscreenForm extends State<OfferScreen2> {
         });
         print('вывод id: $userIdp');
         if (idp > 0) {
-          await fetchOfferData(idp.toString(), userid);
+          if (widget.useCustomerNavigation) {
+            await _fetchOfferDataCustomer(idp.toString(), userid);
+          } else {
+            await _fetchOfferDataPerformer(idp, userid, bd);
+          }
         }
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
@@ -140,7 +184,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
     }
   }
 
-  /// true, если предложение успешно отправлено на сервер.
+  /// true, если данные успешно отправлены на сервер.
   Future<bool> uploadData() async {
     if (userIdp <= 0) {
       if (mounted) {
@@ -149,28 +193,52 @@ class _OfferscreenForm extends State<OfferScreen2> {
       }
       return false;
     }
-    final uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
+    if (widget.useCustomerNavigation) {
+      return _uploadCustomerOffer();
+    }
+    return _uploadPerformerOffer();
+  }
 
+  Future<bool> _uploadCustomerOffer() async {
+    final uri = Uri.parse('${Config.baseUrl}/api/add_offerzakaz.php');
     var request = http.MultipartRequest('POST', uri)
       ..fields['cena'] = _cenakmController.text
       ..fields['about'] = _aboutController.text
       ..fields['iduserp'] = userIdp.toString()
       ..fields['iduser'] = userid
       ..fields['bd'] = bd.toString();
-
-    var response = await request.send();
-
+    final response = await request.send();
     if (response.statusCode == 200) {
-      print('Uploaded!');
+      print('Uploaded offer_dataf');
       return true;
     }
-    print('Failed!');
+    print('add_offerzakaz failed');
     return false;
   }
 
-  Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
+  Future<bool> _uploadPerformerOffer() async {
+    final uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
+    var request = http.MultipartRequest('POST', uri)
+      ..fields['cena'] = _cenakmController.text
+      ..fields['about'] = _aboutController.text
+      ..fields['iduserp'] = userIdp.toString()
+      ..fields['iduser'] = userid
+      ..fields['bd'] = bd.toString();
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      print('Uploaded offer_data');
+      return true;
+    }
+    print('add_offer failed');
+    return false;
+  }
+
+  Future<bool> checkOfferExists(int userId, String truckId, int bdVal) async {
+    final path = widget.useCustomerNavigation
+        ? 'check_offer_zakaz.php'
+        : 'check_offer.php';
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.baseUrl}/api/$path?iduser=$userId&truck=$truckId&bd=$bdVal'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -184,7 +252,11 @@ class _OfferscreenForm extends State<OfferScreen2> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _hasExistingOffer ? 'Редактировать услугу' : 'Предложить услугу',
+          widget.useCustomerNavigation
+              ? (_hasExistingOffer ? 'Редактировать заказ' : 'Предложить заказ')
+              : (_hasExistingOffer
+                  ? 'Редактировать услугу'
+                  : 'Предложить услугу'),
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -235,9 +307,9 @@ class _OfferscreenForm extends State<OfferScreen2> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 15.0),
-              child: const Text(
-                'Текст предложения',
-                style: TextStyle(
+              child: Text(
+                widget.useCustomerNavigation ? 'Условия заявки' : 'Текст предложения',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black38,
                   fontSize: 16.0,
@@ -347,21 +419,34 @@ class _OfferscreenForm extends State<OfferScreen2> {
                       Navigator.of(context, rootNavigator: true)
                           .pushAndRemoveUntil(
                         MaterialPageRoute(
-                          builder: (_) => zprofil_zayavki(
-                            nameImg: '',
-                            base: bd,
-                          ),
+                          builder: (_) => widget.useCustomerNavigation
+                              ? zprofil_zakaz(
+                                  nameImg: userid,
+                                  base: bd,
+                                  useCustomerMenu: true,
+                                )
+                              : zprofil_zayavki(
+                                  nameImg: '',
+                                  base: bd,
+                                  useCustomerMenu: false,
+                                ),
                         ),
                         (Route<dynamic> route) => false,
                       );
                     },
-                    child: const Text('Отправить предложение')),
+                    child: Text(
+                      widget.useCustomerNavigation
+                          ? 'Сохранить заявку'
+                          : 'Отправить предложение',
+                    )),
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
+      bottomNavigationBar: widget.useCustomerNavigation
+          ? const CustomerBottomNav(currentIndex: 0)
+          : const PerformerBottomNav(currentIndex: 0),
     );
   }
 

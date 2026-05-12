@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/SendReviewForm.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/get_vt.dart' as performer_services;
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
@@ -44,13 +44,13 @@ class _HistortScreenState extends State<HistortScreen1> {
 
   final List<Widget?> _pages = List.filled(4, null, growable: false);
   late final List<Widget Function()> _builders = [
-    () => const MyImageGrid(),
+    () => const performer_services.MyImageGrid(),
     () => hasActiveOrder
         ? OrderExecutionScreen(
             userId: orderInfo!['user_id'],
             orderId: orderInfo!['order_id'],
             showBottomNav: false)
-        : SearchForm(),
+        : const SearchForm(showBottomNav: false),
     () => zprofil_name2(),
   ];
 

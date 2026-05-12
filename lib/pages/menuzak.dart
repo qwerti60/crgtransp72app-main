@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/SearchFormisp.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
-import 'package:crgtransp72app/pages/get_vt.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/history_zak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
@@ -59,16 +58,26 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int? _currentIndex;
+  bool _isAuthorized = false;
   final List<Widget?> _pages = List.filled(4, null, growable: false);
 
-  late final List<Widget Function()> _builders = [
-    () => MyAppI1(),
-    () => SearchFormisp(), // Ads2App(),
-//    () => outputobzlikes(nameImg: '', base: 1),
-    () => zprofil_name(),
-  ];
+  List<Widget Function()> get _tabBuilders {
+    final builders = <Widget Function()>[
+      () => const MyAppI1zPage(),
+      () => const SearchFormisp(embedInCustomerShell: true),
+    ];
+
+    if (_isAuthorized) {
+      builders.add(() => zprofil_name());
+    }
+
+    return builders;
+  }
 
   void _selectTab(int index) {
+    final builders = _tabBuilders;
+    if (index >= builders.length) return;
+
     if (index == 1 &&
         hasActiveOrder &&
         activeOrderUserId.isNotEmpty &&
@@ -88,7 +97,7 @@ class _MainScreenState extends State<MainScreen> {
 
     setState(() {
       _currentIndex = index;
-      _pages[index] ??= _builders[index]();
+      _pages[index] ??= builders[index]();
     });
   }
 
@@ -123,7 +132,17 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _resolveAuthorization();
     getUserData();
+  }
+
+  Future<void> _resolveAuthorization() async {
+    final token = await getSecurefcm_token();
+    if (!mounted) return;
+
+    setState(() {
+      _isAuthorized = token != null && token.isNotEmpty;
+    });
   }
 
   Future<void> getUserData() async {
@@ -194,31 +213,34 @@ class _MainScreenState extends State<MainScreen> {
   @override
   @override
   Widget build(BuildContext context) {
+    final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(icon: Icon(Icons.fire_truck), label: 'Услуги'),
+      BottomNavigationBarItem(
+        icon: Icon(
+          Icons.subject,
+          color: hasActiveOrder ? Colors.red : null,
+        ),
+        label: 'Заказы',
+      ),
+      if (_isAuthorized)
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.account_circle),
+          label: 'Профиль',
+        ),
+    ];
+
+    final safeIndex = (_currentIndex ?? 0) < items.length ? (_currentIndex ?? 0) : 0;
+    final initialPage = (!_isAuthorized && widget.pageProfile == 'zprofil_ld')
+        ? const Ads2App(showBottomNav: false)
+        : buildProfilePage(widget.pageProfile, orderId: orderid);
+
     return Scaffold(
-      body: _currentIndex == null
-          ? buildProfilePage(widget.pageProfile, orderId: orderid)
-          : _pages[_currentIndex!],
+      body: _currentIndex == null ? initialPage : _pages[safeIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex ?? 0,
+        currentIndex: safeIndex,
         onTap: _selectTab,
         type: BottomNavigationBarType.fixed,
-        items: [
-          const BottomNavigationBarItem(
-              icon: Icon(Icons.fire_truck), label: 'Услуги'),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.subject,
-              color: hasActiveOrder
-                  ? Colors.red
-                  : null, // Изменение цвета иконки при наличии активного заказа
-            ),
-            label: 'Заказы',
-          ),
-          // const BottomNavigationBarItem(
-          //   icon: Icon(Icons.group), label: 'Исполнители'),
-          const BottomNavigationBarItem(
-              icon: Icon(Icons.account_circle), label: 'Профиль'),
-        ],
+        items: items,
       ),
     );
   }

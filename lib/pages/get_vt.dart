@@ -1,13 +1,62 @@
 import 'package:crgtransp72app/config.dart';
-import 'package:crgtransp72app/pages/CityScreenisp.dart';
+import 'package:crgtransp72app/pages/CityScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
+import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../design/colors.dart';
 import 'changerol_page.dart';
+import 'loginpage.dart';
 import 'outputob.dart';
+
+Future<bool> _isAuthorizedUser() async {
+  final token = await getSecurefcm_token();
+  if (token == null || token.isEmpty) return false;
+
+  try {
+    final response = await http
+        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200) return false;
+    final data = json.decode(response.body);
+    return data['error'] == null && data['idusers'] != null;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> _showAuthRequiredDialog(BuildContext context) async {
+  await showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Требуется авторизация'),
+        content: const Text(
+          'Эта функция доступна только для зарегистрированных пользователей.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+            child: const Text('Авторизация'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 void main() {
   runApp(const MyAppI1());
@@ -31,7 +80,15 @@ class MyAppI1 extends StatelessWidget {
         ),
         body: const MyImageGrid(),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
+          onPressed: () async {
+            final isAuthorized = await _isAuthorizedUser();
+            if (!context.mounted) return;
+
+            if (!isAuthorized) {
+              await _showAuthRequiredDialog(context);
+              return;
+            }
+
             // Действие, производимое при нажатии на кнопку
             Navigator.push(context,
                 MaterialPageRoute(builder: (context) => const changerol1()));
@@ -106,20 +163,11 @@ class _MyImageGridState extends State {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                //outputob
-//                                builder: (_) => MyAppGUD1(
-                                //                                     nameImg: images[index].name,
-//                                    )
-//                                    ));
-
-                                builder: (_) => CityScreenIsp(
-                                      //outputobz(
+                                builder: (_) => CityScreen(
                                       indexName: images[index].name,
-                                      //  base: base, // Передача переменной
-                                    ) //outputob(
-                                //nameImg: images[index].name,
-                                //)
-                                ));
+                                    ),
+                            ),
+                        );
                         /*                              Navigator.push(
                           context,
                           MaterialPageRoute(

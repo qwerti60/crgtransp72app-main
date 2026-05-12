@@ -54,9 +54,13 @@ class _OfferscreenForm extends State<OfferScreen> {
     super.initState();
     userid = widget.userid;
     bd = widget.bd;
-    getUserData();
-    /////  checkOfferExists(userId, userIdp as String, bd);
-    fetchOfferData(userId, userid, bd);
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await getUserData();
+    if (!mounted || userIdp <= 0) return;
+    await fetchOfferData(userIdp, userid, bd);
   }
 
   Future<void> fetchOfferData(int iduserp, String userId, int bd) async {
@@ -120,7 +124,7 @@ class _OfferscreenForm extends State<OfferScreen> {
   }
 
   void uploadData() async {
-    var uri = Uri.parse('http://ivnovav.ru/api/add_offer.php');
+    var uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

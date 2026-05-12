@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
 
-import 'loginpage.dart';
+import 'change_user.dart';
 import 'profil_ld.dart';
 import 'profil_otkl.dart';
 import 'profil_transport.dart';
@@ -209,7 +209,7 @@ class _showExitConfirmationDialog {
                 child: const Text('Да'),
                 onPressed: () {
                   Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()));
+                      MaterialPageRoute(builder: (_) => const change_user()));
                 }),
           ],
         );

@@ -1,8 +1,6 @@
-import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
-import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/test.dart';
+import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -22,8 +20,8 @@ class PerformerBottomNav extends StatefulWidget {
 
 class _PerformerBottomNavState extends State<PerformerBottomNav> {
   bool _highlightOrders = false;
-  String _orderId = '';
-  String _orderUserId = '';
+  bool _isAuthorized = false;
+  bool _isLoadingAuth = true;
 
   @override
   void initState() {
@@ -32,18 +30,26 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
   }
 
   Future<void> _loadOrderHighlight() async {
+    var isAuthorized = false;
+    var highlightOrders = false;
+
     try {
       final token = await getSecurefcm_token();
       if (token == null || token.isEmpty) return;
 
+      // Тот же источник, что и MyCustomScreen (zakaz_screen2) — иначе после «Услуги» → CityScreen
+      // нижнее меню без «Профиля», хотя пользователь уже вошёл.
       final userResponse = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo_order.php?token=$token'),
+        Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
       );
       if (userResponse.statusCode != 200) return;
 
       final userData = json.decode(userResponse.body);
-      final userId = userData['idusers']?.toString() ?? '';
+      if (userData['error'] != null || userData['idusers'] == null) return;
+
+      final userId = userData['idusers'].toString();
       if (userId.isEmpty) return;
+      isAuthorized = true;
 
       final statusResponse = await http.get(
         Uri.parse(
@@ -52,45 +58,57 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       if (statusResponse.statusCode != 200) return;
 
       final statusData = json.decode(statusResponse.body);
-      if (!mounted) return;
-      setState(() {
-        _highlightOrders = statusData['result'] == true;
-        _orderId = statusData['order_id']?.toString() ?? '';
-        _orderUserId = statusData['user_id']?.toString() ?? '';
-      });
+      highlightOrders = statusData['result'] == true;
     } catch (_) {
       // Не блокируем навигацию при ошибке сети.
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isAuthorized = isAuthorized;
+        _highlightOrders = highlightOrders;
+        _isLoadingAuth = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.fire_truck),
-          label: 'Объявления',
+    if (_isLoadingAuth) {
+      return const SizedBox(height: kBottomNavigationBarHeight);
+    }
+
+    final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.fire_truck),
+        label: 'Объявления',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(
+          Icons.subject,
+          color: _highlightOrders ? Colors.red : null,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.subject,
-            color: _highlightOrders ? Colors.red : null,
-          ),
-          label: 'Заявки',
-        ),
-        BottomNavigationBarItem(
+        label: 'Заявки',
+      ),
+      if (_isAuthorized)
+        const BottomNavigationBarItem(
           icon: Icon(Icons.account_circle),
           label: 'Профиль',
         ),
-      ],
+    ];
+
+    final safeIndex =
+        widget.currentIndex < items.length ? widget.currentIndex : 0;
+
+    return BottomNavigationBar(
+      currentIndex: safeIndex,
+      type: BottomNavigationBarType.fixed,
+      items: items,
       onTap: (index) {
         if (index == 0) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => const MyAppI1z(),
+              builder: (_) => const MyCustomScreen(initialPage: 0),
             ),
           );
           return;
@@ -100,17 +118,13 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => _highlightOrders &&
-                      _orderId.isNotEmpty &&
-                      _orderUserId.isNotEmpty
-                  ? OrderExecutionScreen(
-                      userId: _orderUserId,
-                      orderId: _orderId,
-                      showBottomNav: true,
-                    )
-                  : SearchForm(),
+              builder: (_) => const MyCustomScreen(initialPage: 1),
             ),
           );
+          return;
+        }
+
+        if (!_isAuthorized) {
           return;
         }
 

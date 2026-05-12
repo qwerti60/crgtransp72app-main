@@ -4,12 +4,15 @@ import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/bmenucopy.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SearchForm extends StatefulWidget {
-  const SearchForm({super.key});
+  final bool showBottomNav;
+
+  const SearchForm({super.key, this.showBottomNav = true});
 
   @override
   _SearchFormState createState() => _SearchFormState();
@@ -221,22 +224,13 @@ class _SearchFormState extends State<SearchForm> {
                       print('selectedCityName');
                       print(selectedCityName);
                       print(selectedServiceName);
-                      Navigator.push(
-                        context,
+                      Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(
-                          builder: (context) => HistortScreen12z(
-                              pageProfile: 'SearchForm',
-                              userId1: selectedCityName
-                                  .toString(), //selectedServiceName.toString(),
-                              orderId: selectedServiceName
-                                  .toString(), //selectedCityName.toString(),
-                              parsedUserIdOk: ''),
-
-                          //    outputobz(
-                          // или outputobz, если класс с маленькой буквы
-                          //nameImg: selectedServiceName!,
-                          // city: selectedCityName!,
-                          // ),
+                          builder: (context) => outputobz(
+                            nameImg: selectedServiceName!,
+                            city: selectedCityName!,
+                            showBottomNav: widget.showBottomNav,
+                          ),
                         ),
                       );
                     } else {
@@ -257,6 +251,8 @@ class _SearchFormState extends State<SearchForm> {
           ],
         ),
       ),
+      bottomNavigationBar:
+          widget.showBottomNav ? const PerformerBottomNav(currentIndex: 1) : null,
     );
   }
 }

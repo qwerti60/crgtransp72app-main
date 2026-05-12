@@ -24,6 +24,7 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
   bool _highlightOrders = false;
   String _activeOrderUserId = '';
   String _activeOrderId = '';
+  bool _isAuthorized = false;
 
   @override
   void initState() {
@@ -42,7 +43,9 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       if (userResponse.statusCode != 200) return;
 
       final userData = json.decode(userResponse.body);
-      final userId = userData['idusers']?.toString() ?? '';
+      if (userData['error'] != null || userData['idusers'] == null) return;
+
+      final userId = userData['idusers'].toString();
       if (userId.isEmpty) return;
 
       final statusResponse = await http.get(
@@ -54,6 +57,7 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       final statusData = json.decode(statusResponse.body);
       if (!mounted) return;
       setState(() {
+        _isAuthorized = true;
         _highlightOrders = statusData['result'] == true;
         _activeOrderUserId = statusData['user_id']?.toString() ?? '';
         _activeOrderId = statusData['order_id']?.toString() ?? '';
@@ -65,27 +69,32 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      type: BottomNavigationBarType.fixed,
-      selectedIconTheme: const IconThemeData(color: violetColor),
-      items: [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.fire_truck),
-          label: 'Услуги',
+    final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.fire_truck),
+        label: 'Услуги',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(
+          Icons.subject,
+          color: _highlightOrders ? Colors.red : null,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.subject,
-            color: _highlightOrders ? Colors.red : null,
-          ),
-          label: 'Заказы',
-        ),
+        label: 'Заказы',
+      ),
+      if (_isAuthorized)
         const BottomNavigationBarItem(
           icon: Icon(Icons.account_circle),
           label: 'Профиль',
         ),
-      ],
+    ];
+    final safeIndex =
+        widget.currentIndex < items.length ? widget.currentIndex : 0;
+
+    return BottomNavigationBar(
+      currentIndex: safeIndex,
+      type: BottomNavigationBarType.fixed,
+      selectedIconTheme: const IconThemeData(color: violetColor),
+      items: items,
       onTap: (index) {
         if (index == 0) {
           Navigator.pushAndRemoveUntil(
@@ -109,6 +118,10 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
             ),
             (Route<dynamic> route) => false,
           );
+          return;
+        }
+
+        if (!_isAuthorized) {
           return;
         }
 

@@ -53,6 +53,7 @@ assets/service_account.json
 *.keystore
 key.properties
 **/key.properties
+android/android_key.zip
 .env
 .env.*
 !.env.example

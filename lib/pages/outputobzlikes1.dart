@@ -6,7 +6,7 @@ import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/get_vt.dart' as performer_services;
 import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
@@ -265,7 +265,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int? _currentIndex;
   final List<Widget?> _pages = List.filled(4, null, growable: false);
   late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
+    () => const performer_services.MyImageGrid(),
     () => SearchForm(), //Ads1App(),
     //() => zprofil_zayavki(nameImg: '', base: 1),
     () => zprofil_name2(),

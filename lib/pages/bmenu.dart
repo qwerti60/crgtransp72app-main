@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/pages/SearchForm.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/get_vt.dart' as performer_services;
 import 'package:crgtransp72app/pages/history_zak.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
@@ -12,7 +12,6 @@ import 'dart:convert';
 import '../config.dart';
 import '../pages/ads1.dart';
 import '../pages/outputobzlikes1.dart';
-import '../pages/history_isp.dart';
 import '../pages/subscription_screen.dart';
 import '../pages/fcm_token.dart';
 
@@ -30,19 +29,29 @@ class HistortScreen12 extends StatefulWidget {
 
 class _HistortScreenState extends State<HistortScreen12> {
   int? _currentIndex;
+  bool _isAuthorized = false;
   final List<Widget?> _pages = List.filled(4, null, growable: false);
 
-  late final List<Widget Function()> _builders = [
-    () => MyAppI1z(),
-    () => SearchForm(), //Ads1App(),
-    //  () => zprofil_zayavki(nameImg: '', base: 1),
-    () => zprofil_name2(),
-  ];
+  List<Widget Function()> get _tabBuilders {
+    final builders = <Widget Function()>[
+      () => const performer_services.MyImageGrid(),
+      () => const SearchForm(showBottomNav: false),
+    ];
+
+    if (_isAuthorized) {
+      builders.add(() => zprofil_name2());
+    }
+
+    return builders;
+  }
 
   void _selectTab(int index) {
+    final builders = _tabBuilders;
+    if (index >= builders.length) return;
+
     setState(() {
       _currentIndex = index;
-      _pages[index] ??= _builders[index]();
+      _pages[index] ??= builders[index]();
     });
   }
 
@@ -104,10 +113,20 @@ class _HistortScreenState extends State<HistortScreen12> {
   @override
   void initState() {
     super.initState();
+    _resolveAuthorization();
     getUserData().then((_) {
       setState(() {});
     }).catchError((err) {
       print('Ошибка в процессе получения данных: $err');
+    });
+  }
+
+  Future<void> _resolveAuthorization() async {
+    final token = await getSecurefcm_token();
+    if (!mounted) return;
+
+    setState(() {
+      _isAuthorized = token != null && token.isNotEmpty;
     });
   }
 
@@ -123,33 +142,38 @@ class _HistortScreenState extends State<HistortScreen12> {
         final orderInfo = snapshot.data!;
         hasActiveOrder = orderInfo['result'] == true;
 
+        final items = <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.fire_truck),
+            label: 'Объявления',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.subject,
+              color: hasActiveOrder ? Colors.red : null,
+            ),
+            label: 'Заказы',
+          ),
+          if (_isAuthorized)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.account_circle),
+              label: 'Профиль',
+            ),
+        ];
+
+        final safeIndex = (_currentIndex ?? 0) < items.length ? (_currentIndex ?? 0) : 0;
+        final initialPage = (!_isAuthorized &&
+                const {'zprofil_ld', 'zprofil_zayavki', 'Subscription'}.contains(widget.pageProfile))
+            ? const Ads1App()
+            : buildProfilePage(widget.pageProfile, orderId: orderid);
+
         return Scaffold(
-          body: _currentIndex == null
-              ? buildProfilePage(widget.pageProfile, orderId: orderid)
-              : _pages[_currentIndex!],
+          body: _currentIndex == null ? initialPage : _pages[safeIndex],
           bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentIndex ?? 0,
+            currentIndex: safeIndex,
             onTap: _selectTab,
             type: BottomNavigationBarType.fixed,
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.fire_truck),
-                label: 'Объявления',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.subject,
-                  color: hasActiveOrder
-                      ? Colors.red
-                      : null, // Меняем цвет иконки на красный, если есть активная запись
-                ),
-                label: 'Заказы',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.account_circle),
-                label: 'Профиль',
-              ),
-            ],
+            items: items,
           ),
         );
       },

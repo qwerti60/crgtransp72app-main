@@ -42,7 +42,7 @@ class _HistortScreenState extends State<HistortScreen> {
             orderId: orderid, //orderInfo!['order_id'].toString()
             showBottomNav: false,
           )
-        : SearchForm(),
+        : const SearchForm(showBottomNav: false),
     () => zprofil_name2(),
   ];
 

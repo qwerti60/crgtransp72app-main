@@ -5,7 +5,6 @@ import 'package:crgtransp72app/pages/SearchFormisp.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
@@ -14,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../design/colors.dart';
-import 'get_vt.dart';
+import 'get_vt_z.dart';
 import 'vod_zak.dart';
 import 'zprofil_page.dart';
 import 'zprofil_zakaz.dart';
@@ -44,32 +43,55 @@ class MyCustomScreen extends StatefulWidget {
 class _MyCustomScreenState extends State<MyCustomScreen> {
   int _currentPage = 0;
   String? userIdok; // Пользовательский идентификатор
+  bool _isAuthorized = false;
+  bool _isLoadingAuth = true;
   bool hasActiveOrder = false; // Есть ли активная запись
   String? retrievedOrderId; // Извлекаемый идентификатор заказа
 
-  Future<void> getUserData() async {
-    final token = await getSecurefcm_token();
-    if (token == null) {
-      print("Token is null");
-      return;
-    }
-    final response = await http
-        .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['error'] != null) {
-        print('Ошибка: ${data['error']}');
-      } else {
+  Future<void> getUserData() async {
+    try {
+      final token = await getSecurefcm_token();
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
         setState(() {
-          userIdok =
-              data['idusers'].toString(); // Получаем идентификатор пользователя
+          _isAuthorized = false;
+          _isLoadingAuth = false;
         });
-        print('Пользователь: $userIdok');
-        print('Пользователь: $userIdok');
+        return;
       }
-    } else {
-      print('Ошибка при получении данных пользователя');
+
+      final response = await http
+          .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'))
+          .timeout(const Duration(seconds: 8));
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['error'] == null && data['idusers'] != null) {
+          setState(() {
+            userIdok = data['idusers'].toString();
+            _isAuthorized = true;
+            _isLoadingAuth = false;
+          });
+          return;
+        }
+      }
+
+      // Если токен есть, но пользователь не найден на сервере,
+      // считаем сессию неавторизованной и открываем гостевой режим.
+      setState(() {
+        _isAuthorized = false;
+        _isLoadingAuth = false;
+        userIdok = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isAuthorized = false;
+        _isLoadingAuth = false;
+        userIdok = null;
+      });
     }
   }
 
@@ -91,24 +113,72 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     print('oi678${orderInfo}');
     switch (_currentPage) {
       case 0:
-        return const MyAppI1();
+        return const MyAppI1zPage();
       case 1:
         if (orderInfo != null && orderInfo['result'] == true) {
           return OrderExecutionScreenzak(
             userId: orderInfo['user_id'],
             orderId: orderInfo['order_id'],
-            showBottomNav: false,
+            showBottomNav: true,
           );
         } else {
-          return const SearchFormisp(); // Ads1App();
+          return const SearchFormisp(embedInCustomerShell: true); // Ads1App();
         }
       case 2:
-        // return const outputobzlikes(nameImg: '', base: 1);
-        ///case 3:
+        if (!_isAuthorized) {
+          return const Ads1App();
+        }
         return const zprofil_name();
       default:
-        return const MyAppI1z();
+        return const MyAppI1zPage();
     }
+  }
+
+  Widget _buildScaffold(Map<String, dynamic>? orderInfo) {
+    final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.fire_truck),
+        label: 'Услуги',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(
+          Icons.subject,
+          color: hasActiveOrder ? Colors.red : null,
+        ),
+        label: 'Заказы',
+      ),
+      if (_isAuthorized)
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.account_circle),
+          label: 'Профиль',
+        ),
+    ];
+
+    final safePage = _currentPage >= items.length ? 0 : _currentPage;
+    if (safePage != _currentPage) {
+      _currentPage = safePage;
+    }
+
+    return Scaffold(
+        body: Column(
+          children: <Widget>[
+            Expanded(child: _getScreen(orderInfo)),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          items: items,
+          type: BottomNavigationBarType.fixed,
+          currentIndex: safePage,
+          selectedIconTheme: const IconThemeData(color: violetColor),
+          onTap: (index) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => MyApp(initialPage: index)),
+              (Route<dynamic> route) => false,
+            );
+          },
+        ),
+    );
   }
 
   @override
@@ -124,6 +194,15 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingAuth) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (!_isAuthorized) {
+      hasActiveOrder = false;
+      return _buildScaffold(null);
+    }
+
     if (userIdok == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -131,60 +210,20 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     return FutureBuilder<Map<String, dynamic>>(
       future: checkOrderStatus(userIdok!),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final orderInfo = snapshot.data!;
+        final orderInfo = snapshot.data;
+        if (snapshot.hasError || orderInfo == null) {
+          hasActiveOrder = false;
+          return _buildScaffold(null);
+        }
         hasActiveOrder =
             orderInfo['result'] == true; // Проверяем наличие активной записи
         print('res: ${orderInfo['result']}');
 
-        return Scaffold(
-          body: Column(
-            children: <Widget>[
-              Expanded(child: _getScreen(orderInfo)),
-            ],
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.fire_truck),
-                label: 'Услуги',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.subject,
-                  color: hasActiveOrder
-                      ? Colors.red
-                      : null, // Меняем цвет иконки на красный, если есть активная запись
-                ),
-                label: 'Заказы',
-              ),
-              /*
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.group),
-                label: 'Исполнители',
-              ),
-         
-         */
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.account_circle),
-                label: 'Профиль',
-              ),
-            ],
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _currentPage,
-            selectedIconTheme: const IconThemeData(color: violetColor),
-            onTap: (index) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => MyApp(initialPage: index)),
-                (Route<dynamic> route) => false,
-              );
-            },
-          ),
-        );
+        return _buildScaffold(orderInfo);
       },
     );
   }

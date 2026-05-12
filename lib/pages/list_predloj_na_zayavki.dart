@@ -105,6 +105,16 @@ class _MyHomePageState extends State<MyHomePage> {
     return _isLikedValue(truck['success']);
   }
 
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   Future<void> getUserData() async {
     final token = await getSecurefcm_token(); // Await the secure token
     if (token == null) {
@@ -405,6 +415,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   truckImage = null;
                                 }
                               }
+                              final double rating = _toDouble(truck['rating']);
+                              final int reviewsCount =
+                                  _toInt(truck['reviewsCount']);
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment
                                     .stretch, // Для выравнивания содержимого в начале
@@ -501,9 +514,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         children: List.generate(
                                                             5, (index) {
                                                           return Icon(
-                                                            index <
-                                                                    (truck['rating'] ??
-                                                                        0)
+                                                            index < rating
                                                                 ? Icons.star
                                                                 : Icons
                                                                     .star_border,
@@ -514,7 +525,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        '${truck['rating'] ?? 0.0}',
+                                                        rating.toStringAsFixed(1),
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                           color: Colors.grey,
@@ -547,7 +558,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                             const SizedBox(
                                                                 width: 2),
                                                             Text(
-                                                              '${truck['reviewsCount'] ?? 0}',
+                                                              '$reviewsCount',
                                                               style:
                                                                   const TextStyle(
                                                                 fontSize: 14,

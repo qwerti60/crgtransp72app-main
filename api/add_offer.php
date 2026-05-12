@@ -1,4 +1,8 @@
 <?php
+/**
+ * Исполнитель: предложение услуги по объявлению заказчика (таблица offer_data).
+ * Заказчик / экран «Предложить заказ» — add_offerzakaz.php → offer_dataf (см. OfferScreen2).
+ */
 header('Content-Type: application/json; charset=utf-8');
 
 include __DIR__ . '/databd.php';

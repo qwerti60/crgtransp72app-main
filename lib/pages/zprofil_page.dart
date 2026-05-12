@@ -8,13 +8,11 @@ import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/subscription_screen.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
-import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
 import 'account_deletion.dart';
 import 'ads2.dart';
-import 'list_predloj_na_obj_isp.dart';
-import 'loginpage.dart';
+import 'change_user.dart';
 import 'rent_z.dart';
 import 'zprofil_ld.dart';
 import 'zprofil_zakaz.dart';
@@ -229,7 +227,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                   },
                   child: const Text('Мои объявления')),
             ),
-            /* Container(
+             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
               child: TextButton(
@@ -238,16 +236,18 @@ class zprofil_nameForm extends State<zprofil_name> {
                   ),
                   onPressed: () {
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => list_predloj_na_obj_isp(
-                                  nameImg: userId.toString(),
-                                  bd: 1,
-                                  useCustomerMenu: true,
-                                )));
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const zprofil_zakaz(
+                          nameImg: '',
+                          base: 1,
+                          useCustomerMenu: true,
+                        ),
+                      ),
+                    );
                   },
-                  child: const Text('Статус заказа')),
-            ),*/
+                  child: const Text('Заявки')),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -318,8 +318,16 @@ class zprofil_nameForm extends State<zprofil_name> {
                         borderRadius: BorderRadius.all(Radius.circular(3))),
                   ),
                   onPressed: () {
-                    navigateIfNeeded(context,
-                        userId); // предполагается, что userId уже объявлен и доступен
+                    if (userId > 0) {
+                      navigateIfNeeded(context, userId);
+                      return;
+                    }
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => MyAppZakazScreen()),
+                      (Route<dynamic> route) => false,
+                    );
                   },
                   child: const Text('Стать грузоперевозчиком'),
                 ),
@@ -386,7 +394,7 @@ class _showExitConfirmationDialog {
                 }
 
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()));
+                    MaterialPageRoute(builder: (_) => const change_user()));
               },
             ),
           ],

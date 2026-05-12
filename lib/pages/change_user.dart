@@ -184,8 +184,16 @@ class change_userForm extends State<change_user> {
                         borderRadius: BorderRadius.all(Radius.circular(3))),
                   ),
                   onPressed: () {
-                    navigateIfNeeded(context,
-                        userId); // предполагается, что userId уже объявлен и доступен
+                    if (userId > 0) {
+                      navigateIfNeeded(context, userId);
+                      return;
+                    }
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => MyAppZakazScreen()),
+                      (Route<dynamic> route) => false,
+                    );
                   },
                   child: const Text('Я грузоперевозчик'),
                 ),

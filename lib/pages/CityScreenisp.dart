@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/outputob.dart';
-import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart'; // Для HTTP запросов
 import 'package:flutter/services.dart';
@@ -33,6 +33,7 @@ class CityScreenIsp extends StatefulWidget {
 
 class _CityScreenState extends State<CityScreenIsp> {
   List<Map<String, dynamic>> cities = [];
+
   void initState() {
     super.initState();
     loadInitialData(); // Новый метод, объединяющий загрузку данных
@@ -63,11 +64,15 @@ class _CityScreenState extends State<CityScreenIsp> {
       if (response.statusCode == 200 &&
           response.data != null &&
           response.data['cities'] != null) {
+        var loadedCities =
+            List<Map<String, dynamic>>.from(response.data['cities']);
+
+        loadedCities.sort(
+          (a, b) => a['city'].toString().compareTo(b['city'].toString()),
+        );
+
         setState(() {
-          cities = List.from(response.data['cities'])
-            ..sort((a, b) => a['city']
-                .toString()
-                .compareTo(b['city'].toString())); // Сортируем по алфавиту
+          cities = loadedCities;
         });
       }
     } catch (e) {
@@ -144,6 +149,7 @@ class _CityScreenState extends State<CityScreenIsp> {
                 },
               ),
       ),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
     );
   }
 
@@ -188,13 +194,15 @@ class _CityScreenState extends State<CityScreenIsp> {
                         child: InkWell(
                       onTap: city['city'] != 'Город не найден'
                           ? () {
-                              Navigator.push(
-                                context,
+                              Navigator.of(context, rootNavigator: true).push(
                                 MaterialPageRoute(
-                                    builder: (_) => outputob(
-                                          nameImg: widget.indexName,
-                                          city: city['city'],
-                                        )),
+                                  builder: (_) => outputob(
+                                    nameImg: widget.indexName,
+                                    city: city['city'],
+                                    showBottomNav: true,
+                                    useCustomerNavigation: true,
+                                  ),
+                                ),
                               );
                             }
                           : null, // Исключаем onTap для записи "Город не найден"

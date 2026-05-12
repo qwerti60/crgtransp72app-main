@@ -52,15 +52,19 @@ class _OfferscreenForm extends State<OfferScreenZ> {
     super.initState();
     userid = widget.userid;
     bd = widget.bd;
-    getUserData();
-    /////  checkOfferExists(userId, userIdp as String, bd);
-    fetchOfferData(userId, userid, bd);
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await getUserData();
+    if (!mounted || userIdp <= 0) return;
+    await fetchOfferData(userIdp, userid, bd);
   }
 
   Future<void> fetchOfferData(int iduserp, String userId, int bd) async {
     final response = await http.post(
       Uri.parse(
-          '${Config.baseUrl}/api/fetch_offerz.php'), // заменить на ваш сервер
+          '${Config.baseUrl}/api/fetch_offer_zakaz.php'),
       body: {'iduserp': '$iduserp', 'userId': '$userId', 'bd': '$bd'},
     );
 
@@ -117,7 +121,7 @@ class _OfferscreenForm extends State<OfferScreenZ> {
   }
 
   void uploadData() async {
-    var uri = Uri.parse('http://ivnovav.ru/api/add_offerzakaz.php');
+    var uri = Uri.parse('${Config.baseUrl}/api/add_offerzakaz.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
@@ -150,7 +154,7 @@ class _OfferscreenForm extends State<OfferScreenZ> {
 
   Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.baseUrl}/api/check_offer_zakaz.php?iduser=$userId&truck=$truckId&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];

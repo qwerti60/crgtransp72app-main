@@ -1,6 +1,7 @@
-import 'package:crgtransp72app/pages/CityScreen.dart';
-import 'package:crgtransp72app/pages/changerol_page.dart';
+import 'package:crgtransp72app/pages/CityScreenisp.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
+import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/loginpage.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
 import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,53 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../design/colors.dart';
+
+Future<bool> _isAuthorizedUser() async {
+  final token = await getSecurefcm_token();
+  if (token == null || token.isEmpty) return false;
+
+  try {
+    final response = await http
+        .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'))
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) return false;
+
+    final data = json.decode(response.body);
+    return data['error'] == null && data['idusers'] != null;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> _showAuthRequiredDialog(BuildContext context) async {
+  await showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Требуется авторизация'),
+        content: const Text(
+          'Эта функция доступна только для зарегистрированных пользователей.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+            child: const Text('Авторизация'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 void main() {
   runApp(const MyAppI1z());
@@ -22,7 +70,7 @@ class MyAppI1z extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Техника',
+            'Услуги',
             style: TextStyle(
               color: whiteprColor,
             ),
@@ -31,17 +79,24 @@ class MyAppI1z extends StatelessWidget {
         ),
         body: const MyImageGrid(),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
+          onPressed: () async {
+            final isAuthorized = await _isAuthorizedUser();
+            if (!context.mounted) return;
+
+            if (!isAuthorized) {
+              await _showAuthRequiredDialog(context);
+              return;
+            }
+
             // Действие, производимое при нажатии на кнопку
             Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const changerol()));
+                MaterialPageRoute(builder: (context) => const changerol1()));
             print('Нажата плавающая кнопка');
           }, // Иконка, отображаемая на кнопке
           backgroundColor: blueaccentColor,
           child: const Icon(Icons.add), // Цвет фона кнопки
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-        bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
       ),
     );
   }
@@ -57,7 +112,7 @@ class MyAppI1zPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Техника',
+          'Услуги',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -66,9 +121,17 @@ class MyAppI1zPage extends StatelessWidget {
       ),
       body: const MyImageGrid(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
+          final isAuthorized = await _isAuthorizedUser();
+          if (!context.mounted) return;
+
+          if (!isAuthorized) {
+            await _showAuthRequiredDialog(context);
+            return;
+          }
+
           Navigator.push(
-              context, MaterialPageRoute(builder: (context) => const changerol()));
+              context, MaterialPageRoute(builder: (context) => const changerol1()));
           print('Нажата плавающая кнопка');
         },
         backgroundColor: blueaccentColor,
@@ -160,10 +223,8 @@ class _MyImageGridState extends State<MyImageGrid> {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => CityScreen(
-                                      //outputobz(
+                                builder: (_) => CityScreenIsp(
                                       indexName: images[index].name,
-                                      //  base: base, // Передача переменной
                                     )));
                       },
                       child: Padding(

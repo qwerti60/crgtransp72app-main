@@ -10,7 +10,6 @@ import '../config.dart';
 import '../design/dimension.dart';
 import 'change_user.dart';
 import 'changestatis_page.dart';
-import 'get_vt_z.dart' show MyImageGrid;
 import 'gruz_vodit.dart';
 //import 'profil_page.dart';
 import 'rent_z.dart';
@@ -389,25 +388,6 @@ class _LoginState extends State<LoginPage> {
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 16.0),
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.fire_truck_outlined),
-                label: const Text('Смотреть технику без регистрации'),
-                style: ButtonStyle(
-                  foregroundColor: WidgetStateProperty.all(blueaccentColor),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const GuestEquipmentScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 40.0),
               child: TextButton(
                 style: TextButton.styleFrom(
@@ -441,24 +421,6 @@ class _LoginState extends State<LoginPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class GuestEquipmentScreen extends StatelessWidget {
-  const GuestEquipmentScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Техника',
-          style: TextStyle(color: whiteprColor),
-        ),
-        backgroundColor: blueaccentColor,
-      ),
-      body: const MyImageGrid(isGuestMode: true),
     );
   }
 }

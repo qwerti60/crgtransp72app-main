@@ -110,6 +110,7 @@ class _MyImageGridState extends State {
                                 builder: (_) => outputob(
                                       nameImg: images[index].name,
                                       city: '',
+                                      ignoreCityFilter: true,
                                     )));
                         /*                              Navigator.push(
                           context,

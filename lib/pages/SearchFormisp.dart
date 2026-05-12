@@ -8,7 +8,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SearchFormisp extends StatefulWidget {
-  const SearchFormisp({super.key});
+  /// Если `true`, экран поиска уже внутри shell с нижним меню — на «Исполнители»
+  /// своё меню не дублировать.
+  final bool embedInCustomerShell;
+
+  const SearchFormisp({super.key, this.embedInCustomerShell = false});
 
   @override
   _SearchFormispState createState() => _SearchFormispState();
@@ -219,8 +223,7 @@ class _SearchFormispState extends State<SearchFormisp> {
                     print(selectedServiceName);
                     if (selectedServiceName != null &&
                         selectedCityName != null) {
-                      Navigator.push(
-                        context,
+                      Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(
                           builder:
                               (context) => /* HistortScreen1(
@@ -234,7 +237,9 @@ class _SearchFormispState extends State<SearchFormisp> {
                             // или outputobz, если класс с маленькой буквы
                             nameImg: selectedServiceName!,
                             city: selectedCityName!,
-                            showBottomNav: true,
+                            showBottomNav: !widget.embedInCustomerShell,
+                            useCustomerNavigation: true,
+                            ignoreCityFilter: false,
                           ),
                         ),
                       );

@@ -18,7 +18,7 @@ import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import '../design/colors.dart';
 import 'account_deletion.dart';
 import 'ads1.dart';
-import 'loginpage.dart';
+import 'change_user.dart';
 import 'subscription_screen.dart';
 import 'zakaz_screen2.dart';
 import 'zprofil_ld.dart';
@@ -371,7 +371,7 @@ class _showExitConfirmationDialog {
                 }
 
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()));
+                    MaterialPageRoute(builder: (_) => const change_user()));
               },
             ),
           ],
