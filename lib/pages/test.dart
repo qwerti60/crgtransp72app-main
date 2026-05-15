@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config.dart';
+import '../navigation/shell_bottom_nav_spec.dart';
 import '../pages/ads1.dart';
 import '../pages/outputobzlikes1.dart';
 import '../pages/history_isp.dart';
@@ -151,24 +152,25 @@ class _HistortScreenState extends State<HistortScreen> {
             currentIndex: _currentIndex ?? 0,
             onTap: _selectTab,
             type: BottomNavigationBarType.fixed,
-            items: [
-              const BottomNavigationBarItem(
-                  icon: Icon(Icons.fire_truck), label: 'Объявления'),
-              BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.subject,
-                  color: hasActiveOrder
-                      ? Colors.red
-                      : null, // Меняется цвет иконки, если есть активная заявка
+            items: () {
+              final histLabels = PerformerHistortShellNav.bottomNavLabels();
+              return [
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.fire_truck), label: histLabels[0]),
+                BottomNavigationBarItem(
+                  icon: Icon(
+                    Icons.subject,
+                    color: hasActiveOrder
+                        ? Colors.red
+                        : null, // Меняется цвет иконки, если есть активная заявка
+                  ),
+                  label: histLabels[1],
                 ),
-                label: 'Заявки',
-              ),
-              /*   const BottomNavigationBarItem(
-                  icon: Icon(Icons.group), label: 'Заказчики'),
-             */
-              const BottomNavigationBarItem(
-                  icon: Icon(Icons.account_circle), label: 'Профиль'),
-            ],
+                BottomNavigationBarItem(
+                    icon: const Icon(Icons.account_circle),
+                    label: histLabels[2]),
+              ];
+            }(),
           ),
         );
       },

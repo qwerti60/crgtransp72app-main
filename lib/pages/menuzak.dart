@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config.dart';
+import '../navigation/shell_bottom_nav_spec.dart';
 import '../pages/ads1.dart';
 import '../pages/outputobzlikes1.dart';
 import '../pages/history_isp.dart';
@@ -213,19 +214,24 @@ class _MainScreenState extends State<MainScreen> {
   @override
   @override
   Widget build(BuildContext context) {
+    final navLabels =
+        CustomerShellNav.bottomNavLabels(isAuthenticated: _isAuthorized);
     final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(icon: Icon(Icons.fire_truck), label: 'Услуги'),
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.fire_truck),
+        label: navLabels[0],
+      ),
       BottomNavigationBarItem(
         icon: Icon(
           Icons.subject,
           color: hasActiveOrder ? Colors.red : null,
         ),
-        label: 'Заказы',
+        label: navLabels[1],
       ),
-      if (_isAuthorized)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
-          label: 'Профиль',
+      if (navLabels.length > 2)
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.account_circle),
+          label: navLabels[2],
         ),
     ];
 

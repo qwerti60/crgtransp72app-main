@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
@@ -69,22 +70,24 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
 
   @override
   Widget build(BuildContext context) {
+    final navLabels =
+        CustomerShellNav.bottomNavLabels(isAuthenticated: _isAuthorized);
     final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.fire_truck),
-        label: 'Услуги',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.fire_truck),
+        label: navLabels[0],
       ),
       BottomNavigationBarItem(
         icon: Icon(
           Icons.subject,
           color: _highlightOrders ? Colors.red : null,
         ),
-        label: 'Заказы',
+        label: navLabels[1],
       ),
-      if (_isAuthorized)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
-          label: 'Профиль',
+      if (navLabels.length > 2)
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.account_circle),
+          label: navLabels[2],
         ),
     ];
     final safeIndex =

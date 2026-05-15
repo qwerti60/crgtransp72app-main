@@ -12,6 +12,7 @@ import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import '../design/colors.dart';
 import 'get_vt_z.dart';
 import 'vod_zak.dart';
@@ -135,22 +136,24 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   }
 
   Widget _buildScaffold(Map<String, dynamic>? orderInfo) {
+    final navLabels =
+        CustomerShellNav.bottomNavLabels(isAuthenticated: _isAuthorized);
     final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.fire_truck),
-        label: 'Услуги',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.fire_truck),
+        label: navLabels[0],
       ),
       BottomNavigationBarItem(
         icon: Icon(
           Icons.subject,
           color: hasActiveOrder ? Colors.red : null,
         ),
-        label: 'Заказы',
+        label: navLabels[1],
       ),
-      if (_isAuthorized)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
-          label: 'Профиль',
+      if (navLabels.length > 2)
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.account_circle),
+          label: navLabels[2],
         ),
     ];
 

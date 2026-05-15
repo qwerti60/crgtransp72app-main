@@ -1,3 +1,4 @@
+import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
@@ -77,22 +78,24 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       return const SizedBox(height: kBottomNavigationBarHeight);
     }
 
+    final navLabels =
+        PerformerShellNav.bottomNavLabels(isAuthenticated: _isAuthorized);
     final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.fire_truck),
-        label: 'Объявления',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.fire_truck),
+        label: navLabels[0],
       ),
       BottomNavigationBarItem(
         icon: Icon(
           Icons.subject,
           color: _highlightOrders ? Colors.red : null,
         ),
-        label: 'Заявки',
+        label: navLabels[1],
       ),
-      if (_isAuthorized)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
-          label: 'Профиль',
+      if (navLabels.length > 2)
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.account_circle),
+          label: navLabels[2],
         ),
     ];
 

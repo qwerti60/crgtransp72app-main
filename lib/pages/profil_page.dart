@@ -1,4 +1,5 @@
 import 'package:crgtransp72app/pages/profil_vu.dart';
+import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:flutter/material.dart';
 
 import '../design/colors.dart';
@@ -167,15 +168,15 @@ class profil_nameForm extends State<profil_name> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.fire_truck),
-            label: 'Техника',
+            label: LegacyProfilPageBottomNav.tabEquipment,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.subject),
-            label: 'Заказы',
+            label: LegacyProfilPageBottomNav.tabOrders,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_circle),
-            label: 'Профиль',
+            label: LegacyProfilPageBottomNav.tabProfile,
           ),
         ],
         currentIndex: _currentPage,

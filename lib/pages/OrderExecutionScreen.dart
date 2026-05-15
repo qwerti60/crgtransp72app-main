@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
+import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 
 class OrderExecutionScreen extends StatefulWidget {
   final String userId;
@@ -370,19 +371,21 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
   @override
   Widget build(BuildContext context) {
     final isAuthorized = userIdok.isNotEmpty;
+    final navLabels = PerformerShellNav.bottomNavLabels(
+        isAuthenticated: isAuthorized);
     final navItems = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.fire_truck),
-        label: 'Объявления',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.fire_truck),
+        label: navLabels[0],
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.subject),
-        label: 'Заявки',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.subject),
+        label: navLabels[1],
       ),
-      if (isAuthorized)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.account_circle),
-          label: 'Профиль',
+      if (navLabels.length > 2)
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.account_circle),
+          label: navLabels[2],
         ),
     ];
 

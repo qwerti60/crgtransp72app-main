@@ -192,7 +192,7 @@ class _CityScreenState extends State<CityScreenIsp> {
             ...items
                 .map((city) => Center(
                         child: InkWell(
-                      onTap: city['city'] != 'Город не найден'
+                      onTap: city['city'] != Config.emptyCityListPlaceholder
                           ? () {
                               Navigator.of(context, rootNavigator: true).push(
                                 MaterialPageRoute(
@@ -205,9 +205,12 @@ class _CityScreenState extends State<CityScreenIsp> {
                                 ),
                               );
                             }
-                          : null, // Исключаем onTap для записи "Город не найден"
+                          : null, // Плейсхолдер «нет объявлений» — без перехода
                       child: Text(
-                        "${city['city']} (${city['cnt']})",
+                        city['city'] == Config.emptyCityListPlaceholder
+                            ? city['city'].toString()
+                            : "${city['city']} (${city['cnt']})",
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     )))
