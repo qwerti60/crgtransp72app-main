@@ -13,8 +13,8 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: com.example.crgtransp72app
-        BUILD_NAME: 3.0.5
-        BUILD_NUMBER: 15
+        BUILD_NAME: 6.0.0
+        BUILD_NUMBER: 19
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
