@@ -14,7 +14,7 @@ workflows:
       vars:
         BUNDLE_ID: com.example.crgtransp72app
         BUILD_NAME: 6.0.0
-        BUILD_NUMBER: 22
+        BUILD_NUMBER: 23
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
@@ -53,16 +53,27 @@ workflows:
           keychain add-certificates
       - name: Apply code signing profiles
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --project ios/Runner.xcodeproj
+          test -f /Users/builder/export_options.plist || (echo "export_options.plist missing" && exit 1)
           plutil -lint /Users/builder/export_options.plist
       - name: Build iOS IPA
         script: |
-          flutter build ipa \
+          set -e
+          set -o pipefail
+          if ! flutter build ipa \
             --release \
             -t lib/main.dart \
             --build-name="$BUILD_NAME" \
             --build-number="$BUILD_NUMBER" \
-            --export-options-plist=/Users/builder/export_options.plist
+            --export-options-plist=/Users/builder/export_options.plist \
+            --verbose 2>&1 | tee /tmp/flutter_build_ipa.log; then
+            echo "=== flutter build ipa failed (last 120 lines) ==="
+            tail -120 /tmp/flutter_build_ipa.log 2>/dev/null || true
+            echo "=== xcodebuild logs ==="
+            ls -la /tmp/xcodebuild_logs/ 2>/dev/null || true
+            tail -150 /tmp/xcodebuild_logs/*.log 2>/dev/null || true
+            exit 1
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
