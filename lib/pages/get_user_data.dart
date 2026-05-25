@@ -85,7 +85,7 @@ class _MyAppState extends State {
 
   Future fetchUsers(String name) async {
     var response = await http.get(Uri.parse(
-        'http://ivnovav.ru/api/getuserdata_ispolnit.php?name=$name&city=$city'));
+        'https://ivnovav.ru/api/getuserdata_ispolnit.php?name=$name&city=$city'));
 
     print('city: $city');
     print('name: $name');

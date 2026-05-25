@@ -33,18 +33,27 @@ class CityScreen extends StatefulWidget {
 
 class _CityScreenState extends State<CityScreen> {
   List<Map<String, dynamic>> cities = [];
+  bool _isLoadingCities = true;
+  bool _loadFailed = false;
+
+  @override
   void initState() {
     super.initState();
-    loadInitialData(); // Новый метод, объединяющий загрузку данных
+    loadInitialData();
   }
 
   Future<void> loadInitialData() async {
     try {
-      await getUserData(); // Сначала получаем данные пользователя
-      await fetchCities(); // Затем загружаем города
+      await getUserData();
+      await fetchCities();
     } catch (e) {
-      // Обработка возможных ошибок
       debugPrint('Ошибка при получении данных: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingCities = false;
+          _loadFailed = true;
+        });
+      }
     }
   }
 
@@ -52,13 +61,19 @@ class _CityScreenState extends State<CityScreen> {
     try {
       final dio = Dio();
       final response = await dio.get(
-        'https://ivnovav.ru/api/get_cities.php',
+        '${Config.baseUrl}/api/get_cities.php',
         queryParameters: {
           'namex': widget.indexName,
-          'useId': userId.toString()
-        }, // имя параметра
-        options: Options(responseType: ResponseType.json),
+          'useId': userId.toString(),
+        },
+        options: Options(
+          responseType: ResponseType.json,
+          receiveTimeout: const Duration(seconds: 12),
+          sendTimeout: const Duration(seconds: 12),
+        ),
       );
+
+      if (!mounted) return;
 
       if (response.statusCode == 200 &&
           response.data != null &&
@@ -70,26 +85,36 @@ class _CityScreenState extends State<CityScreen> {
         );
         setState(() {
           cities = loadedCities;
+          _isLoadingCities = false;
+          _loadFailed = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingCities = false;
+          _loadFailed = true;
         });
       }
     } catch (e) {
-      print('fetchCities error: $e');
+      debugPrint('fetchCities error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingCities = false;
+          _loadFailed = true;
+        });
+      }
     }
-
-    print('d123 ${widget.indexName}');
-    print('d123 ${cities}');
-    print('d123 ${userId.toString()}');
   }
 
   int userId = 0;
   Future<void> getUserData() async {
-    final token = await getSecurefcm_token(); // Await the secure token
+    final token = await getSecurefcm_token();
     if (token == null) {
-      print("Token is null");
       return;
     }
-    final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+    try {
+      final response = await http
+          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+          .timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -106,27 +131,54 @@ class _CityScreenState extends State<CityScreen> {
     } else {
       print('Ошибка при получении данных пользователя');
     }
+    } catch (e) {
+      debugPrint('getUserData error: $e');
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Список городов ${widget.indexName}',
-          style: const TextStyle(
-            color: Colors.white, // цвет текста
+  Widget _buildBodyContent() {
+    if (_isLoadingCities) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_loadFailed) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Не удалось загрузить список городов. Проверьте подключение к интернету.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isLoadingCities = true;
+                    _loadFailed = false;
+                  });
+                  loadInitialData();
+                },
+                child: const Text('Повторить'),
+              ),
+            ],
           ),
         ),
-        backgroundColor: Colors.blue.shade700, // цвет панели
-      ),
-      body: SafeArea(
-        // Безопасная зона только для содержимого
-        child: cities.isEmpty
-            ? Center(
-                child:
-                    CircularProgressIndicator()) // Пока загружается показываем индикатор загрузки
-            : LayoutBuilder(
+      );
+    }
+    if (cities.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            Config.emptyCityListPlaceholder,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
                   final halfWidth = width / 2;
@@ -144,7 +196,23 @@ class _CityScreenState extends State<CityScreen> {
                     )
                   ]);
                 },
-              ),
+              );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Список городов ${widget.indexName}',
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.blue.shade700,
+      ),
+      body: SafeArea(
+        child: _buildBodyContent(),
       ),
       bottomNavigationBar: const PerformerBottomNav(currentIndex: 0),
     );

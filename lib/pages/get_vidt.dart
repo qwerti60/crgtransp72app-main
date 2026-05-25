@@ -34,7 +34,12 @@ class _GalleryScreenState extends State {
 
   Future<List<ImageData>> fetchImages() async {
     final response =
-        await http.get(Uri.parse('http://ivnovav.ru/api/getimage.php?bd=vidt'));
+        await http
+            .get(
+              Uri.parse('https://ivnovav.ru/api/getimage.php')
+                  .replace(queryParameters: {'bd': 'vidt'}),
+            )
+            .timeout(const Duration(seconds: 12));
 
     if (response.statusCode == 200) {
       List jsonResponse = json.decode(response.body);

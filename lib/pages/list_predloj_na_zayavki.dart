@@ -224,7 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 // 1. Обновлённая сигнатура
   Future<void> uploadData(int bd, String nameImg, int userID) async {
-    final uri = Uri.parse('http://ivnovav.ru/api/updatePriemZak.php');
+    final uri = Uri.parse('https://ivnovav.ru/api/updatePriemZak.php');
 
     try {
       final response = await http.post(uri,
@@ -251,7 +251,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
     final uri =
-        Uri.parse('http://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
+        Uri.parse('https://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
 
     try {
       final response = await http.post(uri, body: {
@@ -289,7 +289,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
     final response = await http.post(
-      Uri.parse('http://ivnovav.ru/api/check_isp.php'),
+      Uri.parse('https://ivnovav.ru/api/check_isp.php'),
       body: {
         'idusers': idUser.toString(),
         'bd': bd.toString(),

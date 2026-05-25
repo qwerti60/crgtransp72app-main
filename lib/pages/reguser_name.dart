@@ -5,6 +5,8 @@ import '../design/dimension.dart';
 //import 'reguser1_name.dart';
 import 'reguser2_page.dart';
 import '../config.dart';
+import 'package:crgtransp72app/api/reference_lists_api.dart';
+import 'package:crgtransp72app/widgets/async_list_placeholder.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -51,6 +53,8 @@ class creguser_name extends StatefulWidget {
 
 class _creguser_nameForm extends State<creguser_name> {
   List _vidk = [];
+  bool _vidkLoading = true;
+  bool _vidkFailed = false;
   String? _selectedVidkuzov;
   late int statNum;
   late int rollNum;
@@ -67,6 +71,8 @@ class _creguser_nameForm extends State<creguser_name> {
   late String kppStr;
   late String vidt;
   List _gp = [];
+  bool _gpLoading = true;
+  bool _gpFailed = false;
   String? _selectedGP;
   @override
   void initState() {
@@ -92,33 +98,27 @@ class _creguser_nameForm extends State<creguser_name> {
     _fetchGP();
   }
 
-  Future _fetchVidT() async {
-    final response = await http
-        .get(Uri.parse(Config.baseUrl).replace(path: '/api/vidk.php'));
-    //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _vidk = json.decode(response.body);
-      });
-    } else {
-      throw Exception('Failed to load');
-    }
+  Future<void> _fetchVidT() async {
+    final result = await ReferenceListsApi.fetch('/api/vidk.php');
+    if (!mounted) return;
+    setState(() {
+      _vidkLoading = false;
+      _vidkFailed = result.failed;
+      if (result.data != null) _vidk = result.data!;
+    });
   }
 
-  Future _fetchGP() async {
-    final response = await http
-        .get(Uri.parse(Config.baseUrl).replace(path: '/api/get_vidgr.php'));
-    //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
 
-    if (response.statusCode == 200) {
-      setState(() {
-        _gp = json.decode(response.body);
-      });
-    } else {
-      throw Exception('Failed to load cities');
-    }
+  Future<void> _fetchGP() async {
+    final result = await ReferenceListsApi.fetch('/api/get_vidgr.php');
+    if (!mounted) return;
+    setState(() {
+      _gpLoading = false;
+      _gpFailed = result.failed;
+      if (result.data != null) _gp = result.data!;
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -243,9 +243,12 @@ class _creguser_nameForm extends State<creguser_name> {
                 border: Border.all(color: Colors.black38, width: 2),
                 color: grayprprColor,
               ),
-              child: _gp.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
+              child: AsyncListPlaceholder(
+                isLoading: _gpLoading,
+                loadFailed: _gpFailed,
+                isEmpty: _gp.isEmpty,
+                onRetry: _fetchGP,
+                child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
@@ -282,6 +285,7 @@ class _creguser_nameForm extends State<creguser_name> {
                         ),
                       ],
                     ),
+              ),
             ),
             Container(
               width: double.infinity,
@@ -390,9 +394,12 @@ class _creguser_nameForm extends State<creguser_name> {
                 border: Border.all(color: Colors.black38, width: 2),
                 color: grayprprColor,
               ),
-              child: _vidk.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
+              child: AsyncListPlaceholder(
+                isLoading: _vidkLoading,
+                loadFailed: _vidkFailed,
+                isEmpty: _vidk.isEmpty,
+                onRetry: _fetchVidT,
+                child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
@@ -429,6 +436,7 @@ class _creguser_nameForm extends State<creguser_name> {
                         ),
                       ],
                     ),
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),

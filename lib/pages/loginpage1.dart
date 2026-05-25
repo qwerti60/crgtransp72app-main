@@ -35,7 +35,7 @@ class _RegisterPageState extends State {
 
   Future registerUser() async {
     final response = await http.post(
-      Uri.parse('http://ivnovav.ru/register.php'),
+      Uri.parse('https://ivnovav.ru/register.php'),
       body: {
         'username': _usernameController.text,
         'email': _emailController.text,

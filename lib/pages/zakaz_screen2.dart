@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import '../design/colors.dart';
 import 'changerol_page.dart';
+import 'loginpage.dart';
 import 'get_vt.dart' as performer_services;
 import 'vod_zak.dart';
 import 'zprofil_page.dart';
@@ -94,7 +95,8 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
         'https://ivnovav.ru/api/check_order_status1.php?userIdok=$userIdok');
-    final response = await http.get(uri);
+    final response =
+        await http.get(uri).timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {
       final decodedResponse = json.decode(response.body);
@@ -170,7 +172,40 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
             : null,
         floatingActionButton: safePage == 0
             ? FloatingActionButton(
-                onPressed: () {
+                onPressed: () async {
+                  if (!_isAuthorized) {
+                    await showDialog(
+                      context: context,
+                      builder: (dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Требуется авторизация'),
+                          content: const Text(
+                            'Размещение объявления доступно после входа в аккаунт.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(),
+                              child: const Text('Отмена'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginPage(),
+                                  ),
+                                );
+                              },
+                              child: const Text('Войти'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -225,7 +260,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     }
 
     if (userIdok == null) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildScaffold(null);
     }
 
     return FutureBuilder<Map<String, dynamic>>(

@@ -214,7 +214,7 @@ class zprofil_ldForm extends State<zprofil_ld> {
   Future _uploadImage(Uint8List imageBytes, String email) async {
     String base64Image = base64Encode(imageBytes);
     var response = await http.post(
-      Uri.parse('http://ivnovav.ru/api/upload.php'),
+      Uri.parse('https://ivnovav.ru/api/upload.php'),
       body: {
         'image': base64Image,
         'email': email,
@@ -242,7 +242,7 @@ class zprofil_ldForm extends State<zprofil_ld> {
 
     // Создаем запрос на сервер
     Uri uri =
-        Uri.parse("http://ivnovav.ru/api/upload.php"); // Измените на ваш URL
+        Uri.parse("https://ivnovav.ru/api/upload.php"); // Измените на ваш URL
     var request = http.MultipartRequest("POST", uri)
       ..fields['email'] = email // Замените на соответствующий ID пользователя
       ..files.add(http.MultipartFile.fromBytes(

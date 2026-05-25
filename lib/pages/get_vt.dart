@@ -115,9 +115,12 @@ class _MyImageGridState extends State {
   late Future<List<ImageData>> imagesGruzchik;
   late String nameImg;
   Future<List<ImageData>> fetchImages(String db) async {
-    final response = await http.get(
-        Uri.parse("${Config.baseUrl}/api/getimage.php")
-            .replace(queryParameters: {'bd': db}));
+    final response = await http
+        .get(
+          Uri.parse('${Config.baseUrl}/api/getimage.php')
+              .replace(queryParameters: {'bd': db}),
+        )
+        .timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
       return (json.decode(response.body) as List)
           .map((data) => ImageData.fromJson(data))

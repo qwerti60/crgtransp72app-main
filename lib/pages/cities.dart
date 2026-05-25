@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../config.dart';
+import 'package:crgtransp72app/api/cities_api.dart';
+import 'package:crgtransp72app/widgets/async_list_placeholder.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -13,6 +15,8 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPage extends State {
   List _cities = [];
+  bool _citiesLoading = true;
+  bool _citiesFailed = false;
   String? _selectedCity;
 
   @override
@@ -21,22 +25,18 @@ class _RegisterPage extends State {
     _fetchCities();
   }
 
-  Future _fetchCities() async {
-    try {
-      final response =
-          await http.get(Uri.parse(Config.baseUrl).replace(path: 'cities.php'));
-      if (response.statusCode == 200) {
-        setState(() {
-          _cities = json.decode(response.body);
-        });
-      } else {
-        print('Failed to load cities: ${response.statusCode}');
-        throw Exception('Failed to load cities');
+  Future<void> _fetchCities() async {
+    final result = await CitiesApi.fetchAll();
+    if (!mounted) return;
+    setState(() {
+      _citiesLoading = false;
+      _citiesFailed = result.failed;
+      if (result.data != null) {
+        _cities = result.data!;
       }
-    } catch (e) {
-      print('Error fetching cities: $e');
-    }
+    });
   }
+
 
 /*
   Future _fetchCities() async {
@@ -58,9 +58,18 @@ class _RegisterPage extends State {
       appBar: AppBar(
         title: const Text('Select a City'),
       ),
-      body: _cities.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: AsyncListPlaceholder(
+          isLoading: _citiesLoading,
+          loadFailed: _citiesFailed,
+          isEmpty: _cities.isEmpty,
+          onRetry: () {
+            setState(() {
+              _citiesLoading = true;
+              _citiesFailed = false;
+            });
+            _fetchCities();
+          },
+          child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 DropdownButton(
@@ -94,6 +103,7 @@ class _RegisterPage extends State {
                 ),
               ],
             ),
+      ),
     );
   }
 }

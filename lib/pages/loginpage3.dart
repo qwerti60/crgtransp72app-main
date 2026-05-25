@@ -35,7 +35,7 @@ class _RegisterFormState extends State {
 
   Future _registerUser(String username, String email, String password) async {
     final response = await http.post(
-      Uri.parse('http://ivnovav.ru/reg.php'),
+      Uri.parse('https://ivnovav.ru/reg.php'),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
       },

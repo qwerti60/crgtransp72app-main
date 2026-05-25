@@ -237,6 +237,8 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
           responseType: ResponseType.json,
+          receiveTimeout: const Duration(seconds: 12),
+          sendTimeout: const Duration(seconds: 12),
         ),
       );
       if (response.data is Map<String, dynamic>) {

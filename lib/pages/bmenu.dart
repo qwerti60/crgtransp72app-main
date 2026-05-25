@@ -100,7 +100,8 @@ class _HistortScreenState extends State<HistortScreen12> {
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
         'https://ivnovav.ru/api/check_order_status.php?userIdok=$userIdok');
-    final response = await http.get(uri);
+    final response =
+        await http.get(uri).timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {
       final decodedResponse = json.decode(response.body);

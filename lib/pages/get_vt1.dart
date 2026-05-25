@@ -56,7 +56,12 @@ class _MyImageGridState extends State {
   late String nameImg;
   Future<List<ImageData>> fetchImages(String db) async {
     final response =
-        await http.get(Uri.parse('http://ivnovav.ru/api/getimage.php?bd=$db'));
+        await http
+            .get(
+              Uri.parse('https://ivnovav.ru/api/getimage.php')
+                  .replace(queryParameters: {'bd': db}),
+            )
+            .timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
       return (json.decode(response.body) as List)
           .map((data) => ImageData.fromJson(data))

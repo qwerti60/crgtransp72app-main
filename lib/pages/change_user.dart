@@ -10,14 +10,17 @@ import '../design/dimension.dart';
 import 'subscription_screen.dart';
 import 'package:http/http.dart' as http;
 
+import 'loginpage.dart';
+import 'changestatis_page.dart';
 import 'zakaz_screen2.dart';
 
 Future<bool?> checkSubscription(int userId) async {
-  final response = await http.post(
-    Uri.parse(
-        '${Config.baseUrl}/api/check_subscription.php?iduser=$userId'), // Adding userId as a query parameter
-    // Note: Since you are sending the userId in the URL, you do not need to include it in the body again
-  );
+  final response = await http
+      .post(
+        Uri.parse(
+            '${Config.baseUrl}/api/check_subscription.php?iduser=$userId'),
+      )
+      .timeout(const Duration(seconds: 8));
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);
     print(data['status']);
@@ -142,9 +145,39 @@ class change_userForm extends State<change_user> {
                   color: blackprColor,
                   fontSize: fontSize30,
                 )),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              child: Text(
+                'Просмотр услуг и объявлений не требует регистрации. Вход нужен только для размещения заказов и личного кабинета.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 14),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 30.0),
+              margin: const EdgeInsets.only(top: 8.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    fixedSize: const Size(double.infinity, 50),
+                    foregroundColor: blueaccentColor,
+                    side: const BorderSide(color: blueaccentColor),
+                  ),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyApp()),
+                      (Route<dynamic> route) => false,
+                    );
+                  },
+                  child: const Text('Смотреть без регистрации'),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
               child: SizedBox(
                 width: double.infinity,
                 child: TextButton(
@@ -197,6 +230,36 @@ class change_userForm extends State<change_user> {
                   },
                   child: const Text('Я грузоперевозчик'),
                 ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                      );
+                    },
+                    child: const Text('Войти'),
+                  ),
+                  const Text(' | ', style: TextStyle(color: Colors.black38)),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const chagestatus(data: 1),
+                        ),
+                      );
+                    },
+                    child: const Text('Регистрация'),
+                  ),
+                ],
               ),
             ),
           ],

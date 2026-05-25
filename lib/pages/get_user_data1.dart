@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
+import 'package:crgtransp72app/api/cities_api.dart';
+import 'package:crgtransp72app/widgets/async_list_placeholder.dart';
 import '../design/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,6 +34,8 @@ class MyAppGUD1 extends StatefulWidget {
 class _MyAppState extends State<MyAppGUD1> {
   List users = [];
   List _cities = [];
+  bool _citiesLoading = true;
+  bool _citiesFailed = false;
   String? _selectedCity;
   bool isSwitched = false;
 //String nameImg;
@@ -86,23 +90,22 @@ class _MyAppState extends State<MyAppGUD1> {
     }
   }
 
-  Future _fetchCities() async {
-    final response = await http
-        .get(Uri.parse(Config.baseUrl).replace(path: '/api/cities.php'));
-    //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _cities = json.decode(response.body);
-      });
-    } else {
-      throw Exception('Failed to load cities');
-    }
+  Future<void> _fetchCities() async {
+    final result = await CitiesApi.fetchAll();
+    if (!mounted) return;
+    setState(() {
+      _citiesLoading = false;
+      _citiesFailed = result.failed;
+      if (result.data != null) {
+        _cities = result.data!;
+      }
+    });
   }
+
 
   Future fetchUsers(String name, String city) async {
     var response = await http.get(Uri.parse(
-        'http://ivnovav.ru/api/getuserdata_ispolnit.php?name=$name&city=$city'));
+        'https://ivnovav.ru/api/getuserdata_ispolnit.php?name=$name&city=$city'));
 
     print('city: $city');
     print('name: $name');

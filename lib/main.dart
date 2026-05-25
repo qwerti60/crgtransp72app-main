@@ -1,108 +1,67 @@
+import 'dart:async';
+
+import 'package:crgtransp72app/firebase_options.dart';
 import 'package:crgtransp72app/pages/start_pages.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Импортируем core
-import 'package:firebase_messaging/firebase_messaging.dart'; // Импортируем messaging
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
-Future<void> _initializeFirebase() async {
-  await Firebase.initializeApp(); // Инициализируем Firebase
-  //final fcmToken
-
-  // Запрашиваем разрешения на отправку уведомлений (особенно важно для iOS)
-  NotificationSettings settings =
-      await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  if (settings.authorizationStatus == AuthorizationStatus.denied) {
-    // Пользователь отказал в разрешении – возвращаемся без дальнейших действий
-    return;
-  }
-
-  // Для iOS: показываем баннер/звук/бейдж, когда приложение на экране.
-  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  // Подписываемся на получение нового токена (рекомендуемый способ)
-  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-    debugPrint('Новый FCM-токен: $newToken');
-  });
-
-  // Пробуем сразу получить токен, используя await (для немедленного вывода токена)
+/// Не блокирует первый кадр UI — иначе ревью видит «вечную» загрузку на Launch Screen.
+Future<void> _initializeFirebaseInBackground() async {
   try {
-    String? fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken != null) {
-      debugPrint('Полученный FCM-токен: $fcmToken');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 12));
+
+    final settings = await FirebaseMessaging.instance
+        .requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      return;
     }
-  } catch (e) {
-    debugPrint('Ошибка получения токена: $e');
-  }
 
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    // Слушаем входящие уведомления
-    print('Received a notification!');
-    print(message.notification?.title); // Выводим заголовок уведомления
-    print(message.notification?.body); // Выводим тело уведомления
-  });
-}
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        )
+        .timeout(const Duration(seconds: 5));
 
-Future<void> initPush() async {
-  await Firebase
-      .initializeApp(); // Инициализация Firebase должна произойти первой
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      debugPrint('Новый FCM-токен: $newToken');
+    });
 
-  // Запрашиваем разрешения на отправку уведомлений (особенно важно для iOS)
-  NotificationSettings settings =
-      await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  if (settings.authorizationStatus == AuthorizationStatus.denied) {
-    // Пользователь отказал в разрешении – возвращаемся без дальнейших действий
-    return;
-  }
-
-  // Для iOS: показываем баннер/звук/бейдж, когда приложение на экране.
-  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  // Подписываемся на получение нового токена (рекомендуемый способ)
-  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-    debugPrint('Новый FCM-токен: $newToken');
-  });
-
-  // Пробуем сразу получить токен, используя await (для немедленного вывода токена)
-  try {
-    String? currentToken = await FirebaseMessaging.instance.getToken();
-    if (currentToken != null) {
-      debugPrint('Полученный FCM-токен: $currentToken');
+    try {
+      final fcmToken = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 10));
+      if (fcmToken != null) {
+        debugPrint('Полученный FCM-токен: $fcmToken');
+      }
+    } catch (e) {
+      debugPrint('Ошибка получения токена: $e');
     }
-  } catch (e) {
-    debugPrint('Ошибка получения токена: $e');
-  }
 
-  // Обработчик входящих сообщений
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    debugPrint('Получено уведомление:');
-    debugPrint(
-        'Заголовок: ${message.notification?.title}, Сообщение: ${message.notification?.body}');
-  });
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('Received a notification!');
+      debugPrint(message.notification?.title);
+      debugPrint(message.notification?.body);
+    });
+  } catch (e) {
+    debugPrint('Firebase init skipped or failed: $e');
+  }
 }
 
 void main() async {
-  // Первая строка, обеспечивающая полную инициализацию привязки Flutter
-  await WidgetsFlutterBinding.ensureInitialized();
-
-  await _initializeFirebase(); // Ждём завершения инициализации Firebase
-  runApp(const MyApp()); // Стартуем приложение
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
+  unawaited(_initializeFirebaseInBackground());
 }
 
 class MyApp extends StatelessWidget {
@@ -116,7 +75,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const SplashScreen(), // Стартовая страница остаётся неизменной
+      home: const SplashScreen(),
     );
   }
 }

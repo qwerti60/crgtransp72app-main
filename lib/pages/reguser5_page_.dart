@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../design/colors.dart';
 import '../design/dimension.dart';
 import '../config.dart';
+import 'package:crgtransp72app/api/reference_lists_api.dart';
+import 'package:crgtransp72app/widgets/async_list_placeholder.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -54,6 +56,8 @@ class creguser5_name_ extends StatefulWidget {
 
 class _creguser5_nameForm extends State<creguser5_name_> {
   List _vidt = [];
+  bool _vidtLoading = true;
+  bool _vidtFailed = false;
   String? _selectedVidt;
   late int statNum;
   late int rollNum;
@@ -91,19 +95,16 @@ class _creguser5_nameForm extends State<creguser5_name_> {
     _fetchVidT();
   }
 
-  Future _fetchVidT() async {
-    final response = await http
-        .get(Uri.parse(Config.baseUrl).replace(path: '/api/vidt.php'));
-    //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _vidt = json.decode(response.body);
-      });
-    } else {
-      throw Exception('Failed to load cities');
-    }
+  Future<void> _fetchVidT() async {
+    final result = await ReferenceListsApi.fetch('/api/vidt.php');
+    if (!mounted) return;
+    setState(() {
+      _vidtLoading = false;
+      _vidtFailed = result.failed;
+      if (result.data != null) _vidt = result.data!;
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -158,9 +159,12 @@ class _creguser5_nameForm extends State<creguser5_name_> {
                 color: grayprprColor,
               ),
 // Step 2.
-              child: _vidt.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
+              child: AsyncListPlaceholder(
+                isLoading: _vidtLoading,
+                loadFailed: _vidtFailed,
+                isEmpty: _vidt.isEmpty,
+                onRetry: _fetchVidT,
+                child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
@@ -197,6 +201,7 @@ class _creguser5_nameForm extends State<creguser5_name_> {
                         ),
                       ],
                     ),
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),

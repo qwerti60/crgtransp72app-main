@@ -31,7 +31,7 @@ class _RegistrationScreenState extends State {
 
   Future checkUser() async {
     final response = await http.post(
-      Uri.parse('http://www.ivnovav.ru/register.php'),
+      Uri.parse('https://ivnovav.ru/register.php'),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
       },

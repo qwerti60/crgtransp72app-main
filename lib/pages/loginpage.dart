@@ -11,6 +11,7 @@ import '../design/dimension.dart';
 import 'change_user.dart';
 import 'changestatis_page.dart';
 import 'gruz_vodit.dart';
+import 'zakaz_screen1.dart';
 //import 'profil_page.dart';
 import 'rent_z.dart';
 import 'zprofil_page.dart';
@@ -384,6 +385,24 @@ class _LoginState extends State<LoginPage> {
                 ),
                 onPressed: _showForgotPasswordDialog,
                 child: const Text('Восстановить пароль'),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 16.0),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.fire_truck_outlined),
+                label: const Text('Смотреть услуги без регистрации'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: blueaccentColor,
+                ),
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyApp()),
+                    (route) => false,
+                  );
+                },
               ),
             ),
             Container(

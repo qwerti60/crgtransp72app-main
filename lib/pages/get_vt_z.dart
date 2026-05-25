@@ -1,4 +1,5 @@
 import 'package:crgtransp72app/pages/CityScreenisp.dart';
+import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/loginpage.dart';
@@ -118,6 +119,32 @@ class MyAppI1zPage extends StatelessWidget {
           ),
         ),
         backgroundColor: blueaccentColor,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const change_user()),
+              );
+            },
+            child: const Text(
+              'Роли',
+              style: TextStyle(color: whiteprColor),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+            child: const Text(
+              'Войти',
+              style: TextStyle(color: whiteprColor),
+            ),
+          ),
+        ],
       ),
       body: const MyImageGrid(),
       floatingActionButton: FloatingActionButton(
@@ -157,8 +184,12 @@ class _MyImageGridState extends State<MyImageGrid> {
   late Future<List<ImageData>> imagesGruzchik;
   late String nameImg;
   Future<List<ImageData>> fetchImages(String db) async {
-    final response =
-        await http.get(Uri.parse('http://ivnovav.ru/api/getimage.php?bd=$db'));
+    final response = await http
+        .get(
+          Uri.parse('https://ivnovav.ru/api/getimage.php')
+              .replace(queryParameters: {'bd': db}),
+        )
+        .timeout(const Duration(seconds: 12));
     if (response.statusCode == 200) {
       return (json.decode(response.body) as List)
           .map((data) => ImageData.fromJson(data))
@@ -201,17 +232,6 @@ class _MyImageGridState extends State<MyImageGrid> {
                   itemBuilder: (BuildContext context, int index) {
                     return GestureDetector(
                       onTap: () {
-                        if (widget.isGuestMode) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Для перехода к заявкам и профилю войдите в аккаунт',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
                         int base =
                             0; // Объявление переменной за пределами условного блока
 

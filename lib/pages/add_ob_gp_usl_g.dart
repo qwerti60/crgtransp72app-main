@@ -9,6 +9,8 @@ import 'decimal_text_input_formatter.dart';
 import '../design/colors.dart';
 //import 'reguser1_name.dart';
 import '../config.dart';
+import 'package:crgtransp72app/api/cities_api.dart';
+import 'package:crgtransp72app/widgets/async_list_placeholder.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -38,6 +40,8 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
   final List _vidt = [];
   String? _selectedVidkuzov;
   List _cities = [];
+  bool _citiesLoading = true;
+  bool _citiesFailed = false;
   bool _isSubmitting = false;
   String? _selectedCity;
   final List _cities1 = [];
@@ -120,19 +124,18 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
     }
   }
 
-  Future _fetchCities() async {
-    final response =
-        await http.get(Uri.parse('${Config.baseUrl}/api/cities.php'));
-    //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _cities = json.decode(response.body);
-      });
-    } else {
-      throw Exception('Failed to load cities');
-    }
+  Future<void> _fetchCities() async {
+    final result = await CitiesApi.fetchAll();
+    if (!mounted) return;
+    setState(() {
+      _citiesLoading = false;
+      _citiesFailed = result.failed;
+      if (result.data != null) {
+        _cities = result.data!;
+      }
+    });
   }
+
 
   Future _pickImage(int index) async {
     final ImagePicker picker = ImagePicker();
@@ -374,9 +377,18 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                 border: Border.all(color: Colors.black38, width: 2),
                 color: grayprprColor,
               ),
-              child: _cities.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
+              child: AsyncListPlaceholder(
+                isLoading: _citiesLoading,
+                loadFailed: _citiesFailed,
+                isEmpty: _cities.isEmpty,
+                onRetry: () {
+                  setState(() {
+                    _citiesLoading = true;
+                    _citiesFailed = false;
+                  });
+                  _fetchCities();
+                },
+                child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DropdownButton(
@@ -414,6 +426,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl_g> {
                         ),
                       ],
                     ),
+              ),
             ),
             Container(
               width: double.infinity,
