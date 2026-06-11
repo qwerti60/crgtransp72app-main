@@ -34,8 +34,8 @@ Future<void> showDeleteAccountDialog(BuildContext context) async {
     return;
   }
 
-  final fcmToken = await getSecurefcm_token();
-  if (fcmToken == null || fcmToken.isEmpty) {
+  final authToken = await getSecurefcm_token();
+  if (authToken == null || authToken.isEmpty) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Не удалось определить аккаунт')),
@@ -46,7 +46,7 @@ Future<void> showDeleteAccountDialog(BuildContext context) async {
   try {
     final response = await http.post(
       Uri.parse(Config.baseUrl).replace(path: '/api/delete_account.php'),
-      body: {'fcm_token': fcmToken},
+      body: {'fcm_token': authToken},
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );
     final result = jsonDecode(response.body);
@@ -54,7 +54,7 @@ Future<void> showDeleteAccountDialog(BuildContext context) async {
     if (response.statusCode == 200 && result['success'] == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('fcm_token');
-      await prefs.remove('789456123');
+      await clearAuthToken();
 
       if (!context.mounted) return;
       Navigator.of(context).pushAndRemoveUntil(

@@ -7,23 +7,19 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    if (empty($_POST['fcm_token'])) {
-        echo json_encode(['success' => false, 'message' => 'FCM token is missing']);
+    $token = $_POST['fcm_token'] ?? $_POST['token'] ?? '';
+    if ($token === '') {
+        echo json_encode(['success' => false, 'message' => 'Token is missing']);
         exit;
     }
 
-    $fcmToken = $_POST['fcm_token'];
+    require_once __DIR__ . '/token_auth.php';
 
-    $stmt = $pdo->prepare("SELECT idusers FROM users WHERE fcm_token = :fcm_token LIMIT 1");
-    $stmt->execute([':fcm_token' => $fcmToken]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$user) {
+    $userId = resolveUserIdFromToken($pdo, $token);
+    if ($userId === null) {
         echo json_encode(['success' => false, 'message' => 'Account not found']);
         exit;
     }
-
-    $userId = (int)$user['idusers'];
 
     $pdo->beginTransaction();
 

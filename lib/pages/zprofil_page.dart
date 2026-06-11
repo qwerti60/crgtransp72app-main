@@ -359,15 +359,14 @@ class _showExitConfirmationDialog {
             TextButton(
               child: const Text('Да'),
               onPressed: () async {
-                final fcmToken =
-                    await getSecurefcm_token(); // Await the secure token
-                if (fcmToken != null) {
+                final pushToken = await getPushFcmToken();
+                if (pushToken != null) {
                   try {
                     final response = await http.post(
                       Uri.parse(Config.baseUrl).replace(
                           path: '/api/clear_fcm_token.php'), // URL нашего API
                       body: {
-                        'fcm_token': fcmToken,
+                        'fcm_token': pushToken,
                       },
                       headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
@@ -393,6 +392,9 @@ class _showExitConfirmationDialog {
                   print('No FCM token available for clearing.');
                 }
 
+                await clearAuthToken();
+
+                if (!context.mounted) return;
                 Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const change_user()));
               },

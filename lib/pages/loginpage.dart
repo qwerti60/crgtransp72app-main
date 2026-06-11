@@ -3,6 +3,8 @@
 import 'dart:convert';
 
 import 'package:crgtransp72app/design/colors.dart';
+import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -36,58 +38,54 @@ class _LoginState extends State<LoginPage> {
   final TextEditingController _newPasswordController = TextEditingController();
   bool _obscureNewPassword = true;
 
-  Future<void> _requestPasswordResetCode(String email) async {
-    final response = await http.post(
-      Uri.parse(Config.baseUrl)
-          .replace(path: '/api/request_password_reset.php'),
-      body: {'email': email.trim()},
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    );
+  Future<String?> _requestPasswordResetCode(String email) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.baseUrl)
+                .replace(path: '/api/request_password_reset.php'),
+            body: {'email': email.trim()},
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          )
+          .timeout(const Duration(seconds: 15));
 
-    final data = jsonDecode(response.body);
-    if (!mounted) return;
-
-    if (response.statusCode == 200 && data['status'] == 'success') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Код отправлен на e-mail')),
-      );
-      Navigator.of(context).pop();
-      _showConfirmResetDialog(email.trim());
-      return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return null;
+      }
+      return data['message']?.toString() ?? 'Не удалось отправить код';
+    } catch (_) {
+      return 'Нет связи с сервером. Проверьте интернет.';
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(data['message'] ?? 'Не удалось отправить код')),
-    );
   }
 
-  Future<void> _confirmPasswordReset(
-      String email, String code, String password) async {
-    final response = await http.post(
-      Uri.parse(Config.baseUrl)
-          .replace(path: '/api/confirm_password_reset.php'),
-      body: {
-        'email': email.trim(),
-        'code': code.trim(),
-        'new_password': password,
-      },
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    );
+  Future<String?> _confirmPasswordReset({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(Config.baseUrl)
+                .replace(path: '/api/confirm_password_reset.php'),
+            body: {
+              'email': email.trim(),
+              'code': code.trim(),
+              'new_password': password,
+            },
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          )
+          .timeout(const Duration(seconds: 15));
 
-    final data = jsonDecode(response.body);
-    if (!mounted) return;
-
-    if (response.statusCode == 200 && data['status'] == 'success') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пароль успешно изменен')),
-      );
-      Navigator.of(context).pop();
-      return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return null;
+      }
+      return data['message']?.toString() ?? 'Не удалось изменить пароль';
+    } catch (_) {
+      return 'Нет связи с сервером. Проверьте интернет.';
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(data['message'] ?? 'Не удалось изменить пароль')),
-    );
   }
 
   Future<void> _showForgotPasswordDialog() async {
@@ -95,105 +93,87 @@ class _LoginState extends State<LoginPage> {
     await showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Восстановить пароль'),
-          content: TextFormField(
-            controller: _resetEmailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              hintText: 'Введите e-mail',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () {
-                final email = _resetEmailController.text.trim();
-                final isValidEmail = RegExp(
-                  r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
-                ).hasMatch(email);
-                if (!isValidEmail) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Введите корректный e-mail')),
-                  );
-                  return;
-                }
-                _requestPasswordResetCode(email);
-              },
-              child: const Text('Отправить'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+        var isSubmitting = false;
+        String? errorMessage;
 
-  Future<void> _showConfirmResetDialog(String email) async {
-    _resetCodeController.clear();
-    _newPasswordController.clear();
-    bool obscurePassword = true;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Подтверждение'),
+              title: const Text('Восстановить пароль'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextFormField(
-                    controller: _resetCodeController,
-                    decoration:
-                        const InputDecoration(hintText: 'Код из e-mail'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _newPasswordController,
-                    obscureText: obscurePassword,
-                    decoration: InputDecoration(
-                      hintText: 'Новый пароль',
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setDialogState(() {
-                            obscurePassword = !obscurePassword;
-                          });
-                        },
-                      ),
+                    controller: _resetEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !isSubmitting,
+                    decoration: const InputDecoration(
+                      hintText: 'Введите e-mail',
                     ),
                   ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Отмена'),
                 ),
                 TextButton(
-                  onPressed: () {
-                    final code = _resetCodeController.text.trim();
-                    final newPassword = _newPasswordController.text;
-                    if (code.isEmpty || newPassword.length < 8) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Введите код и пароль не менее 8 символов'),
-                        ),
-                      );
-                      return;
-                    }
-                    _confirmPasswordReset(email, code, newPassword);
-                  },
-                  child: const Text('Сменить пароль'),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final email = _resetEmailController.text.trim();
+                          final isValidEmail = RegExp(
+                            r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
+                          ).hasMatch(email);
+                          if (!isValidEmail) {
+                            setDialogState(() {
+                              errorMessage = 'Введите корректный e-mail';
+                            });
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = true;
+                            errorMessage = null;
+                          });
+
+                          final error = await _requestPasswordResetCode(email);
+                          if (!dialogContext.mounted) return;
+
+                          if (error == null) {
+                            Navigator.of(dialogContext).pop();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Код отправлен на e-mail'),
+                              ),
+                            );
+                            await _showConfirmResetDialog(email);
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = false;
+                            errorMessage = error;
+                          });
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Отправить'),
                 ),
               ],
             );
@@ -203,62 +183,208 @@ class _LoginState extends State<LoginPage> {
     );
   }
 
-  void _login() async {
-    final prefs = await SharedPreferences.getInstance();
-    final fcmToken =
-        prefs.getString('fcm_token'); // Читаем сохранённый токен FCM
+  Future<void> _showConfirmResetDialog(String email) async {
+    _resetCodeController.clear();
+    _newPasswordController.clear();
 
-    // Формируем тело запроса для авторизации
-    var response = await http.post(
-      Uri.parse(Config.baseUrl).replace(path: '/api/autoriz1.php'),
-      body: {
-        'email': _emailController.text,
-        'password': _passwordController.text,
-        if (fcmToken != null)
-          'fcm_token':
-              fcmToken, // Теперь токен передается только если он существует
-        // Передаём токен FCM на сервер
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        var obscurePassword = true;
+        var isSubmitting = false;
+        String? errorMessage;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Подтверждение'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _resetCodeController,
+                    keyboardType: TextInputType.number,
+                    enabled: !isSubmitting,
+                    decoration:
+                        const InputDecoration(hintText: 'Код из e-mail'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _newPasswordController,
+                    obscureText: obscurePassword,
+                    enabled: !isSubmitting,
+                    decoration: InputDecoration(
+                      hintText: 'Новый пароль',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () {
+                                setDialogState(() {
+                                  obscurePassword = !obscurePassword;
+                                });
+                              },
+                      ),
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Отмена'),
+                ),
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final code = _resetCodeController.text.trim();
+                          final newPassword = _newPasswordController.text;
+                          if (code.isEmpty || newPassword.length < 8) {
+                            setDialogState(() {
+                              errorMessage =
+                                  'Введите код и пароль не менее 8 символов';
+                            });
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = true;
+                            errorMessage = null;
+                          });
+
+                          final error = await _confirmPasswordReset(
+                            email: email,
+                            code: code,
+                            password: newPassword,
+                          );
+                          if (!dialogContext.mounted) return;
+
+                          if (error == null) {
+                            Navigator.of(dialogContext).pop();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Пароль успешно изменен'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSubmitting = false;
+                            errorMessage = error;
+                          });
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Сменить пароль'),
+                ),
+              ],
+            );
+          },
+        );
       },
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );
+  }
 
-    var json = jsonDecode(response.body);
+  void _showAuthError(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(content: Text(message)),
+    );
+  }
 
-    Future<void> saveTokenSecurely(String token) async {
-      final prefs = await SharedPreferences.getInstance();
-      prefs.setString('789456123', token); // Сохраняем обычный токен (не FCM!)
-      print(json['token']);
-      print(json['rollNum']);
-    }
+  Future<String?> _resolvePushFcmToken() async {
+    final existing = await getPushFcmToken();
+    if (existing != null) return existing;
 
-    // Проверяем success и token
-    if (json['success'] != null && json['success'] && json['token'] != null) {
-      saveTokenSecurely(json['token']);
-
-      // Переход на соответствующие экраны в зависимости от rollNum
-      switch (json['rollNum']) {
-        case 1:
-          Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const change_user()));
-          break;
-        case 2:
-          Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const zprofil_name()));
-          break;
-        case 3:
-          Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const gruz_vodit()));
-          break;
-        default:
-          break;
+    try {
+      final pushToken = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 10));
+      if (pushToken != null && pushToken.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fcm_token', pushToken);
+        return pushToken;
       }
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(content: Text(json['message']));
-        },
-      );
+    } catch (_) {}
+    return null;
+  }
+
+  void _login() async {
+    try {
+      final pushToken = await _resolvePushFcmToken();
+
+      final body = <String, String>{
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+      };
+      if (pushToken != null) {
+        body['fcm_token'] = pushToken;
+      }
+
+      final response = await http
+          .post(
+            Uri.parse(Config.baseUrl).replace(path: '/api/autoriz1.php'),
+            body: body,
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+
+      final dynamic json;
+      try {
+        json = jsonDecode(response.body);
+      } catch (_) {
+        _showAuthError('Ошибка сервера. Попробуйте позже.');
+        return;
+      }
+
+      if (json['success'] == true && json['token'] != null) {
+        await saveAuthToken(json['token']);
+
+        switch (json['rollNum']) {
+          case 1:
+            Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const change_user()));
+            break;
+          case 2:
+            Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const zprofil_name()));
+            break;
+          case 3:
+            Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const gruz_vodit()));
+            break;
+          default:
+            _showAuthError('Неизвестный тип аккаунта');
+            break;
+        }
+      } else {
+        _showAuthError(json['message']?.toString() ?? 'Ошибка авторизации');
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _showAuthError('Нет связи с сервером. Проверьте интернет.');
     }
   }
 

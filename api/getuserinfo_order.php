@@ -17,14 +17,21 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    /* --- в запросе обязательно передаём FCM-токен --- */
     if (empty($_GET['token'])) {
-        echo json_encode(['error' => 'FCM Token is required']);
+        echo json_encode(['error' => 'Token is required']);
         exit;
     }
-    $token = $_GET['token'];
 
-    /* --- один запрос: пользователь + его заказ --- */
+    require_once __DIR__ . '/token_auth.php';
+
+    $token = $_GET['token'];
+    $userId = resolveUserIdFromToken($pdo, $token);
+
+    if ($userId === null) {
+        echo json_encode(['error' => 'User not found']);
+        exit;
+    }
+
     $sql = "
         SELECT 
             u.idusers,
@@ -39,17 +46,17 @@ try {
             og.user_id
         FROM users u
         LEFT JOIN ordersglobal og ON og.user_idok = u.idusers
-        WHERE u.fcm_token = ?
-        ORDER BY og.order_id DESC       -- если заказов несколько, берём последний
+        WHERE u.idusers = ?
+        ORDER BY og.order_id DESC
         LIMIT 1
     ";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$token]);
+    $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
-        echo json_encode(['error' => 'User with this FCM token not found']);
+        echo json_encode(['error' => 'User not found']);
         exit;
     }
 

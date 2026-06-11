@@ -83,10 +83,24 @@ class change_user extends StatefulWidget {
 }
 
 class change_userForm extends State<change_user> {
+  bool _isAuthorized = false;
+
   @override
   void initState() {
     super.initState();
-    getUserData();
+    _loadAuthState();
+  }
+
+  Future<void> _loadAuthState() async {
+    final token = await getSecurefcm_token();
+    final authorized = token != null && token.isNotEmpty;
+
+    if (!mounted) return;
+    setState(() => _isAuthorized = authorized);
+
+    if (authorized) {
+      await getUserData();
+    }
   }
 
   Future<void> getUserData() async {
@@ -145,36 +159,38 @@ class change_userForm extends State<change_user> {
                   color: blackprColor,
                   fontSize: fontSize30,
                 )),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-              child: Text(
-                'Просмотр услуг и объявлений не требует регистрации. Вход нужен только для размещения заказов и личного кабинета.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54, fontSize: 14),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 8.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    fixedSize: const Size(double.infinity, 50),
-                    foregroundColor: blueaccentColor,
-                    side: const BorderSide(color: blueaccentColor),
-                  ),
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MyApp()),
-                      (Route<dynamic> route) => false,
-                    );
-                  },
-                  child: const Text('Смотреть без регистрации'),
+            if (!_isAuthorized) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                child: Text(
+                  'Просмотр услуг и объявлений не требует регистрации. Вход нужен только для размещения заказов и личного кабинета.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 14),
                 ),
               ),
-            ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                margin: const EdgeInsets.only(top: 8.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      fixedSize: const Size(double.infinity, 50),
+                      foregroundColor: blueaccentColor,
+                      side: const BorderSide(color: blueaccentColor),
+                    ),
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MyApp()),
+                        (Route<dynamic> route) => false,
+                      );
+                    },
+                    child: const Text('Смотреть без регистрации'),
+                  ),
+                ),
+              ),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -232,36 +248,37 @@ class change_userForm extends State<change_user> {
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      );
-                    },
-                    child: const Text('Войти'),
-                  ),
-                  const Text(' | ', style: TextStyle(color: Colors.black38)),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const chagestatus(data: 1),
-                        ),
-                      );
-                    },
-                    child: const Text('Регистрация'),
-                  ),
-                ],
+            if (!_isAuthorized)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                margin: const EdgeInsets.only(top: 24.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
+                      child: const Text('Войти'),
+                    ),
+                    const Text(' | ', style: TextStyle(color: Colors.black38)),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const chagestatus(data: 1),
+                          ),
+                        );
+                      },
+                      child: const Text('Регистрация'),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

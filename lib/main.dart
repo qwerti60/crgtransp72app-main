@@ -5,6 +5,7 @@ import 'package:crgtransp72app/pages/start_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Не блокирует первый кадр UI — иначе ревью видит «вечную» загрузку на Launch Screen.
 Future<void> _initializeFirebaseInBackground() async {
@@ -33,8 +34,10 @@ Future<void> _initializeFirebaseInBackground() async {
         )
         .timeout(const Duration(seconds: 5));
 
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       debugPrint('Новый FCM-токен: $newToken');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fcm_token', newToken);
     });
 
     try {
