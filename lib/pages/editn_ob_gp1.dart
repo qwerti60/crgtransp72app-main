@@ -24,7 +24,6 @@ import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'ads1.dart';
 import 'image_bytes_helper.dart';
 import 'ad_edit_image_multipart.dart';
 import 'decimal_text_input_formatter.dart';
@@ -411,14 +410,9 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
 
     if (response.statusCode == 200) {
       print('Uploaded!');
-      print('Uploaded!');
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const //HistortScreen(pageProfile: 'Ads1App') //
-              Ads1App(),
-        ),
-      );
+      if (context.mounted) {
+        Navigator.pop(context, true);
+      }
     } else {
       print('Failed!');
     }

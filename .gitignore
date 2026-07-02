@@ -1,5 +1,5 @@
-# Local Gradle cache (e.g. GRADLE_USER_HOME for AAB builds)
-.gradle_user_home/
+# Local venv for PDF generation (scripts/md_to_pdf.py)
+.venv_pdf/
 
 # Miscellaneous
 *.class

@@ -26,7 +26,14 @@ class HistortScreen extends StatelessWidget {
         ShellTabBodyIds.performerProfileRouteTabIndex(pageProfile);
 
     return Scaffold(
-      body: buildProfilePage(pageProfile, orderId: orderid),
+      body: Navigator(
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute<void>(
+            builder: (_) => buildProfilePage(pageProfile, orderId: orderid),
+            settings: settings,
+          );
+        },
+      ),
       bottomNavigationBar: PerformerBottomNav(currentIndex: navIndex),
     );
   }

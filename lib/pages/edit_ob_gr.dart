@@ -21,7 +21,6 @@ import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'ads1.dart';
 import 'ad_edit_image_multipart.dart';
 import 'package:crgtransp72app/widgets/ad_edit_image_slot.dart';
 
@@ -338,13 +337,9 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
     if (response.statusCode == 200) {
       print('Uploaded!');
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              const Ads1App(), //HistortScreen(pageProfile: 'Ads1App'), //Ads1App(),
-        ),
-      );
+      if (context.mounted) {
+        Navigator.pop(context, true);
+      }
     } else {
       print('Failed!');
     }

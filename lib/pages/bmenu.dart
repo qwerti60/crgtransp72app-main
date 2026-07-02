@@ -25,7 +25,14 @@ class HistortScreen12 extends StatelessWidget {
         ShellTabBodyIds.performerProfileRouteTabIndex(pageProfile);
 
     return Scaffold(
-      body: buildProfilePage(pageProfile, orderId: orderid),
+      body: Navigator(
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute<void>(
+            builder: (_) => buildProfilePage(pageProfile, orderId: orderid),
+            settings: settings,
+          );
+        },
+      ),
       bottomNavigationBar: PerformerBottomNav(currentIndex: navIndex),
     );
   }
@@ -36,7 +43,7 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
     case 'zprofil_ld':
       return const zprofil_ld(showBottomNav: false);
     case 'Ads1App':
-      return const Ads1App();
+      return const Ads1Page();
     case 'zprofil_zayavki':
       return const zprofil_zayavki(nameImg: '', base: 1);
     case 'hist':

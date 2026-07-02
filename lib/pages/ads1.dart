@@ -9,6 +9,7 @@ import 'package:crgtransp72app/pages/editn_ob_gp1.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/cupertino.dart';
@@ -28,7 +29,9 @@ void main() {
 }
 
 class Ads1App extends StatelessWidget {
-  const Ads1App({super.key});
+  final bool showBottomNav;
+
+  const Ads1App({super.key, this.showBottomNav = true});
 
   @override
   Widget build(BuildContext context) {
@@ -37,29 +40,53 @@ class Ads1App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(),
+      home: showBottomNav
+          ? const Ads1Shell()
+          : const MyHomePage(showBottomNav: false),
     );
   }
 }
 
-// Use this widget when Ads1 is opened inside an existing app shell.
+/// «Мои объявления» исполнителя с нижним меню: редактирование во вложенном Navigator.
+class Ads1Shell extends StatelessWidget {
+  const Ads1Shell({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Navigator(
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute<void>(
+            builder: (_) => const MyHomePage(showBottomNav: false),
+            settings: settings,
+          );
+        },
+      ),
+      bottomNavigationBar: const PerformerBottomNav(currentIndex: 2),
+    );
+  }
+}
+
+/// Экран «Мои объявления» исполнителя внутри [HistortScreen] (меню снаружи).
 class Ads1Page extends StatelessWidget {
   const Ads1Page({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MyHomePage();
+    return const MyHomePage(showBottomNav: false);
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  final bool showBottomNav;
+
+  const MyHomePage({super.key, this.showBottomNav = true});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State {
+class _MyHomePageState extends State<MyHomePage> {
   String? _selectedType;
   int? bd;
 
@@ -219,13 +246,12 @@ class _MyHomePageState extends State {
     }
   }
 
-  void editTruck(int id, BuildContext context, String tableName) async {
+  Future<void> editTruck(int id, BuildContext context, String tableName) async {
     try {
-      // Логика редактирования записи
+      bool? updated;
       switch (tableName) {
-        // Использование switch-case улучшает читаемость кода
         case 'add_ob_gr':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => edit_ob_gr(
@@ -233,7 +259,7 @@ class _MyHomePageState extends State {
                       )));
           break;
         case 'add_ob_vidt':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => edit_ob_vidt(
@@ -241,7 +267,7 @@ class _MyHomePageState extends State {
                       )));
           break;
         case 'add_ob_gp':
-          Navigator.push(
+          updated = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                   builder: (_) => editn_ob_gp(
@@ -249,8 +275,10 @@ class _MyHomePageState extends State {
                       )));
           break;
         default:
-          print(
-              'Unknown table name'); // Сообщение в консоль, если неизвестная таблица
+          print('Unknown table name');
+      }
+      if (updated == true && mounted) {
+        setState(() {});
       }
     } catch (e) {
       debugPrint("Ошибка при редактировании: $e");
