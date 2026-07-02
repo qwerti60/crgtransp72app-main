@@ -22,7 +22,7 @@ exit();
 }
 
 // Prepare an SQL statement to insert the data into the database
-$stmt = $conn->prepare("INSERT INTO users (rollNum, statNum, firstName, lastName, middleName, city, phone, email, password, namefirm, innStr, ogrnStr, kppStr, vidt, marka, godv, maxgruz, dkuzov, shkuzov, vidk, cenahaurs, cenasmena, cenakm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO users (rollNum, statNum, firstName, lastName, middleName, city, phone, email, password, namefirm, innStr, ogrnStr, kppStr, vidt, marka, godv, maxgruz, dkuzov, shkuzov, vidk, cenahaurs, cenasmena, cenakm, flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
 
 if ($stmt === false) {
 echo json_encode(array('status' => 'error', 'message' => 'Database error: ' . $conn->error));

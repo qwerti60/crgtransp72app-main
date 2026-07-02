@@ -30,8 +30,11 @@ $sql = "
            IFNULL(avg_ratings.avg_rating, 0) AS avg_rating,
            COALESCE(rev_count.reviewsCount, 0) AS reviewsCount
     FROM offer_data od
+    INNER JOIN ordersglobal og
+        ON od.id = og.idoffer
+        AND od.iduserp = og.user_id
+        AND CAST(od.iduser AS CHAR) = CAST(og.order_id AS CHAR)
     INNER JOIN users u ON od.iduserp = u.idusers
-    LEFT JOIN ordersglobal og ON od.iduserp = og.user_id AND od.iduser = og.order_id
     LEFT JOIN (
         SELECT user_id, AVG(rating) AS avg_rating
         FROM reviewsisp
@@ -43,7 +46,7 @@ $sql = "
         GROUP BY user_id
     ) rev_count ON og.user_id = rev_count.user_id
     WHERE od.status = 1
-      AND (og.status IS NULL OR og.status NOT IN ('выполняется'))
+      AND og.status IN ('выполнен', 'отменен')
       AND og.user_idok = ?
 ";
 

@@ -1,17 +1,19 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OfferScreen.dart';
-import 'package:crgtransp72app/pages/OfferScreen2.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
+import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:crgtransp72app/pages/zakaz_screen2.dart';
+import '../navigation/pending_performer_order.dart';
 import '../config.dart';
 import '../design/colors.dart';
 import 'customer_bottom_nav.dart';
@@ -23,6 +25,7 @@ void main() {
   runApp(const zprofil_zayavki(
     nameImg: '',
     base: 1,
+    showBottomNav: true,
   ));
 }
 
@@ -30,11 +33,13 @@ class zprofil_zayavki extends StatelessWidget {
   final String nameImg;
   final int base;
   final bool useCustomerMenu;
+  final bool showBottomNav;
   const zprofil_zayavki({
     super.key,
     required this.nameImg,
     required this.base,
     this.useCustomerMenu = false,
+    this.showBottomNav = false,
   });
 
   @override
@@ -48,6 +53,7 @@ class zprofil_zayavki extends StatelessWidget {
         nameImg: nameImg,
         base: base,
         useCustomerMenu: useCustomerMenu,
+        showBottomNav: showBottomNav,
       ),
     );
   }
@@ -58,11 +64,13 @@ class MyHomePage extends StatefulWidget {
 
   final int base;
   final bool useCustomerMenu;
+  final bool showBottomNav;
   const MyHomePage({
     super.key,
     required this.nameImg,
     required this.base,
     required this.useCustomerMenu,
+    this.showBottomNav = false,
   });
 
   @override
@@ -91,6 +99,11 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   late Future<List> _adsFuture;
+
+  bool _isValidDisplayDate(dynamic value) {
+    final s = value?.toString().trim() ?? '';
+    return s.isNotEmpty && !s.startsWith('0000-00-00');
+  }
 
   @override
   void initState() {
@@ -562,7 +575,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         2.0, // Можно адаптировать в зависимости от желаемых пропорций
                                   ),
                                 ),
-                              if (truck['maxgruz'] != null)
+                              if (_isValidDisplayDate(truck['created_at']))
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
@@ -808,13 +821,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       Text('Подробнее о заказе:',
                                           style: DefaultTextStyle.of(context)
                                               .style),
+                                      const SizedBox(height: 4),
                                       Text('${truck['about']}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
@@ -843,8 +857,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                   final int cardBd = int.tryParse(
                                           truck['bd']?.toString() ?? '') ??
                                       (bd ?? widget.base);
-                                  final int editBd = widget.base;
-                                  final int deleteBd = widget.base;
+                                  final int editBd = cardBd;
+                                  final int deleteBd = cardBd;
                                   return Container(
                                     color:
                                         Colors.white, // По желанию добавьте фон
@@ -888,13 +902,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         context,
                                                         MaterialPageRoute(
                                                           builder: (context) =>
-                                                              OfferScreen2(
+                                                              OfferScreen(
                                                             userid: truck['id']
                                                                 .toString(),
                                                             useridobj:
                                                                 truck['iduser']
                                                                     .toString(),
-                                                            bd: editBd, // как в outputobz: контекст текущего раздела
+                                                            bd: editBd,
                                                           ),
                                                         ),
                                                       );
@@ -1062,28 +1076,43 @@ class _MyHomePageState extends State<MyHomePage> {
                                                           ),
                                                         ),
                                                         onPressed: canStart
-                                                            ? () {
-                                                                Navigator.push(
+                                                            ? () async {
+                                                                await notifyUserById(
+                                                                  userId: truck[
+                                                                          'iduser']
+                                                                      .toString(),
+                                                                  title:
+                                                                      kDefaultPushTitle,
+                                                                  body:
+                                                                      'Исполнитель начал выполнение вашего заказа!',
+                                                                );
+                                                                PendingPerformerOrder
+                                                                    .set(
+                                                                  performer: truck[
+                                                                          'iduserp']
+                                                                      .toString(),
+                                                                  order: truck[
+                                                                          'id']
+                                                                      .toString(),
+                                                                  customer: truck[
+                                                                          'iduser']
+                                                                      .toString(),
+                                                                  orderBd:
+                                                                      cardBd,
+                                                                );
+                                                                Navigator
+                                                                    .pushAndRemoveUntil(
                                                                   context,
                                                                   MaterialPageRoute(
-                                                                    builder:
-                                                                        (context) =>
-                                                                            OrderExecutionScreen(
-                                                                      userId: truck[
-                                                                              'iduserp']
-                                                                          .toString(),
-                                                                      orderId: truck[
-                                                                              'id']
-                                                                          .toString(),
+                                                                    builder: (_) =>
+                                                                        const MyAppZakazScreen(
+                                                                      initialPage:
+                                                                          1,
                                                                     ),
                                                                   ),
+                                                                  (route) =>
+                                                                      false,
                                                                 );
-                                                                print(
-                                                                    'trid ${truck['id']}');
-                                                                print(
-                                                                    'uid $userId');
-                                                                print(
-                                                                    'uid ${truck['iduser']}');
                                                               }
                                                             : null,
                                                         child: Text(canStart
@@ -1125,7 +1154,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     context,
                                                     MaterialPageRoute(
                                                       builder: (context) =>
-                                                          OfferScreen2(
+                                                          OfferScreen(
                                                         userid: truck['id']
                                                             .toString(),
                                                         useridobj:
@@ -1160,9 +1189,11 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: widget.useCustomerMenu
-          ? const CustomerBottomNav(currentIndex: 1)
-          : const PerformerBottomNav(currentIndex: 1),
+      bottomNavigationBar: widget.showBottomNav
+          ? (widget.useCustomerMenu
+              ? const CustomerBottomNav(currentIndex: 1)
+              : const PerformerBottomNav(currentIndex: 1))
+          : null,
 
       // нужное расположение
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,

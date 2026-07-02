@@ -25,6 +25,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'ads2.dart';
 import 'image_bytes_helper.dart';
+import 'ad_edit_image_multipart.dart';
+import 'package:crgtransp72app/widgets/ad_edit_image_slot.dart';
 import 'decimal_text_input_formatter.dart';
 
 class rdit_ob_gp_usl_g extends StatefulWidget {
@@ -66,6 +68,7 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
   final List _images = List.generate(4, (index) => null);
   final List _imagesDoc = [null, null, null, null]; // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
+  final List<bool> _deletedImages = List.generate(4, (_) => false);
   List<String> dropdownOptions = [
     'Не знаю',
     'Полная загрузка',
@@ -173,6 +176,7 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
       setState(() {
         _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
+        _deletedImages[index] = false;
       });
     }
   }
@@ -240,27 +244,23 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
             ));
   }
 
+  void _deleteImage(int index) {
+    setState(() {
+      _images[index] = null;
+      _originalImages[index] = null;
+      _deletedImages[index] = true;
+    });
+  }
+
   Widget _imageSlot(int index) {
-    return GestureDetector(
+    final hasPhoto = _images[index] != null ||
+        (!_deletedImages[index] && _originalImages[index] != null);
+    return AdEditImageSlot(
+      size: imageSize,
+      displayFile: _images[index],
+      fallbackFile: _deletedImages[index] ? null : _originalImages[index],
       onTap: () => _pickImage(index),
-      child: Container(
-        height: imageSize,
-        width: imageSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: _images[index] != null
-                ? FileImage(File(_images[index]!
-                    .path)) // Преобразуем XFile из _images в File
-                : _originalImages[index] != null
-                    ? FileImage(File(_originalImages[index]!
-                        .path)) // Преобразуем XFile из _originalImages в File
-                    : const AssetImage('assets/images/fotouser.png')
-                        as ImageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      onDelete: hasPhoto ? () => _deleteImage(index) : null,
     );
   }
 
@@ -297,18 +297,12 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
       ..fields['about'] = _aboutController.text
       ..fields['enddatez'] = selectedDatez.toString()
       ..fields['iduser'] = userId.toString();
-// Предполагаем, что _originalImages - это List<XFile>, такой же как и _images
-    for (int i = 0; i < _originalImages.length; i++) {
-      if (_originalImages[i] != null) {
-        // Получаем путь из объекта XFile
-        //FileImage(File(_originalImages[i]!.path));
-        String filePath =
-            _originalImages[i]!.path; // Используем _originalImages здесь
-
-        request.files
-            .add(await http.MultipartFile.fromPath('img${i + 1}', filePath));
-      }
-    }
+    await AdEditImageMultipart.appendPhotos(
+      request,
+      originals: _originalImages,
+      deleted: _deletedImages,
+      fieldPrefix: 'img',
+    );
 
     print(_dropdownValueGruzch);
     print(widget.id);

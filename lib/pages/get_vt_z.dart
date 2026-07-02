@@ -1,5 +1,4 @@
 import 'package:crgtransp72app/pages/CityScreenisp.dart';
-import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/loginpage.dart';
@@ -105,11 +104,48 @@ class MyAppI1z extends StatelessWidget {
 
 // Use this widget when the screen is opened inside another shell
 // that already has BottomNavigationBar.
-class MyAppI1zPage extends StatelessWidget {
-  const MyAppI1zPage({super.key});
+class MyAppI1zPage extends StatefulWidget {
+  const MyAppI1zPage({super.key, this.isAuthenticated});
+
+  /// Если передано из родительского shell — не делаем лишний запрос.
+  final bool? isAuthenticated;
+
+  @override
+  State<MyAppI1zPage> createState() => _MyAppI1zPageState();
+}
+
+class _MyAppI1zPageState extends State<MyAppI1zPage> {
+  bool? _isAuthorized;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isAuthenticated != null) {
+      _isAuthorized = widget.isAuthenticated;
+    } else {
+      _loadAuthState();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MyAppI1zPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAuthenticated != null &&
+        widget.isAuthenticated != oldWidget.isAuthenticated) {
+      setState(() => _isAuthorized = widget.isAuthenticated);
+    }
+  }
+
+  Future<void> _loadAuthState() async {
+    final authorized = await _isAuthorizedUser();
+    if (!mounted) return;
+    setState(() => _isAuthorized = authorized);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final showLoginButton = _isAuthorized != true;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -120,30 +156,21 @@ class MyAppI1zPage extends StatelessWidget {
         ),
         backgroundColor: blueaccentColor,
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const change_user()),
-              );
-            },
-            child: const Text(
-              'Роли',
-              style: TextStyle(color: whiteprColor),
+          if (showLoginButton)
+            TextButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+                if (!mounted) return;
+                await _loadAuthState();
+              },
+              child: const Text(
+                'Войти',
+                style: TextStyle(color: whiteprColor),
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
-            },
-            child: const Text(
-              'Войти',
-              style: TextStyle(color: whiteprColor),
-            ),
-          ),
         ],
       ),
       body: const MyImageGrid(),
@@ -236,7 +263,7 @@ class _MyImageGridState extends State<MyImageGrid> {
                             0; // Объявление переменной за пределами условного блока
 
                         if (title == 'Заказ спецтехники') base = 2;
-                        if (title == 'Заказ грузовыех перевозок') base = 1;
+                        if (title == 'Заказ грузовых перевозок') base = 1;
                         if (title == 'Заказ грузчиков') base = 3;
                         print('object567');
                         print(base);
@@ -245,6 +272,7 @@ class _MyImageGridState extends State<MyImageGrid> {
                             MaterialPageRoute(
                                 builder: (_) => CityScreenIsp(
                                       indexName: images[index].name,
+                                      bd: base,
                                     )));
                       },
                       child: Padding(
@@ -253,8 +281,7 @@ class _MyImageGridState extends State<MyImageGrid> {
                           children: [
                             Expanded(
                               child: Image.memory(
-                                base64Decode(images[index]
-                                    .image), // Make sure this is the correct decoding for your image
+                                base64Decode(images[index].image),
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -287,7 +314,7 @@ class _MyImageGridState extends State<MyImageGrid> {
     return CustomScrollView(
       slivers: [
         imagesSection('Заказ спецтехники', imagesVidt),
-        imagesSection('Заказ грузовыех перевозок', imagesVidg),
+        imagesSection('Заказ грузовых перевозок', imagesVidg),
         imagesSection('Заказ грузчиков', imagesGruzchik),
       ],
     );

@@ -14,17 +14,12 @@ $conn->set_charset('utf8');
  * универсальный кусок для расчёта offerf
  * ------------------------------------------------- */
 $offerf =
-" GREATEST(
-      ( SELECT COUNT(*)              -- всего предложений
-          FROM offer_data od
-         WHERE od.iduser = a.id
-      )
-    - ( SELECT COUNT(*)              -- выполненные/отменённые заказы
-          FROM ordersglobal og
-         WHERE og.order_id = a.id
-           AND og.status IN ('выполнен','отменен')
-      )
- ,0) AS offerf";
+" ( SELECT COUNT(DISTINCT od.iduserp)
+      FROM offer_dataf od
+     WHERE od.iduser = a.id
+       AND od.bd = " . (int) $bd . "
+       AND od.isp = 0
+  ) AS offerf";
 
 /* -------------------------------------------------
  * формируем основной запрос

@@ -34,8 +34,10 @@
 
 ### Меню
 
-- Нижнее меню ветки заказчика: `lib/pages/customer_bottom_nav.dart`
-- На экранах заказчика использовать только `CustomerBottomNav`
+- **Один главный shell:** `lib/pages/zakaz_screen1.dart` (`MyApp` / `MyCustomScreen`)
+- **Нижнее меню на дочерних экранах:** `lib/pages/customer_bottom_nav.dart` (`CustomerBottomNav`)
+- **Гость:** 2 вкладки — «Услуги», «Заказы» (без «Профиль»)
+- **Обёртки профиля** (`menuzak.dart`, `HistortScreen1z.dart`) используют только `CustomerBottomNav`, без второго shell
 
 ## Ветка грузоперевозчика
 
@@ -53,8 +55,10 @@
 
 ### Меню
 
-- Нижнее меню ветки грузоперевозчика: `lib/pages/performer_bottom_nav.dart`
-- На экранах грузоперевозчика использовать только `PerformerBottomNav`
+- **Один главный shell:** `lib/pages/zakaz_screen2.dart` (`MyAppZakazScreen` / `MyCustomScreen`)
+- **Нижнее меню на дочерних экранах:** `lib/pages/performer_bottom_nav.dart` (`PerformerBottomNav`)
+- **Гость:** 2 вкладки — «Объявления», «Заявки» (без «Профиль»)
+- **Обёртки профиля** (`test.dart`, `scrmenu.dart`, `bmenu.dart`, `bmenucopy.dart`) используют только `PerformerBottomNav`, без второго shell
 
 ### Обходные экраны и вложенные оболочки (та же логика «Техника → города», что у `zakaz_screen2`)
 

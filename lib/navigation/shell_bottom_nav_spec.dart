@@ -36,18 +36,17 @@ class PerformerShellNav {
           : const [tabListings, tabApplications];
 }
 
-/// Альтернативная оболочка исполнителя `HistortScreen` в `test.dart` — всегда три вкладки.
+/// Альтернативная оболочка исполнителя `HistortScreen` в `test.dart`.
+/// Предпочитайте [PerformerShellNav] + [PerformerBottomNav].
 class PerformerHistortShellNav {
   PerformerHistortShellNav._();
 
-  static List<String> bottomNavLabels() => const [
-        PerformerShellNav.tabListings,
-        PerformerShellNav.tabApplications,
-        PerformerShellNav.tabProfile,
-      ];
+  static List<String> bottomNavLabels({required bool isAuthenticated}) =>
+      PerformerShellNav.bottomNavLabels(isAuthenticated: isAuthenticated);
 }
 
 /// `bmenu.dart` / `HistortScreen12`: вторая вкладка «Заказы», не «Заявки».
+/// Для новых экранов предпочитайте [PerformerShellNav] — одно меню исполнителя.
 class PerformerBmenuShellNav {
   PerformerBmenuShellNav._();
 
@@ -127,5 +126,31 @@ class ShellTabBodyIds {
     if (requested < 0) return 0;
     if (requested >= tabCount) return 0;
     return requested;
+  }
+
+  /// Индекс вкладки нижнего меню заказчика для экранов-обёрток профиля/истории.
+  static int customerProfileRouteTabIndex(String pageProfile) {
+    switch (pageProfile) {
+      case 'hist':
+      case 'SendReviewForm':
+      case 'SearchForm':
+      case 'list_predloj_na_obj_isp':
+        return 1;
+      default:
+        return profileTabIndex;
+    }
+  }
+
+  /// Индекс вкладки нижнего меню исполнителя для экранов-обёрток профиля/истории.
+  static int performerProfileRouteTabIndex(String pageProfile) {
+    switch (pageProfile) {
+      case 'hist':
+      case 'SendReviewForm':
+      case 'SearchForm':
+      case 'list_predloj_na_zayavki':
+        return 1;
+      default:
+        return profileTabIndex;
+    }
   }
 }

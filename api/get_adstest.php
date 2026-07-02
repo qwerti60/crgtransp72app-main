@@ -26,11 +26,10 @@ SELECT gp.id,
        gp.img1, gp.img2, gp.img3, gp.img4,
        gp.flag,
        gp.created_at,
-       GREATEST(
-           (SELECT COUNT(*) FROM offer_data  od WHERE od.iduser = gp.id) -
-           (SELECT COUNT(*) FROM ordersglobal og WHERE og.order_id = gp.id
-                                                   AND og.status IN ('выполнен','отменен')), 0
-       ) AS offerf,
+       CASE WHEN gp.flag = 0 THEN 0 ELSE (
+           SELECT COUNT(DISTINCT od.iduserp) FROM offer_dataf od
+           WHERE od.iduser = gp.id AND od.bd = 1 AND od.isp = 0
+       ) END AS offerf,
        'add_ob_gp'  AS tableName
 FROM  add_ob_gp gp
 WHERE gp.iduser = ?
@@ -46,11 +45,10 @@ SELECT vidt.id,
        vidt.img1, vidt.img2, vidt.img3, vidt.img4,
        vidt.flag,
        vidt.created_at,
-       GREATEST(
-           (SELECT COUNT(*) FROM offer_data  od WHERE od.iduser = vidt.id) -
-           (SELECT COUNT(*) FROM ordersglobal og WHERE og.order_id = vidt.id
-                                                   AND og.status IN ('выполнен','отменен')), 0
-       ) AS offerf,
+       CASE WHEN vidt.flag = 0 THEN 0 ELSE (
+           SELECT COUNT(DISTINCT od.iduserp) FROM offer_dataf od
+           WHERE od.iduser = vidt.id AND od.bd = 2 AND od.isp = 0
+       ) END AS offerf,
        'add_ob_vidt' AS tableName
 FROM add_ob_vidt vidt
 WHERE vidt.iduser = ?
@@ -66,11 +64,10 @@ SELECT gr.id,
        gr.img1, gr.img2, gr.img3, gr.img4,
        gr.flag,
        gr.created_at,
-       GREATEST(
-           (SELECT COUNT(*) FROM offer_data  od WHERE od.iduser = gr.id) -
-           (SELECT COUNT(*) FROM ordersglobal og WHERE og.order_id = gr.id
-                                                   AND og.status IN ('выполнен','отменен')), 0
-       ) AS offerf,
+       CASE WHEN gr.flag = 0 THEN 0 ELSE (
+           SELECT COUNT(DISTINCT od.iduserp) FROM offer_dataf od
+           WHERE od.iduser = gr.id AND od.bd = 3 AND od.isp = 0
+       ) END AS offerf,
        'add_ob_gr'  AS tableName
 FROM add_ob_gr gr
 WHERE gr.iduser = ?

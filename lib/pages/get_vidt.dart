@@ -69,6 +69,9 @@ class _GalleryScreenState extends State {
             return GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.72,
               ),
               itemCount: images.length,
 // В вашем GridView.builder измените itemBuilder на следующий:
@@ -78,10 +81,18 @@ class _GalleryScreenState extends State {
                       8.0), // Отступы вокруг каждого элемента
                   child: Column(
                     children: <Widget>[
-                      Expanded(
-                        child: Image.memory(
-                          base64Decode(images[index].image),
-                          fit: BoxFit.contain, // Изменено на BoxFit.contain
+                      SizedBox(
+                        width: double.infinity,
+                        height: 100,
+                        child: ClipRect(
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: Image.memory(
+                              base64Decode(images[index].image),
+                              width: double.infinity,
+                              fit: BoxFit.fitWidth,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(

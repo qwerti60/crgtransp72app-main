@@ -1,23 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
-import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/SearchFormisp.dart';
-import 'package:crgtransp72app/pages/ads1.dart';
-import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/outputobzlikes.dart';
-import 'package:crgtransp72app/pages/outputobzlikes1.dart';
-import 'package:crgtransp72app/pages/zprofil_page2.dart';
-import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import '../design/colors.dart';
 import 'get_vt_z.dart';
-import 'vod_zak.dart';
 import 'zprofil_page.dart';
-import 'zprofil_zakaz.dart';
 
 void main() {
   runApp(const MyApp());
@@ -55,6 +48,12 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       final token = await getSecurefcm_token();
       if (token == null || token.isEmpty) {
         if (!mounted) return;
+        CustomerShellNavCache.update(
+          isAuthorized: false,
+          highlightOrders: false,
+          activeOrderUserId: '',
+          activeOrderId: '',
+        );
         setState(() {
           _isAuthorized = false;
           _isLoadingAuth = false;
@@ -70,17 +69,28 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['error'] == null && data['idusers'] != null) {
+          CustomerShellNavCache.update(
+            isAuthorized: true,
+            highlightOrders: false,
+            activeOrderUserId: '',
+            activeOrderId: '',
+          );
           setState(() {
             userIdok = data['idusers'].toString();
             _isAuthorized = true;
             _isLoadingAuth = false;
           });
+          unawaited(syncPushFcmTokenToServer(requestPermission: true));
           return;
         }
       }
 
-      // Если токен есть, но пользователь не найден на сервере,
-      // считаем сессию неавторизованной и открываем гостевой режим.
+      CustomerShellNavCache.update(
+        isAuthorized: false,
+        highlightOrders: false,
+        activeOrderUserId: '',
+        activeOrderId: '',
+      );
       setState(() {
         _isAuthorized = false;
         _isLoadingAuth = false;
@@ -88,6 +98,12 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       });
     } catch (_) {
       if (!mounted) return;
+      CustomerShellNavCache.update(
+        isAuthorized: false,
+        highlightOrders: false,
+        activeOrderUserId: '',
+        activeOrderId: '',
+      );
       setState(() {
         _isAuthorized = false;
         _isLoadingAuth = false;
@@ -115,24 +131,24 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     print('oi678${orderInfo}');
     switch (_currentPage) {
       case 0:
-        return const MyAppI1zPage();
+        return MyAppI1zPage(isAuthenticated: _isAuthorized);
       case 1:
         if (orderInfo != null && orderInfo['result'] == true) {
           return OrderExecutionScreenzak(
-            userId: orderInfo['user_id'],
-            orderId: orderInfo['order_id'],
-            showBottomNav: true,
+            userId: orderInfo['user_id']?.toString() ?? '',
+            orderId: orderInfo['order_id']?.toString() ?? '',
+            showBottomNav: false,
           );
         } else {
           return const SearchFormisp(embedInCustomerShell: true); // Ads1App();
         }
       case 2:
         if (!_isAuthorized) {
-          return const Ads1App();
+          return MyAppI1zPage(isAuthenticated: _isAuthorized);
         }
         return const zprofil_name();
       default:
-        return const MyAppI1zPage();
+        return MyAppI1zPage(isAuthenticated: _isAuthorized);
     }
   }
 
@@ -190,7 +206,12 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     super.initState();
     _currentPage = widget.initialPage;
     getUserData().then((_) {
-      setState(() {});
+      if (!mounted) return;
+      if (!_isAuthorized && _currentPage >= 2) {
+        setState(() => _currentPage = 0);
+      } else {
+        setState(() {});
+      }
     }).catchError((err) {
       print('Ошибка в процессе получения данных: $err');
     });
@@ -225,6 +246,12 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
         }
         hasActiveOrder =
             orderInfo['result'] == true; // Проверяем наличие активной записи
+        CustomerShellNavCache.update(
+          isAuthorized: true,
+          highlightOrders: hasActiveOrder,
+          activeOrderUserId: orderInfo['user_id']?.toString() ?? '',
+          activeOrderId: orderInfo['order_id']?.toString() ?? '',
+        );
         print('res: ${orderInfo['result']}');
 
         return _buildScaffold(orderInfo);

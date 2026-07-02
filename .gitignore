@@ -54,6 +54,7 @@ app.*.map.json
 **/GoogleService-Info.plist
 firebase.json
 assets/service_account.json
+api/service_account.json
 *.jks
 *.keystore
 key.properties
@@ -65,6 +66,7 @@ android/android_key.zip
 
 # Backend secrets and user-uploaded files
 /api/databd.php
+/api/databd.local.php
 /api/dbconnection.php
 /api/payment-proxy.php
 /api/uploads/

@@ -1,34 +1,38 @@
 <?php
-$host = "localhost";
-$username = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
-$dbname = "u2395188_apps";
-// Подключаемся к базе данных
-$pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-$allowedTables = ['vidt', 'vidg', 'gruzchik']; // Define allowed tables
-$tableName = $_GET['bd']; // Get the table name from the URL
+declare(strict_types=1);
 
-if (!in_array($tableName, $allowedTables)) {
-    die('Error: Invalid table name.');
+header('Access-Control-Allow-Origin: *');
+header('Content-Type: application/json; charset=UTF-8');
+
+require_once __DIR__ . '/include/api_bootstrap.php';
+require_once __DIR__ . '/include/admin_ref_lists.php';
+
+$allowedTables = crg_admin_ref_image_tables();
+$tableName = trim((string) ($_GET['bd'] ?? ''));
+
+if (!in_array($tableName, $allowedTables, true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid table name'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-// Proceed with your database query 
-
-// Запрос на получение всех картинок
-$sql = "SELECT image, name FROM $tableName";
-
-// Подготовка и выполнение запроса
-$stmt = $pdo->prepare($sql);
-$stmt->execute();
-
-// Формирование ответа
-$images = [];
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-$row['image'] = base64_encode($row['image']); // Кодируем картинку в base64 для передачи
-$images[] = $row;
+try {
+    $pdo = tp_pdo();
+    $sql = "SELECT name, image FROM `{$tableName}` WHERE LENGTH(image) > 0 ORDER BY id";
+    $stmt = $pdo->query($sql);
+    $images = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $img = crg_admin_ref_blob_to_string($row['image'] ?? '');
+        if ($img === '') {
+            continue;
+        }
+        $images[] = [
+            'name' => (string) ($row['name'] ?? ''),
+            'image' => base64_encode($img),
+        ];
+    }
+    echo json_encode($images, JSON_UNESCAPED_UNICODE);
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-
-// Заголовок для возвращаемого JSON
-header('Content-Type: application/json');
-echo json_encode($images);
-?>

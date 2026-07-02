@@ -17,6 +17,7 @@ import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
 
 import '../config.dart';
+import '../customer_ad_category.dart';
 import '../design/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -295,11 +296,22 @@ class _MyHomePageState extends State {
                   return Center(
                       child:
                           CircularProgressIndicator()); // пока загружаются данные, показываем индикатор загрузки
-                } else if (snapshot.data!.length > 0) {
-                  return ListView.builder(
-                      itemCount: snapshot.data?.length,
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                      child: Text(
+                          'Ошибка: ${snapshot.error}')); // обработка ошибок
+                }
+                final ads = snapshot.data;
+                if (ads == null || ads.isEmpty) {
+                  return const Center(
+                      child: Text(
+                          'У вас пока нет объявлений')); // данных нет или пустой массив
+                }
+                return ListView.builder(
+                      itemCount: ads.length,
                       itemBuilder: (context, index) {
-                        var truck = snapshot.data![index];
+                        var truck = ads[index];
                         List<Uint8List> images = [];
 
                         // Добавляем изображения в список images, только если они не null
@@ -604,8 +616,12 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if ((truck['offerf'] != null) &&
-                                (truck['offerf'] != '0'))
+                            if ((int.tryParse(truck['flag'].toString()) ?? 0) !=
+                                    0 &&
+                                (int.tryParse(
+                                            truck['offerf']?.toString() ?? '0') ??
+                                        0) >
+                                    0)
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -618,23 +634,17 @@ class _MyHomePageState extends State {
                                             DefaultTextStyle.of(context).style),
                                     ElevatedButton(
                                       onPressed: () {
+                                        final adBd = bdFromPerformerAd(
+                                            Map<String, dynamic>.from(truck));
                                         Navigator.of(context,
                                                 rootNavigator: true)
                                             .push(
-                                          /*   MaterialPageRoute(
-                                            builder: (_) =>
-                                                list_predloj_na_zayavki(
-                                              nameImg: truck['id'].toString(),
-                                              bd: bd!,
-                                            ),
-                                          ),
-                                        */
                                           MaterialPageRoute(
                                             builder: (_) => HistortScreen1(
                                                 pageProfile:
                                                     'list_predloj_na_zayavki',
                                                 userId1: truck['id'].toString(),
-                                                orderId: bd!.toString(),
+                                                orderId: adBd.toString(),
                                                 parsedUserIdOk: ''),
                                           ),
                                         );
@@ -651,8 +661,12 @@ class _MyHomePageState extends State {
                                   ],
                                 ),
                               ),
-                            if ((truck['offerf'] != null) &&
-                                (truck['offerf'] == '0'))
+                            if ((int.tryParse(truck['flag'].toString()) ?? 0) ==
+                                    0 ||
+                                (int.tryParse(
+                                            truck['offerf']?.toString() ?? '0') ??
+                                        0) ==
+                                    0)
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -663,7 +677,7 @@ class _MyHomePageState extends State {
                                     Text('Заказов:',
                                         style:
                                             DefaultTextStyle.of(context).style),
-                                    Text('${truck['offerf']}',
+                                    Text('0',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold)),
                                   ],
@@ -672,17 +686,6 @@ class _MyHomePageState extends State {
                           ],
                         );
                       });
-                } else if (snapshot.hasError) {
-                  return Center(
-                      child: Text(
-                          'Ошибка: ${snapshot.error}')); // обработка ошибок
-                } else if (snapshot.data!.length == 0) {
-                  return Center(
-                      child: Text(
-                          'Нет отзывов на заявки')); // если данных нет или массив пустой
-                }
-// By default, show a loading spinner.
-                return const CircularProgressIndicator();
               },
             ),
           ),

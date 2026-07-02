@@ -23,17 +23,24 @@ $sql = "
            u.namefirm, u.innStr, u.ogrnStr, u.kppStr,
            COALESCE(AVG(r.rating), 0) AS rating,
            COALESCE(COUNT(r.id), 0) AS reviewsCount
-    FROM offer_data od
+    FROM offer_dataf od
     INNER JOIN users u ON od.iduserp = u.idusers
     LEFT JOIN reviews r ON u.idusers = r.target_user_id
     WHERE od.iduser = ?
-      AND (od.status = 0 OR od.status IS NULL)
-    GROUP BY od.id, u.idusers
 ";
-$sql .= " ORDER BY od.id DESC ";
+$params = [$nameImg];
+$types = 'i';
+
+if ($bd !== null && $bd > 0) {
+    $sql .= ' AND od.bd = ?';
+    $types .= 'i';
+    $params[] = $bd;
+}
+
+$sql .= ' GROUP BY od.id, u.idusers ORDER BY od.id DESC';
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $nameImg);
+$stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
 

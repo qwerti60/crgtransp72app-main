@@ -26,10 +26,10 @@ if ($conn->connect_error) {
 
 // Запрашиваем отзывы и информацию о пользователе
 $sql = "
-    SELECT r.target_user_id, r.rating, r.comment, r.datastamp,
+    SELECT r.target_user_id, r.user_id, r.rating, r.comment, r.datastamp,
            u.idusers, u.fotouser, u.rollNum, u.statNum, u.firstName, u.lastName, u.middleName, u.city, u.phone, u.email, u.namefirm, u.innStr, u.ogrnStr, u.kppStr
     FROM reviews r
-    INNER JOIN users u ON r.target_user_id = u.idusers
+    INNER JOIN users u ON r.user_id = u.idusers
     WHERE r.target_user_id = ?
 ";
 

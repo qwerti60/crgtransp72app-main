@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -26,17 +28,38 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
   String _activeOrderUserId = '';
   String _activeOrderId = '';
   bool _isAuthorized = false;
+  bool _isLoadingAuth = true;
 
   @override
   void initState() {
     super.initState();
+    if (CustomerShellNavCache.resolved) {
+      _isAuthorized = CustomerShellNavCache.isAuthorized;
+      _highlightOrders = CustomerShellNavCache.highlightOrders;
+      _activeOrderUserId = CustomerShellNavCache.activeOrderUserId;
+      _activeOrderId = CustomerShellNavCache.activeOrderId;
+      _isLoadingAuth = false;
+    }
     _loadOrderHighlight();
   }
 
   Future<void> _loadOrderHighlight() async {
+    var isAuthorized = _isAuthorized;
+    var highlightOrders = _highlightOrders;
+    var activeOrderUserId = _activeOrderUserId;
+    var activeOrderId = _activeOrderId;
+    var authResolved = false;
+
     try {
       final token = await getSecurefcm_token();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        isAuthorized = false;
+        highlightOrders = false;
+        activeOrderUserId = '';
+        activeOrderId = '';
+        authResolved = true;
+        return;
+      }
 
       final userResponse = await http.get(
         Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
@@ -44,10 +67,26 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       if (userResponse.statusCode != 200) return;
 
       final userData = json.decode(userResponse.body);
-      if (userData['error'] != null || userData['idusers'] == null) return;
+      if (userData['error'] != null || userData['idusers'] == null) {
+        isAuthorized = false;
+        highlightOrders = false;
+        activeOrderUserId = '';
+        activeOrderId = '';
+        authResolved = true;
+        return;
+      }
 
       final userId = userData['idusers'].toString();
-      if (userId.isEmpty) return;
+      if (userId.isEmpty) {
+        isAuthorized = false;
+        highlightOrders = false;
+        activeOrderUserId = '';
+        activeOrderId = '';
+        authResolved = true;
+        return;
+      }
+      isAuthorized = true;
+      authResolved = true;
 
       final statusResponse = await http.get(
         Uri.parse(
@@ -56,20 +95,49 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       if (statusResponse.statusCode != 200) return;
 
       final statusData = json.decode(statusResponse.body);
-      if (!mounted) return;
-      setState(() {
-        _isAuthorized = true;
-        _highlightOrders = statusData['result'] == true;
-        _activeOrderUserId = statusData['user_id']?.toString() ?? '';
-        _activeOrderId = statusData['order_id']?.toString() ?? '';
-      });
+      highlightOrders = statusData['result'] == true;
+      if (highlightOrders) {
+        activeOrderUserId = statusData['user_id']?.toString() ?? '';
+        activeOrderId = statusData['order_id']?.toString() ?? '';
+      } else {
+        activeOrderUserId = '';
+        activeOrderId = '';
+      }
     } catch (_) {
       // Не блокируем нижнее меню при ошибке сети.
+    } finally {
+      if (!mounted) return;
+      if (authResolved || !CustomerShellNavCache.resolved) {
+        CustomerShellNavCache.update(
+          isAuthorized: isAuthorized,
+          highlightOrders: highlightOrders,
+          activeOrderUserId: activeOrderUserId,
+          activeOrderId: activeOrderId,
+        );
+        setState(() {
+          _isAuthorized = isAuthorized;
+          _highlightOrders = highlightOrders;
+          _activeOrderUserId = activeOrderUserId;
+          _activeOrderId = activeOrderId;
+          _isLoadingAuth = false;
+        });
+        if (isAuthorized) {
+          unawaited(syncPushFcmTokenToServer(requestPermission: false));
+        }
+      } else {
+        setState(() {
+          _isLoadingAuth = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingAuth) {
+      return const SizedBox(height: kBottomNavigationBarHeight);
+    }
+
     final navLabels =
         CustomerShellNav.bottomNavLabels(isAuthenticated: _isAuthorized);
     final items = <BottomNavigationBarItem>[
@@ -114,10 +182,7 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
             _activeOrderId.isNotEmpty) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => OrderExecutionScreenzak(
-                userId: _activeOrderUserId,
-                orderId: _activeOrderId,
-              ),
+              builder: (_) => const MyApp(initialPage: 1),
             ),
             (Route<dynamic> route) => false,
           );

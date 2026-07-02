@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fcm_token.dart';
 import 'zakaz_screen1.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -22,20 +21,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _requestFCMPermissionsAndGetToken() async {
-    try {
-      await FirebaseMessaging.instance
-          .requestPermission()
-          .timeout(const Duration(seconds: 15));
-      final fcmToken = await FirebaseMessaging.instance
-          .getToken()
-          .timeout(const Duration(seconds: 10));
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('fcm_token', fcmToken ?? '');
-      debugPrint('Полученный FCM-токен: $fcmToken');
-    } catch (e) {
-      debugPrint('Ошибка при получении FCM-токена: $e');
-    }
+    // Разрешения и токен — только после входа (loginpage), не на splash.
+    await configureFirebaseMessaging();
   }
 
   Future<void> _navigateToHome() async {

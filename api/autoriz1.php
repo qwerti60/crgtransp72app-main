@@ -1,77 +1,183 @@
 <?php
-header("Content-Type: application/json");
-include 'databd.php';
-require_once '/var/www/u2395188/data/vendor/autoload.php';
+declare(strict_types=1);
 
-use \Firebase\JWT\JWT;
+header('Content-Type: application/json; charset=utf-8');
 
-// Создаем новое соединение с базой данных
-$conn = new mysqli($host, $username, $password, $dbname);
+require __DIR__ . '/load_databd.php';
 
-// Получаем входящие данные
-$email = $_POST['email'];
-$password = $_POST['password'];
-$fcm_token = isset($_POST['fcm_token']) ? $_POST['fcm_token'] : ''; // Новый параметр
+/**
+ * JWT для входа: include/jwt_bootstrap.php или vendor на хостинге.
+ */
+function crg_autoriz1_bootstrap_jwt(): bool
+{
+    if (function_exists('crg_jwt_autoload') && crg_jwt_autoload()) {
+        return true;
+    }
 
-$response = array();
-$response['success'] = false; // По умолчанию ставим ложь
+    foreach ([
+        __DIR__ . '/include/jwt_bootstrap.php',
+        __DIR__ . '/jwt_bootstrap.php',
+    ] as $path) {
+        if (is_readable($path)) {
+            require_once $path;
+            if (function_exists('crg_jwt_autoload') && crg_jwt_autoload()) {
+                return true;
+            }
+        }
+    }
 
-if ($stmt = $conn->prepare('SELECT idusers, rollNum, statNum, password, flag, fcm_token FROM users WHERE email = ?')) {
+    foreach ([
+        '/var/www/u2395188/data/vendor/autoload.php',
+        dirname(__DIR__) . '/vendor/autoload.php',
+        dirname(__DIR__, 2) . '/vendor/autoload.php',
+        __DIR__ . '/vendor/autoload.php',
+    ] as $vendor) {
+        if (is_readable($vendor)) {
+            require_once $vendor;
+            break;
+        }
+    }
+
+    if (!class_exists(\Firebase\JWT\JWT::class, false)) {
+        return false;
+    }
+
+    if (!function_exists('crg_jwt_secret')) {
+        function crg_jwt_secret(): string
+        {
+            return '789456123';
+        }
+    }
+
+    if (!function_exists('crg_jwt_autoload')) {
+        function crg_jwt_autoload(): bool
+        {
+            return class_exists(\Firebase\JWT\JWT::class, false);
+        }
+    }
+
+    if (!function_exists('crg_jwt_encode')) {
+        function crg_jwt_encode(array $payload): ?string
+        {
+            try {
+                return \Firebase\JWT\JWT::encode($payload, crg_jwt_secret(), 'HS256');
+            } catch (Throwable $e) {
+                return null;
+            }
+        }
+    }
+
+    return crg_jwt_autoload();
+}
+
+$response = ['success' => false];
+
+try {
+    $conn = new mysqli($host, $username, $password, $dbname);
+    if ($conn->connect_error) {
+        throw new RuntimeException('DB connect');
+    }
+    $conn->set_charset('utf8mb4');
+
+    $email = trim((string) ($_POST['email'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
+    $fcmToken = trim((string) ($_POST['fcm_token'] ?? ''));
+
+    if ($email === '' || $password === '') {
+        $response['message'] = 'Укажите e-mail и пароль';
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (!crg_autoriz1_bootstrap_jwt()) {
+        $response['message'] = 'Ошибка сервера (JWT): загрузите api/include/jwt_bootstrap.php или vendor на хостинг';
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $hasFcm = false;
+    $colRes = $conn->query("SHOW COLUMNS FROM users LIKE 'fcm_token'");
+    if ($colRes !== false && $colRes->num_rows > 0) {
+        $hasFcm = true;
+    }
+
+    $sql = $hasFcm
+        ? 'SELECT idusers, rollNum, statNum, password, flag, fcm_token FROM users WHERE email = ? LIMIT 1'
+        : 'SELECT idusers, rollNum, statNum, password, flag FROM users WHERE email = ? LIMIT 1';
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        throw new RuntimeException('prepare failed');
+    }
+
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $stmt->store_result();
 
-    if ($stmt->num_rows > 0) {
-        $stmt->bind_result($idusers, $rollNum, $statNum, $hashed_password, $flag, $current_fcm_token);
-        $stmt->fetch();
-
-        // Проверяем пароль
-        if (password_verify($password, $hashed_password)) {
-            // Проверяем флаги блокировки и одобрения аккаунта
-            if (($rollNum == 2 || $rollNum == 3) && $flag == 0) {
-                $response['message'] = "Данные пользователя еще на проверке";
-            } else {
-                // Проверяем токен FCM
-                if (!empty($fcm_token) && ($fcm_token !== $current_fcm_token)) {
-                    // Токен не совпадает или пуст, обновляем
-                    $update_stmt = $conn->prepare('UPDATE users SET fcm_token = ? WHERE idusers = ?');
-                    $update_stmt->bind_param('si', $fcm_token, $idusers);
-                    $update_stmt->execute();
-                }
-                
-                // Генерируем JWT-токен
-                $timeIssuedAt = time();
-                $token = array(
-                    "iss" => "http://example.org",
-                    "aud" => "http://example.com",
-                    "iat" => $timeIssuedAt,
-                    "exp" => $timeIssuedAt + 3600 * 24 * 30, // Срок действия токена (месяц)
-                    "data" => array(
-                        "idusers" => $idusers,
-                        "email" => $email
-                    )
-                );
-                $secret_key = "789456123"; // ВАШ секретный ключ
-                $jwt = JWT::encode($token, $secret_key, 'HS256');
-
-                // Ответ успешен
-                $response['success'] = true;
-                $response['rollNum'] = $rollNum;
-                $response['statNum'] = $statNum;
-                $response['token'] = $jwt;
-            }
-        } else {
-            $response['message'] = "Неверный пароль";
-        }
-    } else {
-        $response['message'] = "Пользователь не найден";
+    if ($stmt->num_rows === 0) {
+        $response['message'] = 'Пользователь не найден';
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
+    $idusers = 0;
+    $rollNum = 0;
+    $statNum = 0;
+    $hashedPassword = '';
+    $flag = 0;
+    $currentFcm = '';
+
+    if ($hasFcm) {
+        $stmt->bind_result($idusers, $rollNum, $statNum, $hashedPassword, $flag, $currentFcm);
+    } else {
+        $stmt->bind_result($idusers, $rollNum, $statNum, $hashedPassword, $flag);
+    }
+    $stmt->fetch();
     $stmt->close();
-} else {
-    $response['message'] = "Ошибка сервера";
+
+    if (!password_verify($password, $hashedPassword)) {
+        $response['message'] = 'Неверный пароль';
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($hasFcm && $fcmToken !== '') {
+        require_once __DIR__ . '/include/fcm_push.php';
+        $tokenCheck = crg_fcm_validate_device_token($fcmToken);
+        if ($tokenCheck === true) {
+            $upd = $conn->prepare('UPDATE users SET fcm_token = ? WHERE idusers = ?');
+            if ($upd !== false) {
+                $upd->bind_param('si', $fcmToken, $idusers);
+                $upd->execute();
+                $upd->close();
+            }
+        }
+    }
+
+    $timeIssuedAt = time();
+    $jwt = crg_jwt_encode([
+        'iss' => 'http://example.org',
+        'aud' => 'http://example.com',
+        'iat' => $timeIssuedAt,
+        'exp' => $timeIssuedAt + 3600 * 24 * 30,
+        'data' => [
+            'idusers' => $idusers,
+            'email' => $email,
+        ],
+    ]);
+
+    if ($jwt === null) {
+        $response['message'] = 'Ошибка сервера (JWT)';
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $response['success'] = true;
+    $response['rollNum'] = (int) $rollNum;
+    $response['statNum'] = (int) $statNum;
+    $response['token'] = $jwt;
+} catch (Throwable $e) {
+    $response['message'] = 'Ошибка сервера';
 }
 
-echo json_encode($response);
-$conn->close();
-?>
+echo json_encode($response, JSON_UNESCAPED_UNICODE);

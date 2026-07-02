@@ -19,16 +19,16 @@ try {
         throw new Exception("Отсутствуют обязательные параметры");
     }
 
-    // SQL-запрос для автоматического переключения значения поля isp
+    // Заявки заказчиков на объявление исполнителя — offer_dataf (не offer_data).
     $sql = "
-        UPDATE offer_data
+        UPDATE offer_dataf
         SET isp = CASE
                     WHEN isp = 0 THEN 1
                     ELSE 0
                   END
         WHERE iduser = :idusers AND iduserp = :iduserp
           AND bd = :bd
-    "; // Удалила условие по полю bd
+    ";
 
     // Подготовленный оператор
     $stmt = $conn->prepare($sql);

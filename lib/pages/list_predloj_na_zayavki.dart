@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
+import 'package:crgtransp72app/navigation/pending_performer_order.dart';
+import 'package:crgtransp72app/navigation/performer_shell_scope.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
@@ -16,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../design/colors.dart';
 import 'like_helper.dart';
+import 'zakaz_screen2.dart';
 
 import 'changerol_page.dart';
 import 'sendNotification.dart';
@@ -32,13 +34,7 @@ class list_predloj_na_zayavki extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(nameImg: nameImg, bd: bd),
-    );
+    return MyHomePage(nameImg: nameImg, bd: bd);
   }
 }
 
@@ -1028,27 +1024,50 @@ class _MyHomePageState extends State<MyHomePage> {
                                                             'Сервер вернул: ${response.statusCode}');
                                                       }
 
-                                                      // Переход выполняем вне зависимости от наличия токена
-                                                      Navigator.of(context)
-                                                          .push(
-                                                        MaterialPageRoute(
-                                                            builder: (_) =>
-                                                                //HistortScreen(
-                                                                OrderExecutionScreen(
-                                                                  //pageProfile:
-                                                                  //  'OrderExecutionScreen',
-                                                                  userId: truck[
-                                                                          'iduserp']
-                                                                      .toString(),
-                                                                  orderId: widget
-                                                                          .nameImg ??
-                                                                      '', // Обеспечиваем значение по умолчанию
-                                                                )),
+                                                      if (userId == 0) {
+                                                        _showSnack(context,
+                                                            'Не удалось определить исполнителя. Перезайдите в приложение.');
+                                                        return;
+                                                      }
+
+                                                      PendingPerformerOrder.set(
+                                                        performer:
+                                                            userId.toString(),
+                                                        order: widget.nameImg,
+                                                        customer: truck[
+                                                                'iduserp']
+                                                            .toString(),
+                                                        orderBd: widget.bd,
+                                                        source: 'performer_ad',
                                                       );
-                                                      print(
-                                                          'userIdiii111 : ${truck['iduserp'].toString()}');
-                                                      print(
-                                                          'orderIdiii111  : ${widget.nameImg}');
+
+                                                      final shellSelectTab =
+                                                          PerformerShellScope
+                                                              .selectTabOf(
+                                                                  context);
+                                                      if (shellSelectTab !=
+                                                          null) {
+                                                        shellSelectTab(1);
+                                                        Navigator.of(context,
+                                                                rootNavigator:
+                                                                    true)
+                                                            .popUntil((route) =>
+                                                                route.isFirst);
+                                                        return;
+                                                      }
+
+                                                      Navigator.of(context,
+                                                              rootNavigator:
+                                                                  true)
+                                                          .pushAndRemoveUntil(
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              const MyAppZakazScreen(
+                                                            initialPage: 1,
+                                                          ),
+                                                        ),
+                                                        (route) => false,
+                                                      );
                                                     } catch (e, s) {
                                                       debugPrint(
                                                           'Ошибка сети: $e\n$s'); // 4. Ловим исключения

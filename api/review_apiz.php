@@ -47,8 +47,7 @@ $sql = "
         u.ogrnStr,
         u.kppStr
     FROM reviewsisp r
-    INNER JOIN users u          -- ДАННЫЕ АВТОРА ОТЗЫВА
-           ON u.idusers = r.user_id
+    INNER JOIN users u ON u.idusers = r.target_user_id
     WHERE r.user_id = ?
 ";
 

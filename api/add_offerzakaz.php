@@ -31,7 +31,7 @@ $exists = $stmt->fetchColumn() > 0;
 
 if ($exists) {
     $sqlUpdate = 'UPDATE offer_dataf
-                  SET cena = ?, about = ?
+                  SET cena = ?, about = ?, isp = 0
                   WHERE iduserp = ? AND iduser = ? AND bd = ?';
     $pdo->prepare($sqlUpdate)->execute([$cena, $about, $iduserp, $iduser, $bd]);
 

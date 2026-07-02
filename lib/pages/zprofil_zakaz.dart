@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/navigation/zakaz_ad_deal.dart';
+import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/OfferScreen2.dart';
+import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -254,6 +257,152 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int userId = 0;
+
+  int _performerIdForTruck(Map<dynamic, dynamic> truck) {
+    return _intFromDynamic(
+      truck['iduser'] ?? truck['idusers'] ?? truck['review_user_id'],
+    );
+  }
+
+  Future<ZakazAdDealInfo> _fetchDealForTruck(
+    Map<dynamic, dynamic> truck,
+    int rowBd,
+  ) {
+    return fetchZakazAdDeal(
+      customerId: userId,
+      adId: _intFromDynamic(truck['id']),
+      bd: rowBd,
+      performerId: _performerIdForTruck(truck),
+    );
+  }
+
+  Widget _zakazActionButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: SizedBox(
+        width: double.infinity,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            fixedSize: const Size(double.infinity, 50),
+            foregroundColor: whiteprColor,
+            backgroundColor: color,
+            disabledForegroundColor: grayprprColor,
+            shape: const BeveledRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(3)),
+            ),
+          ),
+          onPressed: onPressed,
+          child: Text(label),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZakazOfferActions(
+    BuildContext context,
+    Map<dynamic, dynamic> truck,
+    int rowBd,
+    ZakazAdDealInfo deal,
+  ) {
+    final performerId = _performerIdForTruck(truck).toString();
+    final adId = _intFromDynamic(truck['id']).toString();
+
+    if (deal.isExecuting) {
+      return Column(
+        children: [
+          _zakazActionButton(
+            label: 'Выполняется',
+            color: Colors.orange.shade700,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderExecutionScreenzak(
+                    userId: performerId,
+                    orderId: adId,
+                    showBottomNav: widget.useCustomerMenu,
+                    orderSource: 'performer_ad',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
+    if (deal.isCompleted) {
+      return Column(
+        children: [
+          _zakazActionButton(
+            label: 'Выполнен',
+            color: Colors.green.shade700,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HistortScreen1z(
+                    pageProfile: 'hist',
+                    userId1: performerId,
+                    orderId: adId,
+                    parsedUserIdOk: userId.toString(),
+                    adBd: rowBd,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        _zakazActionButton(
+          label: 'Удалить заявку',
+          color: Colors.red.shade700,
+          onPressed: () async {
+            if (userId <= 0) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Не удалось определить пользователя.'),
+                ),
+              );
+              return;
+            }
+            final listingId = _intFromDynamic(truck['id']);
+            if (listingId <= 0) return;
+            await _confirmDeleteOfferZakaz(context, listingId, rowBd);
+          },
+        ),
+        const SizedBox(height: 12),
+        _zakazActionButton(
+          label: 'Редактировать заказ',
+          color: blueaccentColor,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OfferScreen2(
+                  userid: truck['id'].toString(),
+                  useridobj: truck['iduser'],
+                  bd: rowBd,
+                  useCustomerNavigation: true,
+                ),
+              ),
+            ).then((_) {
+              if (mounted) _reloadOffers();
+            });
+          },
+        ),
+      ],
+    );
+  }
 
   Future<void> _confirmDeleteOfferZakaz(
     BuildContext context,
@@ -972,13 +1121,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       Text('Подробнее о заказе:',
                                           style: DefaultTextStyle.of(context)
                                               .style),
+                                      const SizedBox(height: 4),
                                       Text('${truck['about']}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
@@ -1005,106 +1155,31 @@ class _MyHomePageState extends State<MyHomePage> {
                               Container(
                                 color: Colors.white,
                                 padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20.0,
-                                      ),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: TextButton(
-                                          style: TextButton.styleFrom(
-                                            fixedSize: const Size(
-                                              double.infinity,
-                                              50,
-                                            ),
-                                            foregroundColor: whiteprColor,
-                                            backgroundColor:
-                                                Colors.red.shade700,
-                                            disabledForegroundColor:
-                                                grayprprColor,
-                                            shape:
-                                                const BeveledRectangleBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(3),
-                                              ),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            if (userId <= 0) {
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Не удалось определить пользователя.',
-                                                  ),
-                                                ),
-                                              );
-                                              return;
-                                            }
-                                            final listingId =
-                                                _intFromDynamic(truck['id']);
-                                            if (listingId <= 0) return;
-                                            await _confirmDeleteOfferZakaz(
-                                              context,
-                                              listingId,
-                                              rowBd,
-                                            );
-                                          },
-                                          child: const Text('Удалить заявку'),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20.0,
-                                      ),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: TextButton(
-                                          style: TextButton.styleFrom(
-                                            fixedSize: const Size(
-                                              double.infinity,
-                                              50,
-                                            ),
-                                            foregroundColor: whiteprColor,
-                                            backgroundColor: blueaccentColor,
-                                            disabledForegroundColor:
-                                                grayprprColor,
-                                            shape:
-                                                const BeveledRectangleBorder(
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(3),
-                                              ),
-                                            ),
-                                          ),
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    OfferScreen2(
-                                                  userid:
-                                                      truck['id'].toString(),
-                                                  useridobj: truck['iduser'],
-                                                  bd: rowBd,
-                                                  useCustomerNavigation: true,
-                                                ),
-                                              ),
-                                            ).then((_) {
-                                              if (mounted) _reloadOffers();
-                                            });
-                                          },
-                                          child: const Text(
-                                            'Редактировать заказ',
+                                child: FutureBuilder<ZakazAdDealInfo>(
+                                  future: _fetchDealForTruck(truck, rowBd),
+                                  builder: (context, dealSnapshot) {
+                                    if (dealSnapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
+                                      );
+                                    }
+                                    if (dealSnapshot.hasError ||
+                                        !dealSnapshot.hasData) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return _buildZakazOfferActions(
+                                      context,
+                                      truck,
+                                      rowBd,
+                                      dealSnapshot.data!,
+                                    );
+                                  },
                                 ),
                               ),
                             ],

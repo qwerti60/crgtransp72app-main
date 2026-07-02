@@ -1,106 +1,256 @@
 <?php
-include 'databd.php'; // Предположительно файл databd.php содержит настройки подключения к БД
+include 'databd.php';
 
-// Получаем GET-параметры
 $nameImg = isset($_GET['nameImg']) && is_numeric($_GET['nameImg']) ? (int) $_GET['nameImg'] : null;
 $bd = isset($_GET['bd']) && is_numeric($_GET['bd']) ? (int) $_GET['bd'] : null;
+$usersid = isset($_GET['usersid']) ? (int) $_GET['usersid'] : 0;
 $debug = isset($_GET['debug']) && $_GET['debug'] === '1';
 
-// Проверка наличия обязательных параметров
 if ($nameImg === null) {
-    http_response_code(400); // Код состояния HTTP 400 — некорректный запрос
+    http_response_code(400);
     exit(json_encode(['error' => 'Параметр nameImg обязателен']));
 }
 
-// Соединение с базой данных
 $conn = new mysqli($host, $username, $password, $dbname);
-$conn->set_charset("utf8");
+$conn->set_charset('utf8mb4');
 
-// Проверка успешности подключения
 if ($conn->connect_error) {
-    die("Ошибка подключения к базе данных: " . $conn->connect_error);
+    die('Ошибка подключения к базе данных: ' . $conn->connect_error);
 }
 
-// Формирование SQL-запроса.
-// Важно: не фильтруем через ordersglobal, иначе часть предложений может пропадать.
+function tableExists(mysqli $conn, string $name): bool
+{
+    if ($name === '' || !preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+        return false;
+    }
+    $esc = $conn->real_escape_string($name);
+    $r = $conn->query("SHOW TABLES LIKE '{$esc}'");
+
+    return $r && $r->num_rows > 0;
+}
+
+function performerAdTableForBd(int $bd): ?string
+{
+    switch ($bd) {
+        case 1:
+            return 'add_ob_gp';
+        case 2:
+            return 'add_ob_vidt';
+        case 3:
+            return 'add_ob_gr';
+        default:
+            return null;
+    }
+}
+
+function customerOrderCity(mysqli $conn, int $orderId, int $bd): ?string
+{
+    $customerTables = [
+        1 => 'orders',
+        2 => 'orderst',
+        3 => 'ordersg',
+    ];
+    $table = $customerTables[$bd] ?? 'orders';
+    if (!tableExists($conn, $table)) {
+        return null;
+    }
+
+    $stmt = $conn->prepare("SELECT city FROM {$table} WHERE id = ? LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('i', $orderId);
+    if (!$stmt->execute()) {
+        return null;
+    }
+    $res = $stmt->get_result();
+    if (!$res || !($row = $res->fetch_assoc())) {
+        return null;
+    }
+    $city = trim((string) ($row['city'] ?? ''));
+
+    return $city !== '' ? $city : null;
+}
+
+function queryLatestPerformerAd(
+    mysqli $conn,
+    string $table,
+    int $performerId,
+    ?string $city
+): int {
+    if (!tableExists($conn, $table)) {
+        return 0;
+    }
+
+    if ($city !== null && $city !== '') {
+        $sql = "SELECT id FROM {$table} WHERE iduser = ? AND city = ? ORDER BY id DESC LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param('is', $performerId, $city);
+    } else {
+        $sql = "SELECT id FROM {$table} WHERE iduser = ? ORDER BY id DESC LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+        $stmt->bind_param('i', $performerId);
+    }
+
+    if (!$stmt->execute()) {
+        return 0;
+    }
+    $res = $stmt->get_result();
+    if ($res && ($row = $res->fetch_assoc())) {
+        return (int) ($row['id'] ?? 0);
+    }
+
+    return 0;
+}
+
+function findPerformerListingId(
+    mysqli $conn,
+    int $performerId,
+    int $bd,
+    int $customerOrderId
+): int {
+    $city = customerOrderCity($conn, $customerOrderId, $bd);
+    $table = performerAdTableForBd($bd);
+
+    if ($table !== null) {
+        $id = queryLatestPerformerAd($conn, $table, $performerId, $city);
+        if ($id > 0) {
+            return $id;
+        }
+        $id = queryLatestPerformerAd($conn, $table, $performerId, null);
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    foreach (['add_ob_gp', 'add_ob_vidt', 'add_ob_gr'] as $fallbackTable) {
+        $id = queryLatestPerformerAd($conn, $fallbackTable, $performerId, $city);
+        if ($id > 0) {
+            return $id;
+        }
+        $id = queryLatestPerformerAd($conn, $fallbackTable, $performerId, null);
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    return 0;
+}
+
+function checkLikeStatus(mysqli $conn, int $performerId, int $listingId, int $usersid): string
+{
+    if ($performerId <= 0 || $listingId <= 0 || $usersid <= 0 || !tableExists($conn, 'likes1')) {
+        return 'false';
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT 1 FROM likes1 WHERE idusers = ? AND id = ? AND usersid = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        return 'false';
+    }
+    $stmt->bind_param('iii', $performerId, $listingId, $usersid);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    return ($res && $res->fetch_row()) ? 'true' : 'false';
+}
+
+$bdFilter = $bd !== null && $bd > 0;
+$latestSubquery = $bdFilter
+    ? 'SELECT iduserp, MAX(id) AS max_id
+       FROM offer_data
+       WHERE iduser = ?
+         AND (status = 0 OR status IS NULL)
+         AND bd = ?
+       GROUP BY iduserp'
+    : 'SELECT iduserp, MAX(id) AS max_id
+       FROM offer_data
+       WHERE iduser = ?
+         AND (status = 0 OR status IS NULL)
+       GROUP BY iduserp';
+
+$outerBdFilter = $bdFilter ? ' AND od.bd = ?' : '';
+
 $sql = "
-    SELECT od.id, od.iduser, od.bd, od.cena, od.about, od.iduserp,
+    SELECT od.id, od.iduser AS order_id, od.bd, od.cena, od.about, od.iduserp,
            u.fotouser, u.firstName, u.lastName, u.middleName, u.city, u.phone,
-           u.namefirm, u.innStr, u.ogrnStr, u.kppStr
+           u.namefirm, u.innStr, u.ogrnStr, u.kppStr,
+           COALESCE(AVG(r.rating), 0) AS rating,
+           COALESCE(COUNT(r.user_id), 0) AS reviewsCount
     FROM offer_data od
+    INNER JOIN (
+        {$latestSubquery}
+    ) latest ON od.id = latest.max_id
     INNER JOIN users u ON od.iduserp = u.idusers
+    LEFT JOIN reviewsisp r ON u.idusers = r.user_id
     WHERE od.iduser = ?
       AND (od.status = 0 OR od.status IS NULL)
+      {$outerBdFilter}
+    GROUP BY od.id, u.idusers
+    ORDER BY od.id DESC
 ";
-$sql .= " ORDER BY od.id DESC ";
 
-// Подготовленный SQL-запрос с параметрами для предотвращения инъекций
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $nameImg);
+if ($bdFilter) {
+    $stmt->bind_param('iiii', $nameImg, $bd, $nameImg, $bd);
+} else {
+    $stmt->bind_param('ii', $nameImg, $nameImg);
+}
 $stmt->execute();
-
-// Выполнение запроса и получение результата
 $result = $stmt->get_result();
 
-// Массив для хранения итоговых данных
-$data = array();
-
-// Обработка строк результата
+$data = [];
 while ($row = $result->fetch_assoc()) {
-    // Если фотография пользователя существует, преобразуем её в Base64
     if (!empty($row['fotouser'])) {
         $row['fotouser'] = base64_encode($row['fotouser']);
     }
-    
-    // Добавление обработанной строки в массив данных
+
+    $performerId = (int) ($row['iduserp'] ?? 0);
+    $bdVal = (int) ($row['bd'] ?? 0);
+    $listingId = findPerformerListingId($conn, $performerId, $bdVal, $nameImg);
+
+    $row['listing_id'] = $listingId;
+    $row['idusers'] = $performerId;
+    $row['iduser'] = $performerId;
+    $row['success'] = checkLikeStatus($conn, $performerId, $listingId, $usersid);
+
     $data[] = $row;
 }
 
-// Заголовок ответа для передачи JSON-данных
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 if ($debug) {
     $diag = [
         'request' => [
             'nameImg' => $nameImg,
             'bd' => $bd,
+            'usersid' => $usersid,
         ],
         'sql' => $sql,
         'rows_returned' => count($data),
         'counts' => [],
     ];
 
-    // Диагностика: сколько всего записей в offer_data на этот iduser.
-    $countStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM offer_data WHERE iduser = ?");
-    $countStmt->bind_param("i", $nameImg);
+    $countStmt = $conn->prepare('SELECT COUNT(*) AS cnt FROM offer_data WHERE iduser = ?');
+    $countStmt->bind_param('i', $nameImg);
     $countStmt->execute();
     $countResult = $countStmt->get_result()->fetch_assoc();
     $diag['counts']['offer_data_by_iduser'] = (int) ($countResult['cnt'] ?? 0);
-
-    // Диагностика: активные/неактивные записи.
-    $statusStmt = $conn->prepare("
-        SELECT
-            SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) AS active_or_null,
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS closed
-        FROM offer_data
-        WHERE iduser = ?
-    ");
-    $statusStmt->bind_param("i", $nameImg);
-    $statusStmt->execute();
-    $statusResult = $statusStmt->get_result()->fetch_assoc();
-    $diag['counts']['active_or_null'] = (int) ($statusResult['active_or_null'] ?? 0);
-    $diag['counts']['closed'] = (int) ($statusResult['closed'] ?? 0);
 
     echo json_encode([
         'ok' => true,
         'debug' => $diag,
         'data' => $data,
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 } else {
-    // Обычный режим: экран ожидает именно массив
-    echo json_encode($data);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
 }
 
-// Закрытие соединения с базой данных
 $conn->close();
-?>

@@ -15,31 +15,40 @@ import '../design/colors.dart';
 
 import 'changerol_page.dart';
 import 'customer_bottom_nav.dart';
+import 'like_helper.dart';
 
 class list_predloj_na_obj_isp extends StatelessWidget {
   final String nameImg;
   final int bd; // добавляем параметр base
   final bool useCustomerMenu;
+  final bool wrapInMaterialApp;
 
   const list_predloj_na_obj_isp({
     Key? key,
     required this.nameImg,
     required this.bd, // добавляем обязательное поле
     this.useCustomerMenu = false,
+    this.wrapInMaterialApp = true,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final home = MyHomePage(
+      nameImg: nameImg,
+      bd: bd,
+      useCustomerMenu: useCustomerMenu,
+    );
+
+    if (!wrapInMaterialApp) {
+      return home;
+    }
+
     return MaterialApp(
       title: 'Truck Info',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(
-        nameImg: nameImg,
-        bd: bd,
-        useCustomerMenu: useCustomerMenu,
-      ),
+      home: home,
     );
   }
 }
@@ -86,37 +95,79 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    super
-        .initState(); // Assign nameImg from widget to a local variable if needed:
-    String nameImg = widget.nameImg;
-    int bd = widget.bd;
-    //super.initState();
+    super.initState();
+    _adsFuture = fetchAds(widget.bd, widget.nameImg);
     getUserData();
-    fetchAds(bd, nameImg);
   }
 
   int userId = 0;
+  late Future<List<dynamic>> _adsFuture;
+  final Map<String, bool> _likedOverrides = {};
+
+  // id исполнителя, чьё предложение уже принято заказчиком (или null, если ни одного).
+  // Пока одно предложение принято — кнопки «Принять» у остальных неактивны.
+  int? _acceptedPerformerId;
+  bool _offersStatusLoading = true;
+
+  bool _isLikedValue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  String _likeKey(Map truck) {
+    return (_listingIdForTruck(truck) ?? 0).toString();
+  }
+
+  bool _likedForTruck(Map truck) {
+    final String key = _likeKey(truck);
+    if (_likedOverrides.containsKey(key)) {
+      return _likedOverrides[key]!;
+    }
+    return _isLikedValue(truck['success']);
+  }
+
+  int? _listingIdForTruck(Map truck) {
+    final dynamic raw = truck['listing_id'] ?? truck['id'];
+    if (raw == null) return null;
+    return int.tryParse(raw.toString());
+  }
+
+  int? _performerIdForTruck(Map truck) {
+    final dynamic raw = truck['iduserp'] ?? truck['idusers'] ?? truck['iduser'];
+    if (raw == null) return null;
+    return int.tryParse(raw.toString());
+  }
+
+  Future<bool> _ensureUserId() async {
+    if (userId > 0) return true;
+    await getUserData();
+    return userId > 0;
+  }
+
   Future<void> getUserData() async {
-    final token = await getSecurefcm_token(); // Await the secure token
+    final token = await getSecurefcm_token();
     if (token == null) {
-      print("Token is null");
+      print('Token is null');
       return;
     }
-    final response = await http.get(Uri.parse(Config.baseUrl)
-        .replace(path: '/api/getuserinfo.php?token=$token'));
+    final response = await http.get(
+      Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
+    );
 
+    if (!mounted) return;
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data['error'] != null) {
         print('Ошибка: ${data['error']}');
-      } else {
-        // Обновляем поля класса и UI
-        setState(() {
-          userId = int.tryParse(data['idusers'].toString()) ?? 0;
-        });
-        print('вывод id: $userId');
-        // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
+        return;
       }
+      setState(() {
+        userId = int.tryParse(data['idusers'].toString()) ?? 0;
+        _adsFuture = fetchAds(widget.bd, widget.nameImg);
+      });
+      print('вывод id: $userId');
     } else {
       print('Ошибка при получении данных пользователя');
     }
@@ -124,8 +175,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
-    final response = await http.get(Uri.parse(Config.baseUrl)
-        .replace(path: '/api/getuserinfoads.php?idusers=$idUser'));
+    final response = await http.get(
+      Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -174,8 +226,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       try {
         final parsed = json.decode(response.body);
+        if (parsed is! List) {
+          throw Exception('Ошибка формата ответа');
+        }
         print(nameImg);
         print(bd);
+        await _computeAcceptedPerformer(parsed, bd);
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -189,6 +245,27 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       throw Exception('Failed to load ads');
     }
+  }
+
+  /// Определяет, чьё предложение уже принято (isp = 1) среди всех предложений.
+  /// Принятым может быть только одно предложение за раз.
+  Future<void> _computeAcceptedPerformer(List offers, int bd) async {
+    int? accepted;
+    for (final t in offers) {
+      final performerId =
+          int.tryParse((t['iduserp'] ?? '').toString()) ?? 0;
+      if (performerId <= 0) continue;
+      try {
+        if (await checkIsp(widget.nameImg, bd, performerId)) {
+          accepted = performerId;
+          break;
+        }
+      } catch (_) {
+        // игнорируем ошибку проверки отдельного предложения
+      }
+    }
+    _acceptedPerformerId = accepted;
+    _offersStatusLoading = false;
   }
 
   Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
@@ -254,25 +331,22 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(widget.bd, widget.nameImg),
+              future: _adsFuture,
               builder: (context, snapshot) {
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('name', style: DefaultTextStyle.of(context).style),
-                      Text(lastName,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                );
-
                 if (snapshot.hasData) {
+                  final offers = snapshot.data!;
+                  if (offers.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'В этом разделе нет предложений',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  }
                   return ListView.builder(
-                      itemCount: snapshot.data?.length,
+                      itemCount: offers.length,
                       itemBuilder: (context, index) {
-                        var truck = snapshot.data![index];
+                        var truck = offers[index];
                         if (truck == null)
                           Text(
                             'В этом разделе нет объявлений',
@@ -294,7 +368,6 @@ class _MyHomePageState extends State<MyHomePage> {
                         }
                         String base64Stringf = '';
                         Uint8List? truckImage;
-                        bool isLiked = false; // Состояние кнопки like
                         // Проверяем существует ли изображение fotouser
                         if (truck['fotouser'] != null) {
                           base64Stringf =
@@ -344,19 +417,55 @@ class _MyHomePageState extends State<MyHomePage> {
                                       children: [
                                         IconButton(
                                           icon: Icon(
-                                            truck['success'] == 'true'
+                                            _likedForTruck(truck)
                                                 ? Icons.favorite
                                                 : Icons.favorite_border,
-                                            color: truck['success'] == 'true'
+                                            color: _likedForTruck(truck)
                                                 ? Colors.red
                                                 : Colors.grey,
                                           ),
                                           onPressed: () async {
-                                            await toggleLike(
-                                                truck['iduser'].toString(),
-                                                truck['id'].toString(),
-                                                widget.bd);
-                                            setState(() {});
+                                            if (!await _ensureUserId()) return;
+
+                                            final listingId =
+                                                _listingIdForTruck(truck);
+                                            final performerId =
+                                                _performerIdForTruck(truck);
+                                            if (listingId == null ||
+                                                listingId <= 0 ||
+                                                performerId == null ||
+                                                performerId <= 0) {
+                                              return;
+                                            }
+
+                                            final String key =
+                                                _likeKey(truck);
+                                            final bool currentLiked =
+                                                _likedForTruck(truck);
+                                            setState(() {
+                                              _likedOverrides[key] =
+                                                  !currentLiked;
+                                            });
+
+                                            final int likeBd = int.tryParse(
+                                                    truck['bd']?.toString() ??
+                                                        '') ??
+                                                widget.bd;
+
+                                            final bool updated =
+                                                await toggleLike(
+                                              performerId,
+                                              listingId,
+                                              likeBd,
+                                            );
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _likedOverrides[key] = updated;
+                                              truck['success'] =
+                                                  updated ? 'true' : 'false';
+                                              _adsFuture = fetchAds(
+                                                  widget.bd, widget.nameImg);
+                                            });
                                           },
                                         ),
                                         if (truck['firstName'] != null)
@@ -617,180 +726,128 @@ class _MyHomePageState extends State<MyHomePage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Предлагаю:',
                                         style:
                                             DefaultTextStyle.of(context).style),
+                                    const SizedBox(height: 4),
                                     Text('${truck['about']}',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ),
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20.0),
-                              margin: const EdgeInsets.only(top: 20.0),
-                              child: FutureBuilder<bool>(
-                                future: checkIsp(widget.nameImg, widget.bd,
-                                    int.tryParse(truck['iduserp'].toString()) ??
-                                        0),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const SizedBox(
-                                        height: 50,
-                                        child: Center(
-                                            child:
-                                                CircularProgressIndicator()));
-                                  }
+                            Builder(
+                              builder: (context) {
+                                final int performerId = int.tryParse(
+                                        truck['iduserp'].toString()) ??
+                                    0;
+                                // Это предложение принято?
+                                final bool hasOffer =
+                                    _acceptedPerformerId != null &&
+                                        _acceptedPerformerId == performerId;
+                                // Какое-то ДРУГОЕ предложение уже принято?
+                                final bool acceptedElsewhere =
+                                    _acceptedPerformerId != null && !hasOffer;
+                                // «Принять» неактивна, пока статусы грузятся
+                                // или уже принято другое предложение.
+                                final bool disabled = !hasOffer &&
+                                    (_offersStatusLoading || acceptedElsewhere);
 
-                                  final bool hasOffer = snapshot.data ?? false;
+                                // Цвета под состояние кнопки.
+                                final Color bgColor = hasOffer
+                                    ? Colors.red.shade600 // активная «Отказаться»
+                                    : disabled
+                                        ? Colors.grey.shade300 // неактивная
+                                        : blueaccentColor; // активная «Принять»
+                                final Color fgColor = disabled
+                                    ? Colors.grey.shade600
+                                    : whiteprColor;
 
-                                  return SizedBox(
-                                    width: double.infinity,
-                                    child: TextButton(
-                                      style: TextButton.styleFrom(
-                                        fixedSize:
-                                            const Size(double.infinity, 50),
-                                        foregroundColor: whiteprColor,
-                                        backgroundColor: blueaccentColor,
-                                        disabledForegroundColor: grayprprColor,
-                                        shape: const BeveledRectangleBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(3))),
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20.0),
+                                  margin: const EdgeInsets.only(top: 20.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            fixedSize:
+                                                const Size(double.infinity, 50),
+                                            foregroundColor: fgColor,
+                                            backgroundColor: bgColor,
+                                            disabledForegroundColor:
+                                                Colors.grey.shade600,
+                                            disabledBackgroundColor:
+                                                Colors.grey.shade300,
+                                            side: disabled
+                                                ? BorderSide(
+                                                    color: Colors.grey.shade400,
+                                                    width: 1)
+                                                : BorderSide.none,
+                                            shape: const BeveledRectangleBorder(
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(3))),
+                                          ),
+                                          onPressed: disabled
+                                              ? null
+                                              : () async {
+                                                  await _handleOfferToggle(
+                                                    performerId: performerId,
+                                                    iduserp: truck['iduserp'],
+                                                    accept: !hasOffer,
+                                                  );
+                                                },
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                hasOffer
+                                                    ? Icons.close
+                                                    : disabled
+                                                        ? Icons.lock_outline
+                                                        : Icons.check,
+                                                size: 18,
+                                                color: fgColor,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Flexible(
+                                                child: Text(
+                                                  hasOffer
+                                                      ? 'Отказаться от предложения'
+                                                      : 'Принять предложение',
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                      onPressed: () async {
-                                        if (hasOffer) {
-                                          // Отказ от предложения
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString()
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded'
-                                              },
-                                            );
-
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}');
-                                            debugPrint(
-                                                'Body : ${response.body}');
-
-                                            if (response.statusCode == 200) {
-                                              final Map<String, dynamic> data =
-                                                  jsonDecode(response.body);
-
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    deviceToken:
-                                                        data['fcm_token'],
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'От вашего предложения исполнитель отказался!', // Измененное сообщение
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке уведомления: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e) {
-                                            print('Ошибка сети: $e');
-                                          }
-                                        } else {
-                                          // Принятие предложения
-                                          await updateOffer(
-                                              widget.bd,
-                                              widget.nameImg,
-                                              userId,
-                                              truck['iduserp']);
-
-                                          try {
-                                            final response = await http.post(
-                                              Uri.parse(
-                                                  '${Config.baseUrl}/api/notification.php'),
-                                              body: {
-                                                'iduserp':
-                                                    truck['iduserp'].toString()
-                                              },
-                                              headers: {
-                                                'Content-Type':
-                                                    'application/x-www-form-urlencoded'
-                                              },
-                                            );
-
-                                            print(truck['iduserp']);
-                                            debugPrint(
-                                                'Status: ${response.statusCode}');
-                                            debugPrint(
-                                                'Body : ${response.body}');
-
-                                            if (response.statusCode == 200) {
-                                              final Map<String, dynamic> data =
-                                                  jsonDecode(response.body);
-
-                                              if (data['fcm_token'] != null) {
-                                                try {
-                                                  await sendNotificationV1(
-                                                    deviceToken:
-                                                        data['fcm_token'],
-                                                    title:
-                                                        'Привет от crgtransp72app!',
-                                                    body:
-                                                        'Ваше предложение принято исполнителем!', // Изменённое сообщение
-                                                  );
-                                                  print(
-                                                      'Уведомление отправлено');
-                                                } catch (e) {
-                                                  print(
-                                                      'Ошибка при отправке уведомления: $e');
-                                                }
-                                              } else {
-                                                _showSnack(context,
-                                                    'Токен не найден в ответе');
-                                              }
-                                            } else {
-                                              _showSnack(context,
-                                                  'Сервер вернул: ${response.statusCode}');
-                                            }
-                                          } catch (e) {
-                                            print('Ошибка сети: $e');
-                                          }
-                                        }
-                                      },
-                                      child: Text(hasOffer
-                                          ? 'Отказаться от предложения'
-                                          : 'П1ринять предложение'),
-                                    ),
-                                  );
-                                },
-                              ),
+                                      if (disabled && !_offersStatusLoading)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4.0),
+                                          child: Text(
+                                            'Вы уже приняли другое предложение',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
                             )
                           ],
                         );
@@ -798,7 +855,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 } else if (snapshot.hasError) {
                   return Text("${snapshot.error}");
                 }
-// By default, show a loading spinner.
                 return const CircularProgressIndicator();
               },
             ),
@@ -809,6 +865,59 @@ class _MyHomePageState extends State<MyHomePage> {
           ? const CustomerBottomNav(currentIndex: 1)
           : null,
     );
+  }
+
+  Future<void> _handleOfferToggle({
+    required int performerId,
+    required dynamic iduserp,
+    required bool accept,
+  }) async {
+    // Переключаем статус на сервере (isp 0<->1).
+    await updateOffer(widget.bd, widget.nameImg, userId, iduserp);
+
+    if (!mounted) return;
+    // Локально обновляем состояние: при принятии блокируем остальные,
+    // при отказе — снова разрешаем «Принять» у всех.
+    setState(() {
+      _acceptedPerformerId = accept ? performerId : null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/api/notification.php'),
+        body: {'iduserp': iduserp.toString()},
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      );
+
+      debugPrint('Status: ${response.statusCode}');
+      debugPrint('Body : ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        if (data['fcm_token'] != null) {
+          try {
+            await sendNotificationV1(
+              deviceToken: data['fcm_token'],
+              title: 'Привет от crgtransp72app!',
+              body: accept
+                  ? 'Ваше предложение принято исполнителем!'
+                  : 'От вашего предложения исполнитель отказался!',
+            );
+            print('Уведомление отправлено');
+          } catch (e) {
+            print('Ошибка при отправке уведомления: $e');
+          }
+        } else if (mounted) {
+          _showSnack(context, 'Токен не найден в ответе');
+        }
+      } else if (mounted) {
+        _showSnack(context, 'Сервер вернул: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Ошибка сети: $e');
+    }
   }
 
   Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
@@ -848,43 +957,14 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  bool isLiked = false;
   Future<bool> toggleLike(dynamic idUser, dynamic id, int bd) async {
-    //   final response = await http.get(Uri.parse(
-    //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
-    final uri = Uri.parse(Config.baseUrl)
-        .replace(path: '/api/toggle_like1.php')
-        .replace(queryParameters: {
-      'usersid': userId.toString(),
-      'idusers': idUser.toString(),
-      'id': id.toString(),
-      'bd': bd.toString(),
-    });
-
-// Используем построенный URL
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      if (response.body.isEmpty) {
-        throw Exception('Пустой ответ от сервера');
-      }
-      try {
-        final parsed = json.decode(response.body);
-        isLiked = parsed['success'];
-        print('7777');
-        print(userId);
-        return isLiked;
-
-        //getUserDataAds(idusers1);
-      } catch (e) {
-        print('Ошибка декодирования: $e');
-        print('Ответ сервера: ${response.body}');
-        throw Exception('Ошибка формата ответа');
-      }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load ads');
-    }
+    return toggleLikeRequest(
+      usersId: userId,
+      idusers: idUser,
+      id: id,
+      bd: bd,
+      usePerformerEndpoint: false,
+    );
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {

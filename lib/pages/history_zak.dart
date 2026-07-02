@@ -327,142 +327,120 @@ class _MyHomePageState extends State<MyHomePage> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      truck['success'] == 'true'
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      color: truck['success'] == 'true'
+                                          ? Colors.red
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () async {
+                                      await toggleLike(
+                                          truck['iduser'].toString(),
+                                          truck['id'].toString(),
+                                          widget.bd);
+                                      setState(() {});
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
                                   Expanded(
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        IconButton(
-                                          icon: Icon(
-                                            truck['success'] == 'true'
-                                                ? Icons.favorite
-                                                : Icons.favorite_border,
-                                            color: truck['success'] == 'true'
-                                                ? Colors.red
-                                                : Colors.grey,
-                                          ),
-                                          onPressed: () async {
-                                            await toggleLike(
-                                                truck['iduser'].toString(),
-                                                truck['id'].toString(),
-                                                widget.bd);
-                                            setState(() {});
-                                          },
-                                        ),
                                         if (truck['firstName'] != null)
-                                          Column(
+                                          Text(
+                                            '${truck['firstName']} ${truck['lastName']}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ReviewScreenz(
+                                                          userId: truck[
+                                                                  'iduserp']
+                                                              .toString())),
+                                            );
+                                          },
+                                          child: Wrap(
+                                            spacing: 4,
+                                            runSpacing: 2,
                                             crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                                WrapCrossAlignment.center,
                                             children: [
+                                              ...List.generate(5, (index) {
+                                                final double parsedRating =
+                                                    truck['avg_rating'] != null
+                                                        ? double.tryParse(truck[
+                                                                    'avg_rating']
+                                                                .toString()) ??
+                                                            0.0
+                                                        : 0.0;
+                                                return Icon(
+                                                  index < parsedRating
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 16,
+                                                );
+                                              }),
                                               Text(
-                                                '${truck['firstName']} ${truck['lastName']}',
+                                                '${truck['avg_rating'] ?? 0.0}',
                                                 style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
                                               ),
-                                              GestureDetector(
-                                                onTap: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            ReviewScreenz(
-                                                                userId: truck[
-                                                                        'iduserp']
-                                                                    .toString())),
-                                                  );
-                                                },
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Row(
-                                                      children: List.generate(5,
-                                                          (index) {
-                                                        final double
-                                                            parsedRating =
-                                                            truck['avg_rating'] !=
-                                                                    null
-                                                                ? double.tryParse(
-                                                                        truck['avg_rating']
-                                                                            .toString()) ??
-                                                                    0.0
-                                                                : 0.0;
-                                                        return Icon(
-                                                          index < parsedRating
-                                                              ? Icons.star
-                                                              : Icons
-                                                                  .star_border,
-                                                          color: Colors.amber,
-                                                          size: 16,
-                                                        );
-                                                      }),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      '${truck['avg_rating'] ?? 0.0}',
-                                                      style: const TextStyle(
-                                                          fontSize: 14,
-                                                          color: Colors.grey),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Row(
-                                                      children: [
-                                                        const Icon(
-                                                            Icons
-                                                                .comment_outlined,
-                                                            size: 16,
-                                                            color: Colors.grey),
-                                                        const SizedBox(
-                                                            width: 2),
-                                                        Text(
-                                                          '${truck['reviewsCount'] ?? 0}',
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 14,
-                                                                  color: Colors
-                                                                      .grey),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              )
+                                              const Icon(Icons.comment_outlined,
+                                                  size: 16,
+                                                  color: Colors.grey),
+                                              Text(
+                                                '${truck['reviewsCount'] ?? 0}',
+                                                style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
+                                              ),
                                             ],
                                           ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Flexible(
-                                    flex: 0,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        _makePhoneCall(truck['phone']);
-                                      },
-                                      child: Row(
+                                  InkWell(
+                                    onTap: () {
+                                      _makePhoneCall(truck['phone']);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.phone),
-                                          const SizedBox(width: 4),
-                                          SizedBox(
-                                            width: 112,
-                                            child: Text(
-                                              '${truck['phone']}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                          const Icon(Icons.phone, size: 22),
+                                          Text(
+                                            '${truck['phone']}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
@@ -492,191 +470,32 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ),
                               ),
                             if (truck['namefirm'] == null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('Частное лицо',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow('Тип:', 'Частное лицо'),
                             if (truck['namefirm'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Компания:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['namefirm']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow(
+                                  'Компания:', '${truck['namefirm']}'),
                             if (truck['innStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('ИНН:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['innStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow('ИНН:', '${truck['innStr']}'),
                             if (truck['ogrnStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('ОГРН:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['ogrnStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow('ОГРН:', '${truck['ogrnStr']}'),
                             if (truck['kppStr'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('КПП:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['kppStr']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Город:',
-                                      style:
-                                          DefaultTextStyle.of(context).style),
-                                  Text('${truck['city']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
+                              _historyInfoRow('КПП:', '${truck['kppStr']}'),
+                            _historyInfoRow('Город:', '${truck['city']}'),
                             if (truck['cena'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Прелагаемая стоимость:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['cena']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow(
+                                  'Предлагаемая стоимость:', '${truck['cena']}'),
                             if (truck['about'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Предлагаю:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['about']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow(
+                                  'Предлагаю:', '${truck['about']}'),
                             if (truck['start_time'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Начало выполнения заказа:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['start_time']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow('Начало выполнения заказа:',
+                                  '${truck['start_time']}'),
                             if (truck['end_time'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Заказ завершен:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['end_time']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow(
+                                  'Заказ завершен:', '${truck['end_time']}'),
                             if (truck['cancel_time'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Заказ отменен:',
-                                        style:
-                                            DefaultTextStyle.of(context).style),
-                                    Text('${truck['cancel_time']}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
+                              _historyInfoRow(
+                                  'Заказ отменен:', '${truck['cancel_time']}'),
                             //Expanded(child: _getCurrentScreen()),
                           ],
                         );
@@ -687,6 +506,35 @@ class _MyHomePageState extends State<MyHomePage> {
 // By default, show a loading spinner.
                 return const CircularProgressIndicator();
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _historyInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: DefaultTextStyle.of(context).style,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 4,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],

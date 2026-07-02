@@ -1,44 +1,77 @@
 <?php
-$host = "localhost";
-$user = "u2395188_apps72";
-$pass = "kR3iV2aA6gjU8nC9";
-$db = "u2395188_apps";
+declare(strict_types=1);
 
-$conn = new mysqli($host, $user, $pass, $db);
+header('Content-Type: text/plain; charset=utf-8');
 
+require __DIR__ . '/load_databd.php';
+require __DIR__ . '/include/ad_image_update.php';
+
+$id = (int) ($_POST['id'] ?? 0);
+if ($id <= 0) {
+    http_response_code(400);
+    echo 'Не указан id объявления';
+    exit;
+}
+
+$conn = new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) {
-    die('Connection failed: ' . $conn->connect_error);
+    http_response_code(500);
+    echo 'Connection failed';
+    exit;
 }
-$conn->set_charset("utf8");
+$conn->set_charset('utf8mb4');
 
-$id = $_POST['id'];
-$iduser = $_POST['iduser'];
-$maxgruz = $_POST['maxgruz'];
-$city = $_POST['city'];
-$startdate = $_POST['startdate'];
-$enddate = $_POST['enddate'];
-$city1 = $_POST['city1'];
-$vidk = $_POST['vidk'];
-$zagr = $_POST['zagr'];
-$typeper = $_POST['typeper'];
-$cena = $_POST['cena'];
-$about = $_POST['about'];
-$enddatez = $_POST['enddatez'];
+$iduser = (string) ($_POST['iduser'] ?? '');
+$maxgruz = (string) ($_POST['maxgruz'] ?? '');
+$city = (string) ($_POST['city'] ?? '');
+$startdate = (string) ($_POST['startdate'] ?? '');
+$enddate = (string) ($_POST['enddate'] ?? '');
+$city1 = (string) ($_POST['city1'] ?? '');
+$vidk = (string) ($_POST['vidk'] ?? '');
+$zagr = (string) ($_POST['zagr'] ?? '');
+$typeper = (string) ($_POST['typeper'] ?? '');
+$cena = (string) ($_POST['cena'] ?? '');
+$about = (string) ($_POST['about'] ?? '');
+$enddatez = (string) ($_POST['enddatez'] ?? '');
 
-// Обработка изображений
-$img1 = isset($_FILES['img1']['tmp_name']) && !empty($_FILES['img1']['tmp_name']) ? file_get_contents($_FILES['img1']['tmp_name']) : NULL;
-$img2 = isset($_FILES['img2']['tmp_name']) && !empty($_FILES['img2']['tmp_name']) ? file_get_contents($_FILES['img2']['tmp_name']) : NULL;
-$img3 = isset($_FILES['img3']['tmp_name']) && !empty($_FILES['img3']['tmp_name']) ? file_get_contents($_FILES['img3']['tmp_name']) : NULL;
-$img4 = isset($_FILES['img4']['tmp_name']) && !empty($_FILES['img4']['tmp_name']) ? file_get_contents($_FILES['img4']['tmp_name']) : NULL;
+$sets = [
+    'iduser = ?',
+    'maxgruz = ?',
+    'city = ?',
+    'startdate = ?',
+    'enddate = ?',
+    'city1 = ?',
+    'vidk = ?',
+    'zagr = ?',
+    'typepr = ?',
+    'cena = ?',
+    'about = ?',
+    'enddatez = ?',
+];
+$params = [$iduser, $maxgruz, $city, $startdate, $enddate, $city1, $vidk, $zagr, $typeper, $cena, $about, $enddatez];
+$types = 'ssssssssssss';
 
-$stmt = $conn->prepare("UPDATE orders SET iduser=?, maxgruz=?, city=?, startdate=?, enddate=?, city1=?, vidk=?, zagr=?, typepr=?, cena=?, about=?, enddatez=?, img1=?, img2=?, img3=?, img4=? WHERE id=?");
-$stmt->bind_param("isssssssssssssssi", $iduser, $maxgruz, $city, $startdate, $enddate, $city1, $vidk, $zagr, $typeper, $cena, $about, $enddatez, $img1, $img2, $img3, $img4, $id);
+crg_append_listing_photo_updates($sets, $params, $types);
 
-if ($stmt->execute()) {
-    echo "Record updated successfully";
+$params[] = $id;
+$types .= 'i';
+
+$sql = 'UPDATE orders SET ' . implode(', ', $sets) . ' WHERE id = ?';
+$stmt = $conn->prepare($sql);
+if ($stmt === false) {
+    http_response_code(500);
+    echo 'Prepare failed: ' . $conn->error;
+    exit;
+}
+
+$stmt->bind_param($types, ...$params);
+
+if ($stmt->execute() && $stmt->affected_rows >= 0) {
+    echo 'Record updated successfully';
 } else {
-    echo "Error updating record: " . $stmt->error;
+    http_response_code(500);
+    echo 'Error updating record: ' . $stmt->error;
 }
 
+$stmt->close();
 $conn->close();
-?>

@@ -32,8 +32,16 @@ void main() {
   });
 
   group('Performer Histort shell', () {
-    test('always three tabs (profile visible)', () {
-      final labels = PerformerHistortShellNav.bottomNavLabels();
+    test('guest has two tabs', () {
+      final labels =
+          PerformerHistortShellNav.bottomNavLabels(isAuthenticated: false);
+      expect(labels.length, 2);
+      expect(labels, ['Объявления', 'Заявки']);
+    });
+
+    test('authorized has three tabs', () {
+      final labels =
+          PerformerHistortShellNav.bottomNavLabels(isAuthenticated: true);
       expect(labels.length, 3);
       expect(labels[2], 'Профиль');
     });

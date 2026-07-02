@@ -1,27 +1,13 @@
 <?php
 header('Access-Control-Allow-Origin: *');
-header('Content-Type: application/json');
-
 header('Content-Type: application/json; charset=UTF-8');
 
-include 'databd.php';
-$dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
-$options = [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
+require_once __DIR__ . '/include/api_bootstrap.php';
 
 try {
-    $pdo = new PDO($dsn, $username, $password, $options);
-    
-    $pdo->exec("SET NAMES 'utf8mb4'");
-    $pdo->exec("SET CHARACTER SET 'utf8mb4'");
-
-    $stmt = $pdo->query("SELECT id, name FROM cities");
-    $cities = $stmt->fetchAll();
-
-    echo json_encode($cities, JSON_UNESCAPED_UNICODE);
+    $pdo = tp_pdo();
+    $stmt = $pdo->query('SELECT id, name FROM cities');
+    echo json_encode($stmt->fetchAll(), JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-?>

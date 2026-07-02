@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
+import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/test.dart'; // as hist;
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
@@ -83,6 +84,11 @@ class _SendReviewFormState extends State<SendReviewFormzakaz> {
       }
 
       if (response.statusCode == 200 && response.data['status'] == 'success') {
+        await notifyUserById(
+          userId: widget.parsedUserIdOk.toString(),
+          title: kDefaultPushTitle,
+          body: 'Заказчик оставил отзыв об исполнителе',
+        );
         // Открытие окна с успешным результатом и последующей навигацией
         showSuccessDialog('Спасибо!', 'Ваш отзыв успешно отправлен.',
             onOkPressed: () {

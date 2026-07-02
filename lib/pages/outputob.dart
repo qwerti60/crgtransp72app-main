@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/navigation/zakaz_ad_deal.dart';
 import 'package:crgtransp72app/pages/OfferScreen2.dart';
+import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -30,22 +32,28 @@ class outputob extends StatelessWidget {
   /// Запрос объявлений без фильтра по городу (`all_cities=1` в get_ads2_new.php).
   final bool ignoreCityFilter;
 
+  /// Раздел БД: 1 — грузоперевозки, 2 — спецтехника, 3 — грузчики.
+  final int bd;
+
   const outputob(
       {super.key,
       required this.nameImg,
       required this.city,
       this.showBottomNav = false,
       this.useCustomerNavigation = true,
-      this.ignoreCityFilter = false});
+      this.ignoreCityFilter = false,
+      this.bd = 1});
 
   @override
   Widget build(BuildContext context) {
     return MyHomePage(
+      key: ValueKey('ob_${nameImg}_$city'),
       nameImg: nameImg,
       city: city,
       showBottomNav: showBottomNav,
       useCustomerNavigation: useCustomerNavigation,
       ignoreCityFilter: ignoreCityFilter,
+      bd: bd,
     );
   }
 }
@@ -56,6 +64,7 @@ class MyHomePage extends StatefulWidget {
   final bool showBottomNav;
   final bool useCustomerNavigation;
   final bool ignoreCityFilter;
+  final int bd;
 
   const MyHomePage(
       {super.key,
@@ -63,7 +72,8 @@ class MyHomePage extends StatefulWidget {
       required this.city,
       this.showBottomNav = false,
       this.useCustomerNavigation = true,
-      this.ignoreCityFilter = false});
+      this.ignoreCityFilter = false,
+      this.bd = 1});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -91,7 +101,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   bool _invalidResponseSnackShown = false;
-  final Map<String, bool> _likedOverrides = {};
+  final Set<String> _likeInFlight = {};
+  int _fetchSeq = 0;
   late Future<List> _adsFuture;
 
   bool get _isAuthorized => userId > 0;
@@ -150,30 +161,51 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool _likedForTruck(Map truck) {
-    final key = (truck['id'] ?? '').toString();
-    if (_likedOverrides.containsKey(key)) {
-      return _likedOverrides[key]!;
-    }
     return _isLikedValue(truck['success']);
+  }
+
+  String _likeKey(Map truck) {
+    final performerId = (truck['iduser'] ?? truck['idusers'] ?? '').toString();
+    final adId = (truck['id'] ?? '').toString();
+    return '${widget.city}|$performerId|$adId';
+  }
+
+  Future<void> _reloadAds() async {
+    final ads = await fetchAds(widget.city, widget.nameImg, userId);
+    if (!mounted) return;
+    setState(() {
+      _adsFuture = Future.value(ads);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant MyHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.city != widget.city ||
+        oldWidget.nameImg != widget.nameImg ||
+        oldWidget.bd != widget.bd) {
+      bd = widget.bd;
+      _likeInFlight.clear();
+      _reloadAds();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    bd = widget.bd;
+    _adsFuture = _bootstrapAds();
+  }
+
+  Future<List> _bootstrapAds() async {
+    await getUserData();
+    return fetchAds(widget.city, widget.nameImg, userId);
   }
 
   String namefirm = '';
   String innStr = '';
   String ogrnStr = '';
   String kppStr = '';
-
-  @override
-  void initState() {
-    super
-        .initState(); // Assign nameImg from widget to a local variable if needed:
-    String nameImg = widget.nameImg;
-    bd = 1;
-    String city = widget.city;
-
-    _adsFuture = Future.value(<dynamic>[]);
-    getUserData();
-    _adsFuture = fetchAds(city, nameImg, userId);
-  }
 
   int userId = 0;
   Future<void> getUserData() async {
@@ -193,7 +225,6 @@ class _MyHomePageState extends State<MyHomePage> {
         // Обновляем поля класса и UI
         setState(() {
           userId = data['idusers'];
-          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -236,15 +267,123 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkOfferExists(int userId, dynamic truckId, int bd) async {
-    final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer_zakaz.php?iduser=$userId&truck=${truckId.toString()}&bd=$bd'));
+  Future<ZakazAdDealInfo> _fetchDealForTruck(
+    Map<dynamic, dynamic> truck,
+    int bdVal,
+  ) {
+    final adId = int.tryParse(truck['id']?.toString() ?? '') ?? 0;
+    final performerId =
+        int.tryParse(truck['iduser']?.toString() ?? '') ?? 0;
+    return fetchZakazAdDeal(
+      customerId: userId,
+      adId: adId,
+      bd: bdVal,
+      performerId: performerId,
+    );
+  }
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['exists'];
-    } else {
-      throw Exception('Failed to load data');
+  Widget _buildOfferActionButton({
+    required BuildContext context,
+    required ZakazAdDealInfo deal,
+    required Map<dynamic, dynamic> truck,
+    required int bdVal,
+  }) {
+    final listingId = int.tryParse(truck['id']?.toString() ?? '') ?? 0;
+    final performerId = truck['iduser']?.toString() ?? '';
+
+    if (deal.isExecuting) {
+      return _offerActionButton(
+        label: 'Выполняется',
+        color: Colors.orange.shade700,
+        onPressed: () async {
+          if (!_isAuthorized) {
+            await _showAuthRequiredDialog();
+            return;
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OrderExecutionScreenzak(
+                userId: performerId,
+                orderId: listingId.toString(),
+                showBottomNav: widget.useCustomerNavigation,
+                orderSource: 'performer_ad',
+              ),
+            ),
+          );
+        },
+      );
     }
+
+    if (deal.isCompleted || deal.isCancelled || !deal.hasOffer) {
+      return _offerActionButton(
+        label: 'Предложить заказ',
+        color: blueaccentColor,
+        onPressed: () async {
+          if (!_isAuthorized) {
+            await _showAuthRequiredDialog();
+            return;
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OfferScreen2(
+                userid: truck['id'].toString(),
+                useridobj: truck['iduser'],
+                bd: bdVal,
+                useCustomerNavigation: true,
+              ),
+            ),
+          ).then((_) {
+            if (mounted) {
+              setState(() {
+                _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
+              });
+            }
+          });
+        },
+      );
+    }
+
+    return _offerActionButton(
+      label: 'Удалить заявку',
+      color: Colors.red.shade700,
+      onPressed: () async {
+        if (!_isAuthorized) {
+          await _showAuthRequiredDialog();
+          return;
+        }
+        if (listingId <= 0) return;
+        await _confirmDeleteOfferZakaz(context, listingId, bdVal);
+      },
+    );
+  }
+
+  Widget _offerActionButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      margin: const EdgeInsets.only(top: 20.0),
+      child: SizedBox(
+        width: double.infinity,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            fixedSize: const Size(double.infinity, 50),
+            foregroundColor: whiteprColor,
+            backgroundColor: color,
+            disabledForegroundColor: grayprprColor,
+            shape: const BeveledRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(3)),
+            ),
+          ),
+          onPressed: onPressed,
+          child: Text(label),
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmDeleteOfferZakaz(
@@ -310,11 +449,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List> fetchAds(String city, String nameImg, int userId) async {
+    final seq = ++_fetchSeq;
     final queryParameters = <String, String>{
       'nameImg': nameImg,
       'city': city,
       'useId': userId.toString(),
       'usersid': userId.toString(),
+      '_ts': DateTime.now().millisecondsSinceEpoch.toString(),
     };
     if (widget.ignoreCityFilter) {
       queryParameters['all_cities'] = '1';
@@ -325,6 +466,9 @@ class _MyHomePageState extends State<MyHomePage> {
         queryParameters: queryParameters,
       ),
     );
+    if (seq != _fetchSeq) {
+      return [];
+    }
     if (response.statusCode == 200) {
       final String body = response.body.trim();
       if (body.isEmpty) {
@@ -337,12 +481,12 @@ class _MyHomePageState extends State<MyHomePage> {
           return [];
         }
         final parsed = json.decode(body);
-
-        print('uu77${userId}');
-        print('uu77${nameImg}');
-
-        print('uu77${userId}');
-        print('uu77${city}');
+        if (parsed is List) {
+          debugPrint(
+            '[outputob] $city / $nameImg / usersid=$userId likes: '
+            '${parsed.map((e) => '${e['id']}:${e['success']}').join(', ')}',
+          );
+        }
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -492,23 +636,32 @@ class _MyHomePageState extends State<MyHomePage> {
                                               : Colors.grey,
                                         ),
                                         onPressed: () async {
-                                          final key =
-                                              (truck['id'] ?? '').toString();
-                                          final currentLiked =
-                                              _likedForTruck(truck);
+                                          if (!_isAuthorized) {
+                                            await _showAuthRequiredDialog();
+                                            return;
+                                          }
+                                          final key = _likeKey(truck);
+                                          if (_likeInFlight.contains(key)) {
+                                            return;
+                                          }
                                           setState(() {
-                                            _likedOverrides[key] =
-                                                !currentLiked;
+                                            _likeInFlight.add(key);
                                           });
-                                          final updated = await toggleLike(
-                                            truck['iduser'],
-                                            truck['id'],
-                                            bd!,
-                                          );
-                                          if (!mounted) return;
-                                          setState(() {
-                                            _likedOverrides[key] = updated;
-                                          });
+                                          try {
+                                            await toggleLike(
+                                              truck['iduser'],
+                                              truck['id'],
+                                              bd!,
+                                            );
+                                            if (!mounted) return;
+                                            await _reloadAds();
+                                          } finally {
+                                            if (mounted) {
+                                              setState(() {
+                                                _likeInFlight.remove(key);
+                                              });
+                                            }
+                                          }
                                         },
                                       ),
                                       if (truck['firstName'] != null)
@@ -943,98 +1096,29 @@ class _MyHomePageState extends State<MyHomePage> {
                               color: Colors.white, // По желанию добавьте фон
                               padding: const EdgeInsets.all(
                                   8.0), // Добавьте отступы вокруг FutureBuilder
-                              child: FutureBuilder<bool>(
-                                future:
-                                    checkOfferExists(userId, truck['id'], bd!),
+                              child: FutureBuilder<ZakazAdDealInfo>(
+                                future: _fetchDealForTruck(truck, bd!),
                                 builder: (context, snapshot) {
-                                  if (snapshot.hasData && snapshot.data!) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20.0),
-                                      margin: const EdgeInsets.only(top: 20.0),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: TextButton(
-                                          style: TextButton.styleFrom(
-                                            fixedSize:
-                                                const Size(double.infinity, 50),
-                                            foregroundColor: whiteprColor,
-                                            backgroundColor:
-                                                Colors.red.shade700,
-                                            disabledForegroundColor:
-                                                grayprprColor,
-                                            shape: const BeveledRectangleBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(3)),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            if (!_isAuthorized) {
-                                              await _showAuthRequiredDialog();
-                                              return;
-                                            }
-                                            final listingId = int.tryParse(
-                                                    truck['id'].toString()) ??
-                                                0;
-                                            if (listingId <= 0) return;
-                                            await _confirmDeleteOfferZakaz(
-                                              context,
-                                              listingId,
-                                              bd!,
-                                            );
-                                          },
-                                          child:
-                                              const Text('Удалить заявку'),
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    // Если записи нет
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20.0),
-                                      margin: const EdgeInsets.only(top: 20.0),
-                                      child: SizedBox(
-                                        width: double.infinity,
-                                        child: TextButton(
-                                          style: TextButton.styleFrom(
-                                            fixedSize:
-                                                const Size(double.infinity, 50),
-                                            foregroundColor: whiteprColor,
-                                            backgroundColor: blueaccentColor,
-                                            disabledForegroundColor:
-                                                grayprprColor,
-                                            shape: const BeveledRectangleBorder(
-                                              borderRadius: BorderRadius.all(
-                                                  Radius.circular(3)),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            if (!_isAuthorized) {
-                                              await _showAuthRequiredDialog();
-                                              return;
-                                            }
-
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    OfferScreen2(
-                                                        userid: truck['id']
-                                                            .toString(),
-                                                        useridobj:
-                                                            truck['iduser'],
-                                                        bd: bd,
-                                                        useCustomerNavigation:
-                                                            true),
-                                              ),
-                                            );
-                                          },
-                                          child: const Text('Предложить заказ'),
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const SizedBox(
+                                      height: 50,
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
                                         ),
                                       ),
                                     );
                                   }
+                                  if (snapshot.hasError || !snapshot.hasData) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return _buildOfferActionButton(
+                                    context: context,
+                                    deal: snapshot.data!,
+                                    truck: truck,
+                                    bdVal: bd!,
+                                  );
                                 },
                               ),
                             )

@@ -1,70 +1,40 @@
 import 'dart:async';
 
 import 'package:crgtransp72app/firebase_options.dart';
+import 'package:crgtransp72app/push_notifications.dart';
+import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/start_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Не блокирует первый кадр UI — иначе ревью видит «вечную» загрузку на Launch Screen.
-Future<void> _initializeFirebaseInBackground() async {
+Future<void> _initializeFirebaseMessaging() async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    ).timeout(const Duration(seconds: 12));
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await configureFirebaseMessaging();
+    await initPushNotifications();
 
-    final settings = await FirebaseMessaging.instance
-        .requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      return;
-    }
-
-    await FirebaseMessaging.instance
-        .setForegroundNotificationPresentationOptions(
-          alert: true,
-          badge: true,
-          sound: true,
-        )
-        .timeout(const Duration(seconds: 5));
-
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      debugPrint('Новый FCM-токен: $newToken');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('fcm_token', newToken);
-    });
-
-    try {
-      final fcmToken = await FirebaseMessaging.instance
-          .getToken()
-          .timeout(const Duration(seconds: 10));
-      if (fcmToken != null) {
-        debugPrint('Полученный FCM-токен: $fcmToken');
-      }
-    } catch (e) {
-      debugPrint('Ошибка получения токена: $e');
-    }
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Received a notification!');
-      debugPrint(message.notification?.title);
-      debugPrint(message.notification?.body);
-    });
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   } catch (e) {
-    debugPrint('Firebase init skipped or failed: $e');
+    debugPrint('Firebase Messaging setup: $e');
   }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    unawaited(_initializeFirebaseMessaging());
+  } catch (e) {
+    debugPrint('Firebase init: $e');
+  }
   runApp(const MyApp());
-  unawaited(_initializeFirebaseInBackground());
 }
 
 class MyApp extends StatelessWidget {

@@ -39,8 +39,40 @@ class Ads2App extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(showBottomNav: showBottomNav),
+      home: showBottomNav
+          ? const Ads2Shell()
+          : const MyHomePage(showBottomNav: false),
     );
+  }
+}
+
+/// «Мои объявления» с нижним меню: редактирование открывается во вложенном Navigator.
+class Ads2Shell extends StatelessWidget {
+  const Ads2Shell({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Navigator(
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute<void>(
+            builder: (_) => const MyHomePage(showBottomNav: false),
+            settings: settings,
+          );
+        },
+      ),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 2),
+    );
+  }
+}
+
+/// Экран «Мои объявления» заказчика внутри [MenuzakScreen] (меню снаружи).
+class Ads2Page extends StatelessWidget {
+  const Ads2Page({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MyHomePage(showBottomNav: false);
   }
 }
 
@@ -120,8 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
         path: '/api/zak_get_ads.php',
         queryParameters: {
           'idusers': idusers.toString(),
-          'bd': bd
-              .toString(), // Добавляем переменную bd как строку в параметры запроса
+          'bd': bd.toString(),
         },
       ),
     );
@@ -138,10 +169,40 @@ class _MyHomePageState extends State<MyHomePage> {
         print('Ответ сервера: ${response.body}');
         throw Exception('Ошибка формата ответа');
       }
-      // Это излишне, поскольку возвращение происходит в блоке try выше
-      // return json.decode(response.body);
     } else {
       throw Exception('Failed to load ads');
+    }
+  }
+
+  bool _isAdInactive(Map<dynamic, dynamic> truck) {
+    final status = (truck['order_status'] ?? '').toString();
+    if (status == 'выполнен' || status == 'выполняется') {
+      return true;
+    }
+    final isActive = truck['is_active'];
+    return isActive == 0 || isActive == '0' || isActive == false;
+  }
+
+  String? _adStatusLabel(Map<dynamic, dynamic> truck) {
+    final status = (truck['order_status'] ?? '').toString();
+    switch (status) {
+      case 'выполнен':
+        return 'Заказ выполнен · объявление неактивно';
+      case 'выполняется':
+        return 'Заказ выполняется · объявление неактивно';
+      default:
+        return null;
+    }
+  }
+
+  Color _adStatusColor(String status) {
+    switch (status) {
+      case 'выполнен':
+        return Colors.green.shade700;
+      case 'выполняется':
+        return Colors.orange.shade700;
+      default:
+        return Colors.grey.shade700;
     }
   }
 
@@ -235,6 +296,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       itemCount: snapshot.data?.length,
                       itemBuilder: (context, index) {
                         var truck = snapshot.data![index];
+                        final isInactive = _isAdInactive(truck);
+                        final statusLabel = _adStatusLabel(truck);
+                        final orderStatus =
+                            (truck['order_status'] ?? '').toString();
+                        final adBd = int.tryParse(truck['bd']?.toString() ?? '') ??
+                            bd ??
+                            1;
                         List<Uint8List> images = [];
 
                         // Добавляем изображения в список images, только если они не null
@@ -250,10 +318,35 @@ class _MyHomePageState extends State<MyHomePage> {
                           }
                         }
 
-                        return Column(
+                        return Opacity(
+                          opacity: isInactive ? 0.72 : 1.0,
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment
                               .stretch, // Для выравнивания содержимого в начале
                           children: [
+                            if (statusLabel != null)
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _adStatusColor(orderStatus)
+                                      .withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _adStatusColor(orderStatus),
+                                  ),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: _adStatusColor(orderStatus),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal:
@@ -263,8 +356,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                     .end, // Равнение элементов в конце (справа)
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () {
+                                    icon: Icon(
+                                      Icons.edit,
+                                      color: isInactive ? Colors.grey : null,
+                                    ),
+                                    onPressed: isInactive
+                                        ? null
+                                        : () {
                                       print(
                                           "ID: ${truck['id']}, Table Name: ${truck['table_name']}"); // Посмотрите, что реально приходит
                                       editTruck(truck['id'], context,
@@ -275,7 +373,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     icon: const Icon(Icons.delete),
                                     onPressed: () {
                                       showDeleteDialog(
-                                          context, truck['id'], bd);
+                                          context, truck['id'], adBd);
                                     },
                                   ),
                                 ],
@@ -591,7 +689,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ),
                               ),
                             if ((truck['offer'] != null) &&
-                                (truck['offer'] != '0'))
+                                (truck['offer'] != '0') &&
+                                !isInactive)
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -612,7 +711,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 pageProfile:
                                                     'list_predloj_na_obj_isp',
                                                 userId1: truck['id'].toString(),
-                                                orderId: bd!.toString(),
+                                                orderId: adBd.toString(),
                                                 parsedUserIdOk: ''),
 
                                             /*  list_predloj_na_obj_isp(
@@ -654,6 +753,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ),
                               ),
                           ],
+                        ),
                         );
                       });
                 } else if (snapshot.hasError) {

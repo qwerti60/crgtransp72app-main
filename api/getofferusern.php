@@ -98,7 +98,14 @@ FROM (
         b.img2 AS img2,
         b.img3 AS img3,
         b.img4 AS img4,
-        b.startdate AS created_at,
+        CASE
+            WHEN b.created_at IS NOT NULL
+                 AND CAST(b.created_at AS CHAR) NOT IN ('0000-00-00', '0000-00-00 00:00:00')
+                THEN DATE(b.created_at)
+            WHEN b.startdate IS NOT NULL AND b.startdate NOT IN ('0000-00-00', '')
+                THEN b.startdate
+            ELSE DATE(od.timestamp)
+        END AS created_at,
         CASE WHEN EXISTS(
                 SELECT 1 FROM likes1 l
                 WHERE l.idusers = b.iduser AND l.id = b.id AND l.usersid = ?
@@ -138,7 +145,14 @@ FROM (
         b.img2 AS img2,
         b.img3 AS img3,
         b.img4 AS img4,
-        b.startdate AS created_at,
+        CASE
+            WHEN b.created_at IS NOT NULL
+                 AND CAST(b.created_at AS CHAR) NOT IN ('0000-00-00', '0000-00-00 00:00:00')
+                THEN DATE(b.created_at)
+            WHEN b.startdate IS NOT NULL AND b.startdate NOT IN ('0000-00-00', '')
+                THEN b.startdate
+            ELSE DATE(od.timestamp)
+        END AS created_at,
         CASE WHEN EXISTS(
                 SELECT 1 FROM likes1 l
                 WHERE l.idusers = b.iduser AND l.id = b.id AND l.usersid = ?
@@ -178,7 +192,14 @@ FROM (
         b.img2 AS img2,
         b.img3 AS img3,
         b.img4 AS img4,
-        b.startdate AS created_at,
+        CASE
+            WHEN b.created_at IS NOT NULL
+                 AND CAST(b.created_at AS CHAR) NOT IN ('0000-00-00', '0000-00-00 00:00:00')
+                THEN DATE(b.created_at)
+            WHEN b.startdate IS NOT NULL AND b.startdate NOT IN ('0000-00-00', '')
+                THEN b.startdate
+            ELSE DATE(od.timestamp)
+        END AS created_at,
         CASE WHEN EXISTS(
                 SELECT 1 FROM likes1 l
                 WHERE l.idusers = b.iduser AND l.id = b.id AND l.usersid = ?

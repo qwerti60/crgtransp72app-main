@@ -13,10 +13,63 @@ if ($conn->connect_error) {
 // Устанавливаем корректную кодировку
 $conn->set_charset("utf8");
 
+/**
+ * Число уникальных исполнителей с активным откликом — как на экране
+ * «Предложения исполнителей» (list_predloj_na_obj_isp_new.php).
+ */
+function offerCountSql(string $adIdColumn, int $bd): string
+{
+    return "(SELECT COUNT(DISTINCT od.iduserp)
+        FROM offer_data od
+        WHERE od.iduser = {$adIdColumn}
+          AND od.bd = {$bd}
+          AND (od.status = 0 OR od.status IS NULL)) AS offer";
+}
+
+/**
+ * Статус сделки по объявлению заказчика (ordersglobal + offer_data.bd).
+ */
+function orderStatusSql(string $adIdColumn, int $bd, string $customerIdColumn): string
+{
+    return "(SELECT og.status
+        FROM ordersglobal og
+        INNER JOIN offer_data od ON od.id = og.idoffer AND od.bd = {$bd}
+        WHERE CAST(og.order_id AS CHAR) = CAST({$adIdColumn} AS CHAR)
+          AND CAST(og.user_idok AS CHAR) = CAST({$customerIdColumn} AS CHAR)
+          AND og.status IN ('выполняется', 'выполнен', 'отменен')
+        ORDER BY
+            CASE og.status
+                WHEN 'выполняется' THEN 0
+                WHEN 'выполнен' THEN 1
+                ELSE 2
+            END,
+            og.id DESC
+        LIMIT 1) AS order_status";
+}
+
+/**
+ * Объявление неактивно, пока заказ выполняется или уже выполнен.
+ */
+function isActiveSql(string $adIdColumn, int $bd, string $customerIdColumn): string
+{
+    return "(SELECT CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM ordersglobal og
+                INNER JOIN offer_data od ON od.id = og.idoffer AND od.bd = {$bd}
+                WHERE CAST(og.order_id AS CHAR) = CAST({$adIdColumn} AS CHAR)
+                  AND CAST(og.user_idok AS CHAR) = CAST({$customerIdColumn} AS CHAR)
+                  AND og.status IN ('выполняется', 'выполнен')
+            ) THEN 0
+            ELSE 1
+        END) AS is_active";
+}
+
 // Обобщенный SQL-запрос с добавлением имени таблицы
 $sql = "
 SELECT 
-    'orders' as table_name,   -- Добавляем имя таблицы
+    'orders' as table_name,
+    1 AS bd,
     o.id, 
     o.maxgruz, 
     o.city, 
@@ -34,14 +87,17 @@ SELECT
     o.img3, 
     o.img4, 
     o.created_at,
-    (SELECT COUNT(*) FROM offer_data od WHERE od.iduser=o.id AND od.status=0) AS offer
+    " . offerCountSql('o.id', 1) . ",
+    " . orderStatusSql('o.id', 1, 'o.iduser') . ",
+    " . isActiveSql('o.id', 1, 'o.iduser') . "
 FROM 
     orders o
 WHERE 
     o.iduser = ?
 UNION ALL
 SELECT 
-    'orderst' as table_name,  -- Добавляем имя таблицы
+    'orderst' as table_name,
+    2 AS bd,
     ot.id, 
     '',  -- Поле maxgruz отсутствует в таблице orderst
     ot.city, 
@@ -59,14 +115,17 @@ SELECT
     ot.img3, 
     ot.img4, 
     ot.created_at,
-    (SELECT COUNT(*) FROM offer_data od WHERE od.iduser=ot.id AND od.status=0) AS offer
+    " . offerCountSql('ot.id', 2) . ",
+    " . orderStatusSql('ot.id', 2, 'ot.iduser') . ",
+    " . isActiveSql('ot.id', 2, 'ot.iduser') . "
 FROM 
     orderst ot
 WHERE 
     ot.iduser = ?
 UNION ALL
 SELECT 
-    'ordersg' as table_name,  -- Добавляем имя таблицы
+    'ordersg' as table_name,
+    3 AS bd,
     og.id, 
     '',  -- Поле maxgruz отсутствует в таблице ordersg
     og.city, 
@@ -84,7 +143,9 @@ SELECT
     og.img3, 
     og.img4, 
     og.created_at,
-    (SELECT COUNT(*) FROM offer_data od WHERE od.iduser=og.id AND od.status=0) AS offer
+    " . offerCountSql('og.id', 3) . ",
+    " . orderStatusSql('og.id', 3, 'og.iduser') . ",
+    " . isActiveSql('og.id', 3, 'og.iduser') . "
 FROM 
     ordersg og
 WHERE 
@@ -95,7 +156,11 @@ ORDER BY
 $stmt = $conn->prepare($sql); // Подготовливаем запрос
 
 if (!$stmt) {
-    die("Ошибка подготовки запроса: " . $conn->error);
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка подготовки запроса: ' . $conn->error]);
+    $conn->close();
+    exit;
 }
 
 $stmt->bind_param("sss", $idusers, $idusers, $idusers); // Передаваем один раз переменную трижды
@@ -104,22 +169,20 @@ $result = $stmt->get_result();        // Получаем результат в�
 
 $fetchData = [];
 
-if ($result->num_rows > 0) {
+if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         // Преобразуем binary-данные изображений в Base64
         $row['img1'] = $row['img1'] !== null ? base64_encode($row['img1']) : null;
         $row['img2'] = $row['img2'] !== null ? base64_encode($row['img2']) : null;
         $row['img3'] = $row['img3'] !== null ? base64_encode($row['img3']) : null;
         $row['img4'] = $row['img4'] !== null ? base64_encode($row['img4']) : null;
-        
+
         $fetchData[] = $row;
     }
-    
-    header('Content-Type: application/json'); // Устанавливаем заголовок для вывода JSON
-    echo json_encode($fetchData);
-} else {
-    echo json_encode([]); // Если нет данных, возвращаем пустой массив
 }
+
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode($fetchData, JSON_UNESCAPED_UNICODE);
 
 // Закрываем соединение
 $stmt->close();

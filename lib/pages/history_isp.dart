@@ -216,8 +216,9 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         if (orderInfo != null && orderInfo?['result'] == true) {
           return OrderExecutionScreen(
-            userId: orderInfo?['user_id'],
-            orderId: orderInfo?['order_id'],
+            userId: orderInfo?['user_id']?.toString() ?? '',
+            orderId: orderInfo?['order_id']?.toString() ?? '',
+            customerUserId: orderInfo?['user_idok']?.toString(),
             showBottomNav: false,
           );
         } else {

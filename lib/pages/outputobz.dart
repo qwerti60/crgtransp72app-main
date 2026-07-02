@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crgtransp72app/pages/OfferScreen.dart';
-import 'package:crgtransp72app/pages/OfferScreen2.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
@@ -18,6 +17,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import '../customer_ad_category.dart';
 import '../design/colors.dart';
 import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
@@ -119,16 +119,40 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    super
-        .initState(); // Assign nameImg from widget to a local variable if needed:
-    String nameImg = widget.nameImg;
-    bd = 1;
-    String city = widget.city;
-
-    //super.initState();
+    super.initState();
     _adsFuture = Future.value(<dynamic>[]);
+    _resolveBd();
     getUserData();
-    _adsFuture = fetchAds(city, nameImg, userId);
+    _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
+  }
+
+  int _bdForTruck(Map truck) {
+    return int.tryParse(truck['bd']?.toString() ?? '') ?? bd ?? 1;
+  }
+
+  Future<void> _resolveBd() async {
+    if (bd != null && bd! > 0) return;
+    try {
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}/api/get_cities.php').replace(
+          queryParameters: {
+            'namex': widget.nameImg,
+            'useId': '0',
+          },
+        ),
+      );
+      if (response.statusCode != 200) return;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final resolved = bdFromPerformerServiceMeta(
+        lookupTable: data['lookup_table']?.toString(),
+        mainTable: data['main_table']?.toString(),
+      );
+      if (mounted) {
+        setState(() => bd = resolved);
+      }
+    } catch (e) {
+      print('outputobz _resolveBd: $e');
+    }
   }
 
   int userId = 0;
@@ -254,6 +278,12 @@ class _MyHomePageState extends State<MyHomePage> {
       try {
         final parsed = json.decode(response.body);
         print(parsed);
+        if (parsed is List && parsed.isNotEmpty) {
+          final rowBd = int.tryParse(parsed[0]['bd']?.toString() ?? '');
+          if (rowBd != null && rowBd > 0 && mounted) {
+            setState(() => bd = rowBd);
+          }
+        }
         return parsed;
 
         //getUserDataAds(idusers1);
@@ -423,8 +453,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   !currentLiked;
                                             });
                                             final bool updated =
-                                                await toggleLike(
-                                                    ownerId, truck['id'], bd!);
+                                                await toggleLike(ownerId,
+                                                    truck['id'], _bdForTruck(truck));
                                             if (!mounted) return;
                                             setState(() {
                                               _likedOverrides[key] = updated;
@@ -838,13 +868,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       Text('Подробнее о заказе:',
                                           style: DefaultTextStyle.of(context)
                                               .style),
+                                      const SizedBox(height: 4),
                                       Text('${truck['about']}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
@@ -875,7 +906,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 child: FutureBuilder<bool>(
                                   future: userId > 0
                                       ? checkOfferExists(
-                                          userId, truck['id'], bd!)
+                                          userId, truck['id'], _bdForTruck(truck))
                                       : Future.value(false),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData && snapshot.data!) {
@@ -911,12 +942,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      OfferScreen2(
+                                                      OfferScreen(
                                                           userid: truck['id']
                                                               .toString(),
                                                           useridobj:
                                                               truck['iduser'],
-                                                          bd: bd), // Изменение экрана
+                                                          bd: _bdForTruck(truck)),
                                                 ),
                                               );
                                             },
@@ -958,12 +989,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      OfferScreen2(
+                                                      OfferScreen(
                                                           userid: truck['id']
                                                               .toString(),
                                                           useridobj:
                                                               truck['iduser'],
-                                                          bd: bd),
+                                                          bd: _bdForTruck(truck)),
                                                 ),
                                               );
                                             },

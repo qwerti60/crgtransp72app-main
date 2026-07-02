@@ -1,64 +1,48 @@
 <?php
 include 'databd.php';
 
-// Получаем данные из POST-запроса
-$truckId = intval($_POST['id']);
+$truckId = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+$bd = isset($_POST['bd']) ? (int) $_POST['bd'] : 0;
 
-// Проверка наличия необходимого параметра
-if (empty($truckId)) {
-    echo 'Отсутствует идентификатор записи';
+$tableMap = [
+    1 => 'orders',
+    2 => 'orderst',
+    3 => 'ordersg',
+];
+
+if ($truckId <= 0 || !isset($tableMap[$bd])) {
+    echo 'Отсутствуют обязательные параметры';
     exit;
 }
 
-// Создание соединения с базой данных
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $username, $password, $dbname);
 
-// Проверка успешного соединения
 if ($conn->connect_error) {
     die('Ошибка подключения: ' . $conn->connect_error);
 }
 
-// Начинаем транзакцию для защиты целостности данных
 $conn->begin_transaction();
 
 try {
-    // Шаг 1: Удаляем запись из таблицы orders
-    $sql_orders_delete = "DELETE FROM orders WHERE id = ?";
-    $stmt_orders = $conn->prepare($sql_orders_delete);
-    $stmt_orders->bind_param("i", $truckId);
-    $stmt_orders->execute();
+    $table = $tableMap[$bd];
+    $sqlOrderDelete = "DELETE FROM {$table} WHERE id = ?";
+    $stmtOrder = $conn->prepare($sqlOrderDelete);
+    $stmtOrder->bind_param('i', $truckId);
+    $stmtOrder->execute();
+    $stmtOrder->close();
 
-    // Шаг 2: Удаляем запись из таблицы orderst
-    $sql_orderst_delete = "DELETE FROM orderst WHERE id = ?";
-    $stmt_orderst = $conn->prepare($sql_orderst_delete);
-    $stmt_orderst->bind_param("i", $truckId);
-    $stmt_orderst->execute();
+    // Принятые предложения (status = 1) оставляем — они нужны для истории заказов.
+    $sqlOfferDelete = 'DELETE FROM offer_data WHERE iduser = ? AND bd = ? AND status = 0';
+    $stmtOffer = $conn->prepare($sqlOfferDelete);
+    $stmtOffer->bind_param('ii', $truckId, $bd);
+    $stmtOffer->execute();
+    $stmtOffer->close();
 
-    // Шаг 3: Удаляем запись из таблицы ordersg
-    $sql_ordersg_delete = "DELETE FROM ordersg WHERE id = ?";
-    $stmt_ordersg = $conn->prepare($sql_ordersg_delete);
-    $stmt_ordersg->bind_param("i", $truckId);
-    $stmt_ordersg->execute();
-
-    // Шаг 4: Удаляем соответствующую запись из таблицы offer_data
-    $sql_offer_delete = "DELETE FROM offer_data WHERE iduser = ?";
-    $stmt_offer = $conn->prepare($sql_offer_delete);
-    $stmt_offer->bind_param("i", $truckId);
-    $stmt_offer->execute();
-
-    // Сообщаем об успехе
     $conn->commit();
-    echo "Записи успешно удалены";
+    echo 'Записи успешно удалены';
 } catch (Exception $e) {
-    // Откатываем изменения в случае ошибки
     $conn->rollback();
-    echo "Ошибка при удалении записей: " . $e->getMessage();
+    echo 'Ошибка при удалении записей: ' . $e->getMessage();
 }
 
-// Закрываем ресурсы
-$stmt_orders->close();
-$stmt_orderst->close();
-$stmt_ordersg->close();
-$stmt_offer->close();
 $conn->close();
-?>

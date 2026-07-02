@@ -1,10 +1,12 @@
+import 'package:crgtransp72app/navigation/performer_shell_scope.dart';
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/test.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 
 class PerformerBottomNav extends StatefulWidget {
@@ -27,16 +29,27 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
   @override
   void initState() {
     super.initState();
+    if (PerformerShellNavCache.resolved) {
+      _isAuthorized = PerformerShellNavCache.isAuthorized;
+      _highlightOrders = PerformerShellNavCache.highlightOrders;
+      _isLoadingAuth = false;
+    }
     _loadOrderHighlight();
   }
 
   Future<void> _loadOrderHighlight() async {
-    var isAuthorized = false;
-    var highlightOrders = false;
+    var isAuthorized = _isAuthorized;
+    var highlightOrders = _highlightOrders;
+    var authResolved = false;
 
     try {
       final token = await getSecurefcm_token();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        isAuthorized = false;
+        highlightOrders = false;
+        authResolved = true;
+        return;
+      }
 
       // Тот же источник, что и MyCustomScreen (zakaz_screen2) — иначе после «Услуги» → CityScreen
       // нижнее меню без «Профиля», хотя пользователь уже вошёл.
@@ -46,11 +59,22 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       if (userResponse.statusCode != 200) return;
 
       final userData = json.decode(userResponse.body);
-      if (userData['error'] != null || userData['idusers'] == null) return;
+      if (userData['error'] != null || userData['idusers'] == null) {
+        isAuthorized = false;
+        highlightOrders = false;
+        authResolved = true;
+        return;
+      }
 
       final userId = userData['idusers'].toString();
-      if (userId.isEmpty) return;
+      if (userId.isEmpty) {
+        isAuthorized = false;
+        highlightOrders = false;
+        authResolved = true;
+        return;
+      }
       isAuthorized = true;
+      authResolved = true;
 
       final statusResponse = await http.get(
         Uri.parse(
@@ -64,11 +88,24 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       // Не блокируем навигацию при ошибке сети.
     } finally {
       if (!mounted) return;
-      setState(() {
-        _isAuthorized = isAuthorized;
-        _highlightOrders = highlightOrders;
-        _isLoadingAuth = false;
-      });
+      if (authResolved || !PerformerShellNavCache.resolved) {
+        PerformerShellNavCache.update(
+          isAuthorized: isAuthorized,
+          highlightOrders: highlightOrders,
+        );
+        setState(() {
+          _isAuthorized = isAuthorized;
+          _highlightOrders = highlightOrders;
+          _isLoadingAuth = false;
+        });
+        if (isAuthorized) {
+          unawaited(syncPushFcmTokenToServer(requestPermission: false));
+        }
+      } else {
+        setState(() {
+          _isLoadingAuth = false;
+        });
+      }
     }
   }
 
@@ -107,22 +144,33 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       type: BottomNavigationBarType.fixed,
       items: items,
       onTap: (index) {
+        final shellSelectTab = PerformerShellScope.selectTabOf(context);
+        if (shellSelectTab != null) {
+          if (index == 2 && !_isAuthorized) {
+            return;
+          }
+          shellSelectTab(index);
+          return;
+        }
+
         if (index == 0) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (_) => const MyCustomScreen(initialPage: 0),
             ),
+            (Route<dynamic> route) => false,
           );
           return;
         }
 
         if (index == 1) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (_) => const MyCustomScreen(initialPage: 1),
             ),
+            (Route<dynamic> route) => false,
           );
           return;
         }
@@ -131,11 +179,11 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
           return;
         }
 
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => const HistortScreen(pageProfile: 'profileMain'),
+            builder: (_) => MyCustomScreen(initialPage: 2),
           ),
+          (Route<dynamic> route) => false,
         );
       },
     );

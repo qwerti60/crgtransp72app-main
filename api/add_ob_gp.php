@@ -71,7 +71,7 @@ if ($imgdoc4) {
     move_uploaded_file($_FILES["imgdoc4"]["tmp_name"], $imgdoc4);
 }
 */
-$stmt = $conn->prepare("INSERT INTO add_ob_gp (iduser, city, marka, godv, maxgruz, dkuzov, shkuzov, vidk, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO add_ob_gp (iduser, city, marka, godv, maxgruz, dkuzov, shkuzov, vidk, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4, flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)");
 $stmt->bind_param("issisiissssssssssss", $iduser, $city, $marka, $godv, $maxgruz, $dkuzov, $shkuzov, $vidk, $cenahaurs, $cenasmena, $cenakm, $img1, $img2, $img3, $img4, $imgDoc1, $imgDoc2, $imgDoc3, $imgDoc4);
 
 if ($stmt->execute()) {

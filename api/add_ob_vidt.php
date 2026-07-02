@@ -28,7 +28,7 @@ $imgDoc2 = $_FILES['imgDoc2']['tmp_name'] ? file_get_contents($_FILES['imgDoc2']
 $imgDoc3 = $_FILES['imgDoc3']['tmp_name'] ? file_get_contents($_FILES['imgDoc3']['tmp_name']) : NULL;
 $imgDoc4 = $_FILES['imgDoc4']['tmp_name'] ? file_get_contents($_FILES['imgDoc4']['tmp_name']) : NULL;
 
-$stmt = $conn->prepare("INSERT INTO add_ob_vidt (iduser, city, vidt, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO add_ob_vidt (iduser, city, vidt, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4, flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)");
 $stmt->bind_param("isssssssssssss", $iduser, $city, $vidt, $cenahaurs, $cenasmena, $cenakm, $img1, $img2, $img3, $img4, $imgDoc1, $imgDoc2, $imgDoc3, $imgDoc4);
 
 if ($stmt->execute()) {

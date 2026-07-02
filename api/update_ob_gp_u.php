@@ -1,95 +1,80 @@
-<?
+<?php
+require_once __DIR__ . '/include/ad_image_update.php';
 
-$host = "localhost";
-$user = "u2395188_apps72";
-$pass = "kR3iV2aA6gjU8nC9";
-$db = "u2395188_apps";
+$host = 'localhost';
+$user = 'u2395188_apps72';
+$pass = 'kR3iV2aA6gjU8nC9';
+$db = 'u2395188_apps';
 
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
-die('Connection failed: ' . $conn->connect_error);
+    die('Connection failed: ' . $conn->connect_error);
 }
-$conn->set_charset("utf8");
+$conn->set_charset('utf8');
 
-/* Приём данных из формы */
-$city = $_POST['city'];
-$marka = $_POST['marka'];
-$godv = $_POST['godv'];
-$maxgruz = $_POST['maxgruz'];
-$dkuzov = $_POST['dkuzov'];
-$shkuzov = $_POST['shkuzov'];
-$vidk = $_POST['vidk'];
-$cenahaurs = $_POST['cenahaurs'];
-$cenasmena = $_POST['cenasmena'];
-$cenakm = $_POST['cenakm'];
-$iduser = $_POST['iduser'];
-$id = $_POST['id']; // id строки, которую нужно обновить
+$id = (int) ($_POST['id'] ?? 0);
+$iduser = (string) ($_POST['iduser'] ?? '');
+$city = (string) ($_POST['city'] ?? '');
+$marka = (string) ($_POST['marka'] ?? '');
+$godv = (string) ($_POST['godv'] ?? '');
+$maxgruz = (string) ($_POST['maxgruz'] ?? '');
+$dkuzov = (string) ($_POST['dkuzov'] ?? '');
+$shkuzov = (string) ($_POST['shkuzov'] ?? '');
+$vidk = (string) ($_POST['vidk'] ?? '');
+$cenahaurs = (string) ($_POST['cenahaurs'] ?? '');
+$cenasmena = (string) ($_POST['cenasmena'] ?? '');
+$cenakm = (string) ($_POST['cenakm'] ?? '');
 
-/* Изображения (можно оставить логику как была) */
-$img1 = $_FILES['img1']['tmp_name'] ? file_get_contents($_FILES['img1']['tmp_name']) : NULL;
-$img2 = $_FILES['img2']['tmp_name'] ? file_get_contents($_FILES['img2']['tmp_name']) : NULL;
-$img3 = $_FILES['img3']['tmp_name'] ? file_get_contents($_FILES['img3']['tmp_name']) : NULL;
-$img4 = $_FILES['img4']['tmp_name'] ? file_get_contents($_FILES['img4']['tmp_name']) : NULL;
-$imgDoc1 = $_FILES['imgDoc1']['tmp_name'] ? file_get_contents($_FILES['imgDoc1']['tmp_name']) : NULL;
-$imgDoc2 = $_FILES['imgDoc2']['tmp_name'] ? file_get_contents($_FILES['imgDoc2']['tmp_name']) : NULL;
-$imgDoc3 = $_FILES['imgDoc3']['tmp_name'] ? file_get_contents($_FILES['imgDoc3']['tmp_name']) : NULL;
-$imgDoc4 = $_FILES['imgDoc4']['tmp_name'] ? file_get_contents($_FILES['imgDoc4']['tmp_name']) : NULL;
+if ($id <= 0) {
+    die('Не указан id объявления');
+}
 
-/* Подготовленный запрос на UPDATE */
-$sql = "UPDATE add_ob_gp SET
-iduser = ?,
-city = ?,
-marka = ?,
-godv = ?,
-maxgruz = ?,
-dkuzov = ?,
-shkuzov = ?,
-vidk = ?,
-cenahaurs = ?,
-cenasmena = ?,
-cenakm = ?,
-img1 = ?,
-img2 = ?,
-img3 = ?,
-img4 = ?,
-imgdoc1 = ?,
-imgdoc2 = ?,
-imgdoc3 = ?,
-imgdoc4 = ?
-WHERE id = ?";
+$sets = [
+    'iduser = ?',
+    'city = ?',
+    'marka = ?',
+    'godv = ?',
+    'maxgruz = ?',
+    'dkuzov = ?',
+    'shkuzov = ?',
+    'vidk = ?',
+    'cenahaurs = ?',
+    'cenasmena = ?',
+    'cenakm = ?',
+];
+$params = [
+    $iduser,
+    $city,
+    $marka,
+    $godv,
+    $maxgruz,
+    $dkuzov,
+    $shkuzov,
+    $vidk,
+    $cenahaurs,
+    $cenasmena,
+    $cenakm,
+];
+$types = 'sssssssssss';
 
+crg_append_performer_photo_updates($sets, $params, $types);
+
+$params[] = $id;
+$types .= 'i';
+
+$sql = 'UPDATE add_ob_gp SET ' . implode(', ', $sets) . ' WHERE id = ?';
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die('Prepare failed: ' . $conn->error);
+}
 
-$stmt->bind_param(
-"issisiissssssssssssi",
-$iduser,
-$city,
-$marka,
-$godv,
-$maxgruz,
-$dkuzov,
-$shkuzov,
-$vidk,
-$cenahaurs,
-$cenasmena,
-$cenakm,
-$img1,
-$img2,
-$img3,
-$img4,
-$imgDoc1,
-$imgDoc2,
-$imgDoc3,
-$imgDoc4,
-$id // <-- последнее поле для WHERE id = ?
-);
+$stmt->bind_param($types, ...$params);
 
 if ($stmt->execute()) {
-echo "Record updated successfully";
+    echo 'Record updated successfully';
 } else {
-echo "Error: " . $stmt->error;
+    echo 'Error: ' . $stmt->error;
 }
 
 $stmt->close();
 $conn->close();
-?>

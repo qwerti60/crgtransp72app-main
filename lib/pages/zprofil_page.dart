@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/subscription_screen.dart';
+import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
@@ -393,10 +394,14 @@ class _showExitConfirmationDialog {
                 }
 
                 await clearAuthToken();
+                await clearPushFcmTokenLocal();
 
                 if (!context.mounted) return;
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const change_user()));
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp(initialPage: 0)),
+                  (_) => false,
+                );
               },
             ),
           ],

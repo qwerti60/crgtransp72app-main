@@ -1,30 +1,38 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:crgtransp72app/pages/SendReviewForm.dart' hide Config;
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
-import 'package:crgtransp72app/pages/test.dart' as hist;
+import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
-import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 
 class OrderExecutionScreen extends StatefulWidget {
   final String userId;
   final String orderId;
+  /// id заказчика (users.idusers) — пишется в ordersglobal.user_idok.
+  final String? customerUserId;
+  final int? bd;
   final bool showBottomNav;
+  /// customer_order — отклик на заявку заказчика; performer_ad — заявка на объявление исполнителя.
+  final String orderSource;
+  /// start_time из ordersglobal — для мгновенного показа таймера после переустановки.
+  final String? initialStartTime;
 
-  const OrderExecutionScreen(
-      {Key? key,
-      required this.userId,
-      required this.orderId,
-      this.showBottomNav = true})
-      : super(key: key);
+  const OrderExecutionScreen({
+    Key? key,
+    required this.userId,
+    required this.orderId,
+    this.customerUserId,
+    this.bd,
+    this.orderSource = 'customer_order',
+    this.showBottomNav = false,
+    this.initialStartTime,
+  }) : super(key: key);
 
   @override
   _OrderExecutionScreenState createState() => _OrderExecutionScreenState();
@@ -39,11 +47,136 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
   @override
   void initState() {
-    super
-        .initState(); // Assign nameImg from widget to a local variable if needed:
-
-    getUserData();
+    super.initState();
+    _applyInitialStartTime();
+    _bootstrap();
   }
+
+  void _applyInitialStartTime() {
+    final startDate = _parseServerDateTime(widget.initialStartTime);
+    if (startDate == null) return;
+    orderStatus = 'Продолжается выполнение';
+    startTimer(startDate);
+  }
+
+  Future<void> _bootstrap() async {
+    await getUserData();
+    if (!mounted) return;
+
+    final resumeStart = await _fetchResumeStartTime();
+    if (resumeStart != null && mounted) {
+      _resumeRunningOrder(resumeStart);
+      setState(() => isLoading = false);
+    }
+
+    await _loadOrderStatus();
+  }
+
+  /// start_time из shell, get_order_global_info или check_order_status1.
+  Future<DateTime?> _fetchResumeStartTime() async {
+    final fromWidget = _parseServerDateTime(widget.initialStartTime);
+    if (fromWidget != null) {
+      debugPrint('[ISP] resume start_time from widget: ${widget.initialStartTime}');
+      return fromWidget;
+    }
+
+    final performerId = widget.userId.trim();
+    final orderId = widget.orderId.trim();
+    if (performerId.isEmpty || orderId.isEmpty) {
+      return null;
+    }
+
+    try {
+      final infoUri = Uri.parse('${Config.baseUrl}/api/get_order_global_info.php')
+          .replace(queryParameters: {
+        'performer_id': performerId,
+        'order_id': orderId,
+        if (_customerIdForRequest().isNotEmpty)
+          'customer_id': _customerIdForRequest(),
+      });
+      final infoResp =
+          await http.get(infoUri).timeout(const Duration(seconds: 10));
+      debugPrint('[ISP] get_order_global_info ${infoResp.statusCode}: ${infoResp.body}');
+      if (infoResp.statusCode == 200) {
+        final info = json.decode(infoResp.body) as Map<String, dynamic>;
+        if (info['found'] == true &&
+            info['status']?.toString() == 'выполняется') {
+          final start = _parseServerDateTime(info['start_time']);
+          if (start != null) return start;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ISP] get_order_global_info error: $e');
+    }
+
+    try {
+      final statusUri = Uri.parse(
+          '${Config.baseUrl}/api/check_order_status1.php?userIdok=$performerId');
+      final statusResp =
+          await http.get(statusUri).timeout(const Duration(seconds: 10));
+      debugPrint('[ISP] check_order_status1 ${statusResp.statusCode}: ${statusResp.body}');
+      if (statusResp.statusCode == 200) {
+        final status = json.decode(statusResp.body) as Map<String, dynamic>;
+        if (status['result'] == true &&
+            status['order_id']?.toString() == orderId) {
+          final st = status['status']?.toString() ?? 'выполняется';
+          if (st == 'выполняется') {
+            final start = _parseServerDateTime(status['start_time']);
+            if (start != null) return start;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[ISP] check_order_status1 resume error: $e');
+    }
+
+    var customerId = _customerIdForRequest();
+    if (customerId.isEmpty) {
+      customerId = await _resolveCustomerId();
+    }
+    // Для существующей записи в ordersglobal user_idok на сервере подставится из БД.
+    final fromPost = await _fetchStartTimeViaPost(customerId);
+    if (fromPost != null) return fromPost;
+
+    return null;
+  }
+
+  Future<DateTime?> _fetchStartTimeViaPost(String customerId) async {
+    try {
+      final body = <String, String>{
+        'user_id': widget.userId,
+        'order_id': widget.orderId,
+        'start_time': DateTime.now().toIso8601String(),
+        'user_idok': customerId,
+        'source': widget.orderSource,
+      };
+      if (widget.bd != null && widget.bd! > 0) {
+        body['bd'] = widget.bd.toString();
+      }
+      final response = await http
+          .post(
+            Uri.parse('${Config.baseUrl}/api/check_order_status.php'),
+            body: body,
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+      debugPrint('[ISP] check_order_status POST ${response.statusCode}: ${response.body}');
+      if (response.statusCode != 200) return null;
+      final decoded = json.decode(response.body);
+      if (decoded is! Map) return null;
+      final message = decoded['message']?.toString() ?? '';
+      if (message == 'Продолжается выполнение') {
+        return _parseServerDateTime(decoded['start_time']);
+      }
+    } catch (e) {
+      debugPrint('[ISP] check_order_status POST resume error: $e');
+    }
+    return null;
+  }
+
+  bool get _timerIsActive => orderStatus == 'Продолжается выполнение';
 
   String userIdok = '';
   Future<void> getUserData() async {
@@ -53,7 +186,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       return;
     }
     final response = await http
-        .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -64,6 +197,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         setState(() {
           userIdok = data['idusers']?.toString() ?? '';
         });
+        if (userIdok.isNotEmpty) {
+          userId = int.tryParse(userIdok) ?? userId;
+        }
         print('вывод idiok: $userIdok');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
@@ -80,10 +216,17 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
   }
 
   Future<void> startTimer([DateTime? startDate]) async {
+    timer?.cancel();
+    if (startDate != null) {
+      final elapsed = DateTime.now().difference(startDate);
+      elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
+    }
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
       setState(() {
         if (startDate != null) {
-          elapsedDuration = DateTime.now().difference(startDate);
+          final elapsed = DateTime.now().difference(startDate);
+          elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
         } else {
           elapsedDuration += const Duration(seconds: 1);
         }
@@ -94,18 +237,24 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
   String? formattedCancelTime;
 
   Future<void> updateOrderStatus(String newStatus) async {
-    final now = DateTime.now(); // Получение текущего времени
+    final now = DateTime.now();
+    final customerId = await _resolveCustomerId();
 
     final dio = Dio();
     try {
+      final payload = <String, dynamic>{
+        'user_id': widget.userId,
+        'order_id': widget.orderId,
+        'status': newStatus,
+        'current_date_time': now.toIso8601String(),
+      };
+      if (customerId.isNotEmpty) {
+        payload['user_idok'] = customerId;
+      }
+
       final response = await dio.put(
         '${Config.baseUrl}/api/update_order_status.php',
-        data: {
-          'user_id': widget.userId,
-          'order_id': widget.orderId,
-          'status': newStatus,
-          'current_date_time': now.toIso8601String(),
-        },
+        data: payload,
       );
 
       if (response.statusCode == 200) {
@@ -125,10 +274,11 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).push(
+                    Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
-                        builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
+                        builder: (_) => const MyAppZakazScreen(initialPage: 1),
                       ),
+                      (Route<dynamic> route) => false,
                     );
                   },
                   child: const Text('OK'),
@@ -211,80 +361,206 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
     super.dispose();
   }
 
-  Future<void> didChangeDependencies() async {
-    super.didChangeDependencies();
+  String _customerIdForRequest() {
+    final fromWidget = widget.customerUserId?.trim() ?? '';
+    if (fromWidget.isNotEmpty && fromWidget != '0') {
+      return fromWidget;
+    }
+    return '';
+  }
 
+  DateTime? _parseServerDateTime(dynamic raw) {
+    final s = raw?.toString().trim() ?? '';
+    if (s.isEmpty || s.startsWith('0000-00-00')) return null;
+
+    // MySQL: 2026-06-30 12:34:09 — всегда локальное время сервера
+    final mysql = RegExp(
+        r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$');
+    final m = mysql.firstMatch(s);
+    if (m != null) {
+      return DateTime(
+        int.parse(m.group(1)!),
+        int.parse(m.group(2)!),
+        int.parse(m.group(3)!),
+        int.parse(m.group(4)!),
+        int.parse(m.group(5)!),
+        int.parse(m.group(6)!),
+      );
+    }
+
+    try {
+      return DateTime.parse(s).toLocal();
+    } catch (_) {
+      try {
+        return DateTime.parse(s.replaceFirst(' ', 'T')).toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  void _resumeRunningOrder(DateTime startDate) {
+    final elapsed = DateTime.now().difference(startDate);
+    setState(() {
+      elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
+      orderStatus = 'Продолжается выполнение';
+    });
+    _markOrdersTabActive();
+    startTimer(startDate);
+  }
+
+  void _markOrdersTabActive() {
+    PerformerShellNavCache.update(
+      isAuthorized: true,
+      highlightOrders: true,
+    );
+  }
+
+  /// id заказчика для ordersglobal.user_idok (нужен даже на старом API).
+  Future<String> _resolveCustomerId() async {
+    final fromWidget = _customerIdForRequest();
+    if (fromWidget.isNotEmpty) {
+      return fromWidget;
+    }
+
+    final performerId = widget.userId.trim();
+    final orderId = widget.orderId.trim();
+    if (performerId.isEmpty || orderId.isEmpty) {
+      return '';
+    }
+
+    try {
+      final infoUri = Uri.parse('${Config.baseUrl}/api/get_order_global_info.php')
+          .replace(queryParameters: {
+        'performer_id': performerId,
+        'order_id': orderId,
+        if (_customerIdForRequest().isNotEmpty)
+          'customer_id': _customerIdForRequest(),
+      });
+      final infoResp = await http.get(infoUri).timeout(const Duration(seconds: 10));
+      if (infoResp.statusCode == 200) {
+        final info = json.decode(infoResp.body) as Map<String, dynamic>;
+        final id = info['user_idok']?.toString().trim() ?? '';
+        if (info['found'] == true && id.isNotEmpty && id != '0') {
+          return id;
+        }
+      }
+    } catch (e) {
+      debugPrint('get_order_global_info: $e');
+    }
+
+    try {
+      final loggedInId =
+          userIdok.isNotEmpty ? userIdok : performerId;
+      final statusUri = Uri.parse(
+          '${Config.baseUrl}/api/check_order_status1.php?userIdok=$loggedInId');
+      final statusResp =
+          await http.get(statusUri).timeout(const Duration(seconds: 10));
+      if (statusResp.statusCode == 200) {
+        final status = json.decode(statusResp.body) as Map<String, dynamic>;
+        if (status['result'] == true &&
+            status['order_id']?.toString() == orderId) {
+          final id = status['user_idok']?.toString().trim() ?? '';
+          if (id.isNotEmpty && id != '0') {
+            return id;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('check_order_status1 fallback: $e');
+    }
+
+    return '';
+  }
+
+  Future<void> _loadOrderStatus() async {
     try {
       final currentDateTime = DateTime.now();
       final formattedDateTime = currentDateTime.toIso8601String();
+      final customerId = await _resolveCustomerId();
 
-      final dio = Dio();
+      debugPrint('[ISP] performer=${widget.userId} order=${widget.orderId} customer=$customerId');
+      debugPrint('BD: ${widget.bd}');
 
-      // Логируем переменные перед отправкой запроса
-      print('User ID: ${widget.userId.toString()}');
-      print('Order ID: ${widget.orderId.toString()}');
-      print('Start Time: $formattedDateTime');
-      print('User ID OK: ${userId.toString()}');
+      final fields = <String, String>{
+        'user_id': widget.userId,
+        'order_id': widget.orderId,
+        'start_time': formattedDateTime,
+        'user_idok': customerId,
+        'source': widget.orderSource,
+      };
+      if (widget.bd != null && widget.bd! > 0) {
+        fields['bd'] = widget.bd.toString();
+      }
 
-      final response = await dio.post(
-        '${Config.baseUrl}/api/check_order_status.php',
-        data: {
-          'user_id': widget.userId.toString(),
-          'order_id': widget.orderId.toString(),
-          'start_time': formattedDateTime,
-          'user_idok': userId.toString(),
-        },
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType,
-          responseType: ResponseType.json,
-          receiveTimeout: const Duration(seconds: 12),
-          sendTimeout: const Duration(seconds: 12),
-        ),
-      );
-      if (response.data is Map<String, dynamic>) {
-        final message = response.data['message'];
-        print('вывод idiok777: $message');
-        print('вывод idiok77766: $userId');
+      final response = await http
+          .post(
+            Uri.parse('${Config.baseUrl}/api/check_order_status.php'),
+            body: fields,
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode != 200) {
+        String err = 'Ошибка сервера (${response.statusCode})';
+        try {
+          final data = json.decode(response.body);
+          if (data is Map) {
+            err = (data['details'] ?? data['error'] ?? data['message'])
+                    ?.toString() ??
+                err;
+          }
+        } catch (_) {}
+        if (!_timerIsActive) {
+          showErrorSnackbar(err);
+        } else {
+          debugPrint('[ISP] POST failed but timer kept: $err');
+        }
+        return;
+      }
+
+      final dynamic decoded = json.decode(response.body);
+      debugPrint('[ISP] check_order_status POST sync: $decoded');
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString() ?? '';
         switch (message) {
           case 'Продолжается выполнение':
-            final startDateStr = response.data['start_time'];
-            final startDate = DateTime.parse(startDateStr);
+            final startDate = _parseServerDateTime(decoded['start_time']);
+            if (startDate == null) {
+              showErrorSnackbar('Некорректное время начала заказа');
+              break;
+            }
 
-            // Рассчитываем полную разницу во времени сразу же
-            final now = DateTime.now();
-            final totalElapsedSeconds = now.difference(startDate).inSeconds;
-
-            // Преобразуем общее количество секунд в часы и минуты
+            final totalElapsedSeconds =
+                DateTime.now().difference(startDate).inSeconds.clamp(0, 1 << 31);
             final hours = totalElapsedSeconds ~/ 3600;
             final minutes = ((totalElapsedSeconds % 3600) / 60).round();
-
             final durationFormatted = '$hours часа(-ов) $minutes минут(-ы)';
 
             setState(() {
               formattedDuration = durationFormatted;
             });
-
-            if (timer == null || timer!.tick == 0) {
-              print("Перезапускаю таймер");
-
-              // Проверка активности таймера
-              startTimer(startDate); // Перезапускаем таймер
-            }
+            _resumeRunningOrder(startDate);
             break;
 
           case 'Запись успешно создана':
-            if (timer == null || timer!.tick == 0) {
-              // Проверка активности таймера
-              startTimer(null); // Запустим пустой таймер без начальной даты
-            }
+            _markOrdersTabActive();
+            setState(() {
+              orderStatus = 'Продолжается выполнение';
+              elapsedDuration = Duration.zero;
+            });
+            startTimer(null);
             break;
 
           case 'Заказ выполнен':
-            final startDateStr = response.data['start_time'];
-            final endDateStr = response.data['end_time'];
-
-            final startDate = DateTime.parse(startDateStr);
-            final endDate = DateTime.parse(endDateStr);
+            final startDate = _parseServerDateTime(decoded['start_time']);
+            final endDate = _parseServerDateTime(decoded['end_time']);
+            if (startDate == null || endDate == null) {
+              showErrorSnackbar('Некорректное время выполнения заказа');
+              break;
+            }
 
             // Полностью правильная логика расчета времени выполнения
             final durationSeconds = endDate.difference(startDate).inSeconds;
@@ -301,8 +577,11 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
             break;
 
           case 'Заказ отменен':
-            final cancelDateStr = response.data['cancel_time'];
-            final cancelDate = DateTime.parse(cancelDateStr);
+            final cancelDate = _parseServerDateTime(decoded['cancel_time']);
+            if (cancelDate == null) {
+              showErrorSnackbar('Некорректное время отмены');
+              break;
+            }
             final formattedDate =
                 "${cancelDate.day}.${cancelDate.month}.${cancelDate.year} ${cancelDate.hour}:${cancelDate.minute}";
 
@@ -313,19 +592,28 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
             });
             break;
 
+          case 'Предложение не принято заказчиком':
+            showErrorSnackbar('Заказчик ещё не принял ваше предложение');
+            break;
+
           default:
-            showErrorSnackbar('Неизвестный статус заказа');
+            if (!_timerIsActive) {
+              showErrorSnackbar(
+                  message.isNotEmpty ? message : 'Неизвестный статус заказа');
+            }
         }
-      } else {
+      } else if (decoded is Map && decoded['error'] != null) {
+        if (!_timerIsActive) {
+          showErrorSnackbar(decoded['error'].toString());
+        }
+      } else if (!_timerIsActive) {
         showErrorSnackbar('Ошибка формата данных');
       }
-    } on DioError catch (e) {
-      debugPrint(
-          'DioError: ${e.message}\nSTATUS: ${e.response?.statusCode}\nDATA: ${e.response?.data}\nHEADERS: ${e.response?.headers}');
-      showErrorSnackbar('Ошибка связи с сервером');
     } catch (e) {
-      debugPrint('Unexpected error: $e');
-      showErrorSnackbar('Неизвестная ошибка');
+      debugPrint('OrderExecutionScreen _loadOrderStatus: $e');
+      if (!_timerIsActive) {
+        showErrorSnackbar('Ошибка связи с сервером');
+      }
     } finally {
       setState(() {
         isLoading = false;
@@ -338,59 +626,8 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _onBottomNavTap(int index) {
-    if (index == 0) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => hist.HistortScreen(pageProfile: 'Ads1App'),
-        ),
-        (Route<dynamic> route) => false,
-      );
-      return;
-    }
-
-    if (index == 1) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
-        ),
-        (Route<dynamic> route) => false,
-      );
-      return;
-    }
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => hist.HistortScreen(pageProfile: 'profileMain'),
-      ),
-      (Route<dynamic> route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isAuthorized = userIdok.isNotEmpty;
-    final navLabels = PerformerShellNav.bottomNavLabels(
-        isAuthenticated: isAuthorized);
-    final navItems = <BottomNavigationBarItem>[
-      BottomNavigationBarItem(
-        icon: const Icon(Icons.fire_truck),
-        label: navLabels[0],
-      ),
-      BottomNavigationBarItem(
-        icon: const Icon(Icons.subject),
-        label: navLabels[1],
-      ),
-      if (navLabels.length > 2)
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.account_circle),
-          label: navLabels[2],
-        ),
-    ];
-
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(),
@@ -398,16 +635,17 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
             style: const TextStyle(color: whiteprColor)),
         backgroundColor: blueaccentColor,
       ),
-      body: isLoading
+      body: isLoading && !_timerIsActive
           ? const Center(child: CircularProgressIndicator())
           : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (elapsedDuration > Duration.zero &&
-                      (orderStatus == null ||
-                          orderStatus == 'Продолжается выполнение'))
+                  if (orderStatus == 'Продолжается выполнение' ||
+                      (elapsedDuration > Duration.zero &&
+                          orderStatus != 'выполнен' &&
+                          orderStatus != 'отменен'))
                     Column(children: [
                       Text('Время выполнения:',
                           style: Theme.of(context).textTheme.titleLarge),
@@ -441,48 +679,30 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                               'выполнен') // Добавляем условие вывода кнопки продолжения
                             ElevatedButton(
                               onPressed: () {
-                                final parsedUserIdOk = int.tryParse(widget
-                                    .orderId); // Пробуем преобразовать строку в int
-                                final currentUserId = userIdok.isNotEmpty
+                                final performerId = userIdok.isNotEmpty
                                     ? userIdok
-                                    : userId.toString();
-                                print(
-                                    'Current User ID: $currentUserId'); // текущий пользователь
-                                print(
-                                    'Target User ID: ${widget.userId}'); // заказчик
-                                print(
-                                    'Parsed User ID Ok: $parsedUserIdOk'); //106
-
-                                if (parsedUserIdOk != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => HistortScreen1(
-                                          pageProfile: 'SendReviewForm',
-                                          userId1: currentUserId,
-                                          orderId: widget.userId.toString(),
-                                          parsedUserIdOk:
-                                              parsedUserIdOk.toString()),
-                                    ),
-                                    /* MaterialPageRoute(
-                                        builder: (context) => SendReviewForm(
-                                              currentUserId:
-                                                  widget.userId.toString(),
-                                              targetUserId: userId.toString(),
-                                              parsedUserIdOk: parsedUserIdOk,
-                                            )
-                                        SendReviewForm(
-                                              currentUserId:
-                                                  widget.userId.toString(),
-                                              targetUserId: userId.toString(),
-                                              parsedUserIdOk: parsedUserIdOk,
-                                            )*/
-                                  );
-                                } else {
-                                  // Если преобразование не удалось, вывести предупреждение или ошибку
-                                  print(
-                                      'Ошибка: Невозможно преобразовать "$userIdok" в целое число.');
+                                    : widget.userId;
+                                final customerId =
+                                    widget.customerUserId?.trim() ?? '';
+                                if (customerId.isEmpty || customerId == '0') {
+                                  showErrorSnackbar(
+                                      'Не удалось определить заказчика для отзыва');
+                                  return;
                                 }
+                                final listingId =
+                                    int.tryParse(widget.orderId) ?? 0;
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => HistortScreen1(
+                                      pageProfile: 'SendReviewForm',
+                                      userId1: performerId,
+                                      orderId: customerId,
+                                      parsedUserIdOk: listingId.toString(),
+                                    ),
+                                  ),
+                                );
                               },
                               child: Text('Оставьте отзыв'),
                             ),
@@ -530,14 +750,8 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: widget.showBottomNav
-          ? BottomNavigationBar(
-              currentIndex: 1,
-              onTap: _onBottomNavTap,
-              type: BottomNavigationBarType.fixed,
-              items: navItems,
-            )
-          : null,
+      // Нижнее меню только у shell (zakaz_screen2), не у вложенного экрана выполнения.
+      bottomNavigationBar: null,
     );
   }
 }

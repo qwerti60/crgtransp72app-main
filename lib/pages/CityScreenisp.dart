@@ -24,8 +24,13 @@ class MyApp extends StatelessWidget {
 
 class CityScreenIsp extends StatefulWidget {
   final String indexName;
+  final int bd;
 
-  const CityScreenIsp({super.key, required this.indexName});
+  const CityScreenIsp({
+    super.key,
+    required this.indexName,
+    this.bd = 1,
+  });
 
   @override
   _CityScreenState createState() => _CityScreenState();
@@ -181,40 +186,76 @@ class _CityScreenState extends State<CityScreenIsp> {
       );
     }
     return LayoutBuilder(
-                builder: (context, constraints) {
-                  final width = constraints.maxWidth;
-                  final halfWidth = width / 2;
+      builder: (context, constraints) {
+        final halfWidth = constraints.maxWidth / 2;
 
-                  return Row(children: [
-                    // Левая колонка
-                    Flexible(
-                      flex: 1,
-                      child: _buildGroupedList(halfWidth, leftHalf: true),
-                    ),
-                    // Правая колонка
-                    Flexible(
-                      flex: 1,
-                      child: _buildGroupedList(halfWidth, leftHalf: false),
-                    )
-                  ]);
-                },
-              );
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: constraints.maxHeight,
+            width: constraints.maxWidth,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildGroupedList(halfWidth, leftHalf: true),
+                ),
+                Expanded(
+                  child: _buildGroupedList(halfWidth, leftHalf: false),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _buildCityAppBar() {
+    return AppBar(
+      title: Text(
+        'Список городов ${widget.indexName}',
+        style: const TextStyle(
+          color: Colors.white,
+        ),
+      ),
+      backgroundColor: Colors.blue.shade700,
+    );
+  }
+
+  Widget _buildCityListScreen() {
+    return Scaffold(
+      appBar: _buildCityAppBar(),
+      body: SafeArea(
+        child: _buildBodyContent(),
+      ),
+    );
+  }
+
+  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+    if (settings.name == '_performers') {
+      final args = settings.arguments! as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (_) => outputob(
+          key: ValueKey('ob_${args['indexName']}_${args['city']}'),
+          nameImg: args['indexName'] as String,
+          city: args['city'] as String,
+          showBottomNav: false,
+          useCustomerNavigation: true,
+          bd: args['bd'] as int,
+        ),
+      );
+    }
+
+    return MaterialPageRoute(builder: (_) => _buildCityListScreen());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Список городов ${widget.indexName}',
-          style: const TextStyle(
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.blue.shade700,
-      ),
-      body: SafeArea(
-        child: _buildBodyContent(),
+      body: Navigator(
+        initialRoute: '/',
+        onGenerateRoute: _onGenerateRoute,
       ),
       bottomNavigationBar: const CustomerBottomNav(currentIndex: 0),
     );
@@ -233,14 +274,8 @@ class _CityScreenState extends State<CityScreenIsp> {
     return ListView.separated(
       separatorBuilder: (context, index) => const Divider(height: 16),
       padding: const EdgeInsets.all(8.0),
-      physics: BouncingScrollPhysics(),
-      shrinkWrap: true,
-      scrollDirection: Axis.vertical,
-      primary: false,
-      addAutomaticKeepAlives: true,
-      addRepaintBoundaries: true,
-      clipBehavior: Clip.none,
-      addSemanticIndexes: true,
+      physics: const BouncingScrollPhysics(),
+      shrinkWrap: false,
       itemCount: groupedCities.length,
       itemBuilder: (context, index) {
         final entry = groupedCities.elementAt(index);
@@ -261,15 +296,13 @@ class _CityScreenState extends State<CityScreenIsp> {
                         child: InkWell(
                       onTap: city['city'] != Config.emptyCityListPlaceholder
                           ? () {
-                              Navigator.of(context, rootNavigator: true).push(
-                                MaterialPageRoute(
-                                  builder: (_) => outputob(
-                                    nameImg: widget.indexName,
-                                    city: city['city'],
-                                    showBottomNav: true,
-                                    useCustomerNavigation: true,
-                                  ),
-                                ),
+                              Navigator.of(context).pushNamed(
+                                '_performers',
+                                arguments: {
+                                  'indexName': widget.indexName,
+                                  'city': city['city'],
+                                  'bd': widget.bd,
+                                },
                               );
                             }
                           : null, // Плейсхолдер «нет объявлений» — без перехода

@@ -1,60 +1,89 @@
-<?
-header('Content-Type: application/json');
-require_once '/var/www/u2395188/data/vendor/autoload.php';
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+<?php
+declare(strict_types=1);
 
-include 'databd.php';
+header('Content-Type: application/json; charset=utf-8');
 
-// Create a new MySQLi connection
-$conn = new mysqli($host, $username, $password, $dbname);
+require __DIR__ . '/load_databd.php';
+require_once __DIR__ . '/include/jwt_bootstrap.php';
 
-// Получение данных из запроса
-$data = json_decode(file_get_contents("php://input"), true);
+if (!isset($_POST['email'], $_POST['password'])) {
+    echo json_encode(['message' => 'Не получен логин или пароль'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
-if (isset($_POST['email']) && isset($_POST['password'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    // Your authentication logic here
+$email = trim((string) $_POST['email']);
+$loginPassword = (string) $_POST['password'];
 
-// Поиск пользователя в БД
-$stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-$stmt->bind_param("s", $email);
+if ($email === '' || $loginPassword === '') {
+    echo json_encode(['message' => 'Не получен логин или пароль'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$db = crg_db_config();
+$conn = new mysqli($db['host'], $db['username'], $db['password'], $db['dbname']);
+if ($conn->connect_error) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Ошибка сервера'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+$conn->set_charset('utf8mb4');
+
+$stmt = $conn->prepare('SELECT idusers, email, rollNum, statNum, password FROM users WHERE email = ? LIMIT 1');
+if ($stmt === false) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Ошибка сервера'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$stmt->bind_param('s', $email);
 $stmt->execute();
 $result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$row = $result->fetch_assoc();
+$stmt->close();
+$conn->close();
 
-// Проверка пароля (здесь без хеширования для упрощения)
-if ($user && $password == $user['password']) {
-// Проверка rollNum и flag
-if (in_array($user['rollNum'], [2, 3]) && $user['flag'] == 0) {
-echo json_encode(["message" => "Данные пользователя еще на проверке"]);
-} else {
-// Генерация JWT
-$key = "16082024";
+if (!is_array($row)) {
+    echo json_encode(['message' => 'Неверный логин или пароль'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$hash = (string) ($row['password'] ?? '');
+$passwordOk = $hash !== '' && (
+    password_verify($loginPassword, $hash)
+    || (!str_starts_with($hash, '$') && hash_equals($hash, $loginPassword))
+);
+
+if (!$passwordOk) {
+    echo json_encode(['message' => 'Неверный логин или пароль'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!crg_jwt_autoload()) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Ошибка сервера'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $payload = [
-"iss" => "ivnovav.ru", // Издатель токена
-"aud" => "ivnovav.ru", // Потребитель токена
-"iat" => time(), // Время, когда токен был выпущен
-"nbf" => time(), // Время, до которого токен не может быть принят
-"exp" => time() + 3600, // Время истечения срока действия токен
-"data" => [
-"idusers" => $user['idusers'],
-"email" => $user['email'],
-"rollNum" => $user['rollNum'],
-"statNum" => $user['statNum']
-]
+    'iss' => 'ivnovav.ru',
+    'aud' => 'ivnovav.ru',
+    'iat' => time(),
+    'nbf' => time(),
+    'exp' => time() + 3600,
+    'data' => [
+        'idusers' => (int) $row['idusers'],
+        'email' => (string) $row['email'],
+        'rollNum' => (int) $row['rollNum'],
+        'statNum' => (int) $row['statNum'],
+    ],
 ];
 
-$jwt = JWT::encode($payload, $key);
-echo json_encode(["token" => $jwt]);
-}
-} else {
-echo json_encode(["message" => "Неверный логин или пароль"]);
-}
-    
-} else {
-echo json_encode(["message" => "Не получен логин или пароль"]);
+$jwt = crg_jwt_encode($payload);
+if ($jwt === null) {
+    http_response_code(500);
+    echo json_encode(['message' => 'Ошибка сервера'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
+echo json_encode(['token' => $jwt], JSON_UNESCAPED_UNICODE);
 ?>

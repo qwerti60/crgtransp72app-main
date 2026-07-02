@@ -13,7 +13,7 @@ import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/test.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart' show MyApp;
-import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
+import 'package:crgtransp72app/navigation/performer_active_order.dart';
 
 import '../design/colors.dart';
 import 'account_deletion.dart';
@@ -194,14 +194,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    print('[zprofil_page2] tap: Избранные заказчики');
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const zprofil_zayavki(
-                                  nameImg: '',
-                                  base: 1,
-                                )));
+                    openPerformerOffersOrActiveOrder(context);
                   },
                   child: const Text('Предложения')),
             ),
@@ -370,10 +363,15 @@ class _showExitConfirmationDialog {
                 }
 
                 await clearAuthToken();
+                await clearPushFcmTokenLocal();
 
                 if (!context.mounted) return;
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const change_user()));
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const MyAppZakazScreen(initialPage: 0)),
+                  (_) => false,
+                );
               },
             ),
           ],

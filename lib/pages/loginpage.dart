@@ -1,22 +1,18 @@
 //import 'dart:ffi';
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../config.dart';
 import '../design/dimension.dart';
-import 'change_user.dart';
 import 'changestatis_page.dart';
-import 'gruz_vodit.dart';
 import 'zakaz_screen1.dart';
-//import 'profil_page.dart';
-import 'rent_z.dart';
-import 'zprofil_page.dart';
+import 'zakaz_screen2.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -312,34 +308,36 @@ class _LoginState extends State<LoginPage> {
     );
   }
 
-  Future<String?> _resolvePushFcmToken() async {
-    final existing = await getPushFcmToken();
-    if (existing != null) return existing;
-
-    try {
-      final pushToken = await FirebaseMessaging.instance
-          .getToken()
-          .timeout(const Duration(seconds: 10));
-      if (pushToken != null && pushToken.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('fcm_token', pushToken);
-        return pushToken;
-      }
-    } catch (_) {}
-    return null;
+  void _goAfterLogin(BuildContext context, int rollNum) {
+    switch (rollNum) {
+      case 1:
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MyApp(initialPage: 0)),
+          (_) => false,
+        );
+        break;
+      case 2:
+      case 3:
+      case 4:
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MyAppZakazScreen(initialPage: 0)),
+          (_) => false,
+        );
+        break;
+      default:
+        _showAuthError('Неизвестный тип аккаунта');
+        break;
+    }
   }
 
   void _login() async {
     try {
-      final pushToken = await _resolvePushFcmToken();
-
       final body = <String, String>{
         'email': _emailController.text.trim(),
         'password': _passwordController.text,
       };
-      if (pushToken != null) {
-        body['fcm_token'] = pushToken;
-      }
 
       final response = await http
           .post(
@@ -355,30 +353,32 @@ class _LoginState extends State<LoginPage> {
       try {
         json = jsonDecode(response.body);
       } catch (_) {
-        _showAuthError('Ошибка сервера. Попробуйте позже.');
+        if (response.statusCode != 200) {
+          _showAuthError(
+              'Ошибка сервера (${response.statusCode}). Попробуйте позже.');
+        } else {
+          _showAuthError(
+              'Сервер вернул неверный ответ. Обновите api/autoriz1.php на хостинге.');
+        }
         return;
       }
 
       if (json['success'] == true && json['token'] != null) {
         await saveAuthToken(json['token']);
-
-        switch (json['rollNum']) {
-          case 1:
-            Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const change_user()));
-            break;
-          case 2:
-            Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const zprofil_name()));
-            break;
-          case 3:
-            Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const gruz_vodit()));
-            break;
-          default:
-            _showAuthError('Неизвестный тип аккаунта');
-            break;
+        final fcmOk = await syncPushFcmTokenAfterLogin();
+        if (!fcmOk && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Push не подключён: разрешите уведомления в Настройках iPhone '
+                'и перезапустите приложение.',
+              ),
+              duration: Duration(seconds: 6),
+            ),
+          );
         }
+        if (!mounted) return;
+        _goAfterLogin(context, json['rollNum'] as int? ?? 0);
       } else {
         _showAuthError(json['message']?.toString() ?? 'Ошибка авторизации');
       }

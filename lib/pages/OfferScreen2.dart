@@ -31,13 +31,18 @@ class OfferScreen2 extends StatefulWidget {
 
   final dynamic useridobj;
   final bool useCustomerNavigation;
-  //final int bd;
-  const OfferScreen2(
-      {super.key,
-      required this.userid,
-      required this.bd,
-      required this.useridobj,
-      this.useCustomerNavigation = false});
+
+  /// Нижнее меню только если экран открыт без родительского shell (иначе дублируется с CityScreenIsp / профилем).
+  final bool showBottomNav;
+
+  const OfferScreen2({
+    super.key,
+    required this.userid,
+    required this.bd,
+    required this.useridobj,
+    this.useCustomerNavigation = false,
+    this.showBottomNav = false,
+  });
 
   @override
 
@@ -444,9 +449,11 @@ class _OfferscreenForm extends State<OfferScreen2> {
           ],
         ),
       ),
-      bottomNavigationBar: widget.useCustomerNavigation
-          ? const CustomerBottomNav(currentIndex: 0)
-          : const PerformerBottomNav(currentIndex: 0),
+      bottomNavigationBar: widget.showBottomNav
+          ? (widget.useCustomerNavigation
+              ? const CustomerBottomNav(currentIndex: 0)
+              : const PerformerBottomNav(currentIndex: 0))
+          : null,
     );
   }
 

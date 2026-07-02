@@ -27,8 +27,8 @@ $ogrnStr = $_POST['ogrnStr'];
 $kppStr = $_POST['kppStr'];
 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 // Prepare the SQL statement with positional placeholders
-$sql = "INSERT INTO users (rollNum, statNum, firstName, middleName, lastName, city, phone, email, password, namefirm, innStr, ogrnStr, kppStr)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+$sql = "INSERT INTO users (rollNum, statNum, firstName, middleName, lastName, city, phone, email, password, namefirm, innStr, ogrnStr, kppStr, flag)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
 
 $stmt = $conn->prepare($sql);
 

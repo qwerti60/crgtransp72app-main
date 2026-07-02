@@ -26,7 +26,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ads1.dart';
 import 'image_bytes_helper.dart';
+import 'ad_edit_image_multipart.dart';
 import 'decimal_text_input_formatter.dart';
+import 'package:crgtransp72app/widgets/ad_edit_image_slot.dart';
+import 'package:crgtransp72app/utils/reference_dropdown.dart';
 
 class editn_ob_gp extends StatefulWidget {
   final int id;
@@ -70,6 +73,8 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
   final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
   final List<XFile?> _originalImagesDoc = List.generate(4, (indexDoc) => null);
+  final List<bool> _deletedImages = List.generate(4, (_) => false);
+  final List<bool> _deletedImagesDoc = List.generate(4, (_) => false);
   @override
   void initState() {
     super.initState();
@@ -78,6 +83,28 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
     _fetchGP();
     getUserData();
     fetchAds();
+  }
+
+  List<String> get _gpNames =>
+      ReferenceDropdown.uniqueFieldValues(_gp, field: 'name');
+
+  List<String> get _vidkNames =>
+      ReferenceDropdown.uniqueFieldValues(_vidk, field: 'namevidk');
+
+  List<String> get _cityNames =>
+      ReferenceDropdown.uniqueFieldValues(_cities, field: 'name');
+
+  void _reconcileReferenceSelections() {
+    if (_selectedGP != null && _selectedGP!.isNotEmpty) {
+      _selectedGP = ReferenceDropdown.resolveValue(_selectedGP, _gpNames);
+    }
+    if (_selectedVidkuzov != null && _selectedVidkuzov!.isNotEmpty) {
+      _selectedVidkuzov =
+          ReferenceDropdown.resolveValue(_selectedVidkuzov, _vidkNames);
+    }
+    if (_selectedCity != null && _selectedCity!.isNotEmpty) {
+      _selectedCity = ReferenceDropdown.resolveValue(_selectedCity, _cityNames);
+    }
   }
 
   String firstName = '';
@@ -128,6 +155,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       if (result.data != null) {
         _cities = result.data!;
       }
+      _reconcileReferenceSelections();
     });
   }
 
@@ -162,8 +190,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       setState(() {
         _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
-        // _imagesDoc[index] = compressedFile;
-        // _originalImagesDoc[index] = pickedFile;
+        _deletedImages[index] = false;
       });
     }
   }
@@ -196,10 +223,9 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       );
 
       setState(() {
-        //     _images[index] = compressedFile;
-        //   _originalImages[index] = pickedFile;
         _imagesDoc[indexDoc] = compressedFile ?? pickedFile;
         _originalImagesDoc[indexDoc] = pickedFile;
+        _deletedImagesDoc[indexDoc] = false;
       });
     }
   }
@@ -222,51 +248,45 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
             ));
   }
 
+  void _deleteImage(int index) {
+    setState(() {
+      _images[index] = null;
+      _originalImages[index] = null;
+      _deletedImages[index] = true;
+    });
+  }
+
+  void _deleteImageDoc(int indexDoc) {
+    setState(() {
+      _imagesDoc[indexDoc] = null;
+      _originalImagesDoc[indexDoc] = null;
+      _deletedImagesDoc[indexDoc] = true;
+    });
+  }
+
   Widget _imageSlot(int index) {
-    return GestureDetector(
+    final hasPhoto = _images[index] != null ||
+        (!_deletedImages[index] && _originalImages[index] != null);
+    return AdEditImageSlot(
+      size: imageSize,
+      displayFile: _images[index],
+      fallbackFile: _deletedImages[index] ? null : _originalImages[index],
       onTap: () => _pickImage(index),
-      child: Container(
-        height: imageSize,
-        width: imageSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: _images[index] != null
-                ? FileImage(File(_images[index]!
-                    .path)) // Преобразуем XFile из _images в File
-                : _originalImages[index] != null
-                    ? FileImage(File(_originalImages[index]!
-                        .path)) // Преобразуем XFile из _originalImages в File
-                    : const AssetImage('assets/images/fotouser.png')
-                        as ImageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      onDelete: hasPhoto ? () => _deleteImage(index) : null,
     );
   }
 
   Widget _imageSlotDoc(int indexDoc) {
-    return GestureDetector(
+    final hasPhoto = _imagesDoc[indexDoc] != null ||
+        (!_deletedImagesDoc[indexDoc] &&
+            _originalImagesDoc[indexDoc] != null);
+    return AdEditImageSlot(
+      size: imageSize,
+      displayFile: _imagesDoc[indexDoc],
+      fallbackFile:
+          _deletedImagesDoc[indexDoc] ? null : _originalImagesDoc[indexDoc],
       onTap: () => _pickImageDoc(indexDoc),
-      child: Container(
-        height: imageSize,
-        width: imageSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: _imagesDoc[indexDoc] != null
-                ? FileImage(File(_imagesDoc[indexDoc]!
-                    .path)) // Преобразуем XFile из _images в File
-                : _originalImagesDoc[indexDoc] != null
-                    ? FileImage(File(_originalImagesDoc[indexDoc]!
-                        .path)) // Преобразуем XFile из _originalImages в File
-                    : const AssetImage('assets/images/fotouser.png')
-                        as ImageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      onDelete: hasPhoto ? () => _deleteImageDoc(indexDoc) : null,
     );
   }
 
@@ -296,6 +316,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       _vidkLoading = false;
       _vidkFailed = result.failed;
       if (result.data != null) _vidk = result.data!;
+      _reconcileReferenceSelections();
     });
   }
 
@@ -307,6 +328,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       _gpLoading = false;
       _gpFailed = result.failed;
       if (result.data != null) _gp = result.data!;
+      _reconcileReferenceSelections();
     });
   }
 
@@ -344,29 +366,18 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
       ..fields['iduser'] = userId.toString()
       ..fields['id'] = widget.id.toString();
 
-// Предполагаем, что _originalImages - это List<XFile>, такой же как и _images
-    for (int i = 0; i < _originalImages.length; i++) {
-      if (_originalImages[i] != null) {
-        // Получаем путь из объекта XFile
-        //FileImage(File(_originalImages[i]!.path));
-        String filePath =
-            _originalImages[i]!.path; // Используем _originalImages здесь
-
-        request.files
-            .add(await http.MultipartFile.fromPath('img${i + 1}', filePath));
-      }
-    }
-    for (int i1 = 0; i1 < _originalImagesDoc.length; i1++) {
-      if (_originalImagesDoc[i1] != null) {
-        // Получаем путь из объекта XFile
-        //FileImage(File(_originalImages[i]!.path));
-        String filePath =
-            _originalImagesDoc[i1]!.path; // Используем _originalImages здесь
-
-        request.files.add(
-            await http.MultipartFile.fromPath('imgDoc${i1 + 1}', filePath));
-      }
-    }
+    await AdEditImageMultipart.appendPhotos(
+      request,
+      originals: _originalImages,
+      deleted: _deletedImages,
+      fieldPrefix: 'img',
+    );
+    await AdEditImageMultipart.appendPhotos(
+      request,
+      originals: _originalImagesDoc,
+      deleted: _deletedImagesDoc,
+      fieldPrefix: 'imgDoc',
+    );
 
 // Пример добавления imgdoc1
 // Повторите для imgdoc2, imgdoc3, imgdoc4
@@ -538,7 +549,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
         setState(() {
 //          _selectedVidt = ad['vidt'];
 
-          _selectedCity = ad['city'];
+          _selectedCity = ad['city']?.toString();
           _cenahaursController.text = ad['cenahaurs'];
           _cenasmenaController.text = ad['cenasmena'];
           _cenakmController.text = ad['cenakm'];
@@ -547,7 +558,8 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
           _selectedGP = ad['maxgruz']?.toString() ?? '';
           _dkuzovController.text = ad['dkuzov']?.toString() ?? '';
           _shkuzovController.text = ad['shkuzov']?.toString() ?? '';
-          _selectedVidkuzov = ad['vidk'];
+          _selectedVidkuzov = ad['vidk']?.toString();
+          _reconcileReferenceSelections();
           for (var i = 0; i < 4; i++) {
             // 0,1,2,3
             final key = 'img${i + 1}'; // img1,img2,img3,img4
@@ -635,20 +647,11 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
                               _selectedCity = newValue;
                             });
                           },
-                          items: _cities
-                              .map<DropdownMenuItem<String>>((dynamic city) {
-                            return DropdownMenuItem(
-                              value: city['name'],
-                              child: Text(
-                                city['name'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black38,
-                                  fontSize: 16.0,
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                          items: ReferenceDropdown.menuItems(
+                            _cityNames,
+                            currentValue: _selectedCity,
+                            style: ReferenceDropdown.defaultItemStyle,
+                          ),
                         ),
                       ],
                     ),
@@ -769,20 +772,11 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
                               _selectedGP = newValue;
                             });
                           },
-                          items:
-                              _gp.map<DropdownMenuItem<String>>((dynamic gp) {
-                            return DropdownMenuItem(
-                              value: gp['name'],
-                              child: Text(
-                                gp['name'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black38,
-                                  fontSize: 16.0,
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                          items: ReferenceDropdown.menuItems(
+                            _gpNames,
+                            currentValue: _selectedGP,
+                            style: ReferenceDropdown.defaultItemStyle,
+                          ),
                         ),
                       ],
                     ),
@@ -905,20 +899,11 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
                               _selectedVidkuzov = newValue;
                             });
                           },
-                          items: _vidk
-                              .map<DropdownMenuItem<String>>((dynamic vidk1) {
-                            return DropdownMenuItem(
-                              value: vidk1['namevidk'],
-                              child: Text(
-                                vidk1['namevidk'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black38,
-                                  fontSize: 16.0,
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                          items: ReferenceDropdown.menuItems(
+                            _vidkNames,
+                            currentValue: _selectedVidkuzov,
+                            style: ReferenceDropdown.defaultItemStyle,
+                          ),
                         ),
                       ],
                     ),

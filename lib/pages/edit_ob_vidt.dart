@@ -24,7 +24,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ads1.dart';
 import 'image_bytes_helper.dart';
+import 'ad_edit_image_multipart.dart';
 import 'decimal_text_input_formatter.dart';
+import 'package:crgtransp72app/widgets/ad_edit_image_slot.dart';
 
 // Step 1.
 String dropdownValue = 'Мини погрузчики и складская техника';
@@ -67,6 +69,8 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
   final List _imagesDoc = List.generate(4, (indexDoc) => null); // Список для хр
   final List<XFile?> _originalImages = List.generate(4, (index) => null);
   final List<XFile?> _originalImagesDoc = List.generate(4, (indexDoc) => null);
+  final List<bool> _deletedImages = List.generate(4, (_) => false);
+  final List<bool> _deletedImagesDoc = List.generate(4, (_) => false);
   String firstName = '';
   String lastName = '';
   String middleName = '';
@@ -136,6 +140,7 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
       setState(() {
         _images[index] = compressedFile ?? pickedFile;
         _originalImages[index] = pickedFile;
+        _deletedImages[index] = false;
       });
     }
   }
@@ -158,51 +163,45 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
             ));
   }
 
+  void _deleteImage(int index) {
+    setState(() {
+      _images[index] = null;
+      _originalImages[index] = null;
+      _deletedImages[index] = true;
+    });
+  }
+
+  void _deleteImageDoc(int indexDoc) {
+    setState(() {
+      _imagesDoc[indexDoc] = null;
+      _originalImagesDoc[indexDoc] = null;
+      _deletedImagesDoc[indexDoc] = true;
+    });
+  }
+
   Widget _imageSlot(int index) {
-    return GestureDetector(
+    final hasPhoto = _images[index] != null ||
+        (!_deletedImages[index] && _originalImages[index] != null);
+    return AdEditImageSlot(
+      size: imageSize,
+      displayFile: _images[index],
+      fallbackFile: _deletedImages[index] ? null : _originalImages[index],
       onTap: () => _pickImage(index),
-      child: Container(
-        height: imageSize,
-        width: imageSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: _images[index] != null
-                ? FileImage(File(_images[index]!
-                    .path)) // Преобразуем XFile из _images в File
-                : _originalImages[index] != null
-                    ? FileImage(File(_originalImages[index]!
-                        .path)) // Преобразуем XFile из _originalImages в File
-                    : const AssetImage('assets/images/fotouser.png')
-                        as ImageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      onDelete: hasPhoto ? () => _deleteImage(index) : null,
     );
   }
 
   Widget _imageSlotDoc(int indexDoc) {
-    return GestureDetector(
+    final hasPhoto = _imagesDoc[indexDoc] != null ||
+        (!_deletedImagesDoc[indexDoc] &&
+            _originalImagesDoc[indexDoc] != null);
+    return AdEditImageSlot(
+      size: imageSize,
+      displayFile: _imagesDoc[indexDoc],
+      fallbackFile:
+          _deletedImagesDoc[indexDoc] ? null : _originalImagesDoc[indexDoc],
       onTap: () => _pickImageDoc(indexDoc),
-      child: Container(
-        height: imageSize,
-        width: imageSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: _imagesDoc[indexDoc] != null
-                ? FileImage(File(_imagesDoc[indexDoc]!
-                    .path)) // Преобразуем XFile из _images в File
-                : _originalImagesDoc[indexDoc] != null
-                    ? FileImage(File(_originalImagesDoc[indexDoc]!
-                        .path)) // Преобразуем XFile из _originalImages в File
-                    : const AssetImage('assets/images/fotouser.png')
-                        as ImageProvider,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
+      onDelete: hasPhoto ? () => _deleteImageDoc(indexDoc) : null,
     );
   }
 
@@ -245,10 +244,9 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
       );
 
       setState(() {
-        //     _images[index] = compressedFile;
-        //   _originalImages[index] = pickedFile;
         _imagesDoc[indexDoc] = compressedFile ?? pickedFile;
         _originalImagesDoc[indexDoc] = pickedFile;
+        _deletedImagesDoc[indexDoc] = false;
       });
     }
   }
@@ -297,29 +295,18 @@ class edit_ob_vidtForm extends State<edit_ob_vidt> {
       ..fields['cenasmena'] = _cenasmenaController.text
       ..fields['cenakm'] = _cenakmController.text
       ..fields['iduser'] = userId.toString();
-// Предполагаем, что _originalImages - это List<XFile>, такой же как и _images
-    for (int i = 0; i < _originalImages.length; i++) {
-      if (_originalImages[i] != null) {
-        // Получаем путь из объекта XFile
-        //FileImage(File(_originalImages[i]!.path));
-        String filePath =
-            _originalImages[i]!.path; // Используем _originalImages здесь
-
-        request.files
-            .add(await http.MultipartFile.fromPath('img${i + 1}', filePath));
-      }
-    }
-    for (int i1 = 0; i1 < _originalImagesDoc.length; i1++) {
-      if (_originalImagesDoc[i1] != null) {
-        // Получаем путь из объекта XFile
-        //FileImage(File(_originalImages[i]!.path));
-        String filePath =
-            _originalImagesDoc[i1]!.path; // Используем _originalImages здесь
-
-        request.files.add(
-            await http.MultipartFile.fromPath('imgDoc${i1 + 1}', filePath));
-      }
-    }
+    await AdEditImageMultipart.appendPhotos(
+      request,
+      originals: _originalImages,
+      deleted: _deletedImages,
+      fieldPrefix: 'img',
+    );
+    await AdEditImageMultipart.appendPhotos(
+      request,
+      originals: _originalImagesDoc,
+      deleted: _deletedImagesDoc,
+      fieldPrefix: 'imgDoc',
+    );
     var response = await request.send();
 
     if (response.statusCode == 200) {

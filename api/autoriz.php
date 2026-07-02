@@ -24,14 +24,9 @@ if ($stmt = $conn->prepare('SELECT idusers, rollNum, statNum, password, flag FRO
         $stmt->fetch();
 
         if (password_verify($password, $hashed_password)) {
-            // Проверяем rollNum и flag
-            if (($rollNum == 2 || $rollNum == 3) && $flag == 0) {
-                $response['message'] = "Данные пользователя еще на проверке";
-            } else {
-                $response['success'] = true; // Аутентификация успешна
-                $response['rollNum'] = $rollNum;
-                $response['statNum'] = $statNum;
-            }
+            $response['success'] = true;
+            $response['rollNum'] = $rollNum;
+            $response['statNum'] = $statNum;
         } else {
             $response['message'] = "Неверный пароль".$password;
         }

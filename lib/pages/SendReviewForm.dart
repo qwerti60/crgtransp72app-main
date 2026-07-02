@@ -1,12 +1,13 @@
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/pages/ads1.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
-import 'package:crgtransp72app/pages/test.dart'; // as hist;
-import 'package:crgtransp72app/pages/test.dart' as hist;
+import 'package:crgtransp72app/pages/sendNotification.dart';
+import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
@@ -72,20 +73,23 @@ class _SendReviewFormState extends State<SendReviewForm> {
       );
 
       if (response.statusCode == 200 && response.data['status'] == 'success') {
-        // Открытие окна с успешным результатом и последующей навигацией
+        await notifyUserById(
+          userId: widget.targetUserId,
+          title: kDefaultPushTitle,
+          body: 'Исполнитель оставил отзыв о заказчике',
+        );
+        PerformerShellNavCache.update(
+          isAuthorized: true,
+          highlightOrders: false,
+        );
         showSuccessDialog('Спасибо!', 'Ваш отзыв успешно отправлен.',
             onOkPressed: () {
-          /*         Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => history_isp(
-                  nameImg: widget.parsedUserIdOk.toString(), bd: 1)));
-*/
-          Navigator.of(context).push(
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => hist.HistortScreen(pageProfile: 'hist'),
+              builder: (_) => const MyAppZakazScreen(initialPage: 1),
             ),
+            (route) => false,
           );
-
-          // Логируем успешную операцию и значение userID
           print(
               'API Success: Review submitted by user ${widget.currentUserId} for user ${widget.targetUserId}.');
         });
