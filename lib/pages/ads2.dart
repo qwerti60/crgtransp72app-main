@@ -713,7 +713,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     'list_predloj_na_obj_isp',
                                                 userId1: truck['id'].toString(),
                                                 orderId: adBd.toString(),
-                                                parsedUserIdOk: ''),
+                                                parsedUserIdOk: '',
+                                                adBd: adBd),
 
                                             /*  list_predloj_na_obj_isp(
                                               nameImg: truck['id'].toString(),

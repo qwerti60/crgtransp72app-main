@@ -78,9 +78,11 @@ Widget buildProfilePage(
         showBottomNav: false,
       );
     case 'list_predloj_na_obj_isp':
+      final resolvedBd =
+          adBd ?? int.tryParse(orderId123?.toString() ?? '') ?? 1;
       return list_predloj_na_obj_isp(
         nameImg: uid,
-        bd: adBd ?? 1,
+        bd: resolvedBd,
         useCustomerMenu: false,
         wrapInMaterialApp: false,
       );
