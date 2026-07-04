@@ -8,6 +8,8 @@ import 'package:crgtransp72app/pages/menuzak.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/test.dart';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -245,15 +247,17 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
-    final uri =
-        Uri.parse('https://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
+  Future<void> updateOffer(int bd, String nameImg, int userID, iduserp,
+      {required bool accept}) async {
+    final uri = Uri.parse('${Config.baseUrl}/api/updatePriemZak.php');
 
     try {
       final response = await http.post(uri, body: {
-        'idusers': widget.nameImg, // Пользовательский ID
-        'bd': bd.toString(), // Поле bd
-        'iduserp': iduserp.toString() // Поле bd
+        'idusers': widget.nameImg,
+        'bd': bd.toString(),
+        'iduserp': iduserp.toString(),
+        'source': 'performer_ad',
+        'action': accept ? 'accept' : 'refuse',
       });
       print('ttt');
       print(userId.toString());
@@ -285,11 +289,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
     final response = await http.post(
-      Uri.parse('https://ivnovav.ru/api/check_isp.php'),
+      Uri.parse('${Config.baseUrl}/api/check_isp.php'),
       body: {
         'idusers': idUser.toString(),
         'bd': bd.toString(),
         'iduserp': idUserP.toString(),
+        'source': 'performer_ad',
       },
     );
 
@@ -571,25 +576,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                               ),
                                           ],
                                         ),
-                                        GestureDetector(
-                                          onTap: () {
-                                            _makePhoneCall(
-                                                (truck['phone'] ?? '')
-                                                    .toString());
-                                          },
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.phone),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${truck['phone'] ?? ''}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
+                                        ProfileContactRow(
+                                          phone: '${truck['phone'] ?? ''}',
+                                          onChatTap: () => _openChatForTruck(truck),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -808,7 +798,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     widget.bd,
                                                     widget.nameImg,
                                                     userId,
-                                                    truck['iduserp']);
+                                                    truck['iduserp'],
+                                                    accept: false);
                                                 try {
                                                   final response =
                                                       await http.post(
@@ -871,7 +862,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     widget.bd,
                                                     widget.nameImg,
                                                     userId,
-                                                    truck['iduserp']);
+                                                    truck['iduserp'],
+                                                    accept: true);
 
                                                 try {
                                                   final response =
@@ -1113,6 +1105,28 @@ class _MyHomePageState extends State<MyHomePage> {
       id: id,
       bd: bd,
       usePerformerEndpoint: true,
+    );
+  }
+
+  Future<void> _openChatForTruck(Map truck) async {
+    final customerId = int.tryParse('${truck['iduserp'] ?? ''}');
+    final adId = int.tryParse(widget.nameImg);
+    if (customerId == null || adId == null || customerId <= 0 || adId <= 0) {
+      return;
+    }
+    final name = [
+      truck['lastName'],
+      truck['firstName'],
+    ].where((e) => e != null && '$e'.trim().isNotEmpty).join(' ');
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: customerId,
+      bd: widget.bd,
+      adId: adId,
+      title: name.isNotEmpty ? name : 'Заказчик',
+      currentUserId: userId,
+      showBottomNav: false,
+      isPerformer: true,
     );
   }
 

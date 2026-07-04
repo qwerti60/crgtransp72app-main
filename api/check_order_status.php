@@ -165,17 +165,26 @@ function crg_handle_customer_order(
             $stmtUpdateOfferData->bindValue(':id', $offerRow['id'], PDO::PARAM_INT);
             $stmtUpdateOfferData->execute();
 
+            $dealBd = ($bd !== null && $bd > 0) ? $bd : (int) ($offerRow['bd'] ?? 0);
             $stmtInsertOrdersGlobal = $pdo->prepare(
                 "INSERT INTO ordersglobal
-                 (user_id, order_id, user_idok, start_time, status, idoffer)
-                 VALUES (:user_id, :order_id, :user_idok, :start_time, 'выполняется', :idoffer)"
+                 (user_id, order_id, deal_source, bd, user_idok, start_time, status, idoffer)
+                 VALUES (:user_id, :order_id, 'customer_order', :bd, :user_idok, :start_time, 'выполняется', :idoffer)"
             );
             $stmtInsertOrdersGlobal->bindParam(':user_id', $performerId, PDO::PARAM_INT);
             $stmtInsertOrdersGlobal->bindParam(':order_id', $orderId, PDO::PARAM_STR);
+            $stmtInsertOrdersGlobal->bindValue(':bd', $dealBd > 0 ? $dealBd : null, $dealBd > 0 ? PDO::PARAM_INT : PDO::PARAM_NULL);
             $stmtInsertOrdersGlobal->bindParam(':user_idok', $userIdok, PDO::PARAM_STR);
             $stmtInsertOrdersGlobal->bindParam(':start_time', $startTime, PDO::PARAM_STR);
             $stmtInsertOrdersGlobal->bindValue(':idoffer', (int) $offerRow['id'], PDO::PARAM_INT);
             $stmtInsertOrdersGlobal->execute();
+
+            try {
+                require_once __DIR__ . '/include/chat_core.php';
+                crg_chat_on_ordersglobal_created($pdo, (int) $pdo->lastInsertId());
+            } catch (Throwable $e) {
+                // ignore chat hook errors
+            }
 
             echo json_encode([
                 'message' => 'Запись успешно создана',
@@ -263,17 +272,26 @@ function crg_handle_performer_ad(
         return;
     }
 
+    $dealBd = ($bd !== null && $bd > 0) ? $bd : (int) ($offerRow['bd'] ?? 0);
     $stmtInsert = $pdo->prepare(
         "INSERT INTO ordersglobal
-         (user_id, order_id, user_idok, start_time, status, idoffer)
-         VALUES (:user_id, :order_id, :user_idok, :start_time, 'выполняется', :idoffer)"
+         (user_id, order_id, deal_source, bd, user_idok, start_time, status, idoffer)
+         VALUES (:user_id, :order_id, 'performer_ad', :bd, :user_idok, :start_time, 'выполняется', :idoffer)"
     );
     $stmtInsert->bindValue(':user_id', $performerId, PDO::PARAM_INT);
     $stmtInsert->bindValue(':order_id', $adId, PDO::PARAM_STR);
+    $stmtInsert->bindValue(':bd', $dealBd > 0 ? $dealBd : null, $dealBd > 0 ? PDO::PARAM_INT : PDO::PARAM_NULL);
     $stmtInsert->bindParam(':user_idok', $customerIdStr, PDO::PARAM_STR);
     $stmtInsert->bindParam(':start_time', $startTime, PDO::PARAM_STR);
     $stmtInsert->bindValue(':idoffer', (int) $offerRow['id'], PDO::PARAM_INT);
     $stmtInsert->execute();
+
+    try {
+        require_once __DIR__ . '/include/chat_core.php';
+        crg_chat_on_ordersglobal_created($pdo, (int) $pdo->lastInsertId());
+    } catch (Throwable $e) {
+        // ignore chat hook errors
+    }
 
     echo json_encode([
         'message' => 'Запись успешно создана',

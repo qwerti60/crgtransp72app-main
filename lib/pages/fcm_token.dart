@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 
 import 'package:crgtransp72app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:crgtransp72app/services/chat_push_handler.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -55,6 +56,8 @@ Future<void> clearPushFcmTokenLocal() async {
 
 Future<void> configureFirebaseMessaging() async {
   if (_messagingConfigured) return;
+
+  ChatPushHandler.install();
 
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
     debugPrint('FCM onTokenRefresh: ${newToken.substring(0, 16)}…');

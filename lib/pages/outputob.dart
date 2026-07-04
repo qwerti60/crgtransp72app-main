@@ -15,11 +15,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
+import '../customer_ad_category.dart';
 import '../design/colors.dart';
+import '../models/search_params.dart';
+import '../services/search_services_api.dart';
 
 import 'changerol_page.dart';
+import 'customer_search_screen.dart';
 import 'like_helper.dart';
 import 'loginpage.dart';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 
 class outputob extends StatelessWidget {
   final String nameImg;
@@ -35,6 +41,18 @@ class outputob extends StatelessWidget {
   /// Раздел БД: 1 — грузоперевозки, 2 — спецтехника, 3 — грузчики.
   final int bd;
 
+  /// Расширенный поиск (search_services.php).
+  final SearchParams? searchParams;
+
+  /// Заголовок экрана при текстовом поиске.
+  final String? searchTitle;
+
+  /// Индекс вкладки [CustomerBottomNav] (0 — услуги, 1 — заказы, 2 — профиль).
+  final int customerBottomNavIndex;
+
+  /// Если быстрый подбор из «Мои объявления» пуст — открыть форму поиска.
+  final bool openSearchOnEmpty;
+
   const outputob(
       {super.key,
       required this.nameImg,
@@ -42,7 +60,11 @@ class outputob extends StatelessWidget {
       this.showBottomNav = false,
       this.useCustomerNavigation = true,
       this.ignoreCityFilter = false,
-      this.bd = 1});
+      this.bd = 1,
+      this.searchParams,
+      this.searchTitle,
+      this.customerBottomNavIndex = 0,
+      this.openSearchOnEmpty = false});
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +76,10 @@ class outputob extends StatelessWidget {
       useCustomerNavigation: useCustomerNavigation,
       ignoreCityFilter: ignoreCityFilter,
       bd: bd,
+      searchParams: searchParams,
+      searchTitle: searchTitle,
+      customerBottomNavIndex: customerBottomNavIndex,
+      openSearchOnEmpty: openSearchOnEmpty,
     );
   }
 }
@@ -65,6 +91,10 @@ class MyHomePage extends StatefulWidget {
   final bool useCustomerNavigation;
   final bool ignoreCityFilter;
   final int bd;
+  final SearchParams? searchParams;
+  final String? searchTitle;
+  final int customerBottomNavIndex;
+  final bool openSearchOnEmpty;
 
   const MyHomePage(
       {super.key,
@@ -73,7 +103,11 @@ class MyHomePage extends StatefulWidget {
       this.showBottomNav = false,
       this.useCustomerNavigation = true,
       this.ignoreCityFilter = false,
-      this.bd = 1});
+      this.bd = 1,
+      this.searchParams,
+      this.searchTitle,
+      this.customerBottomNavIndex = 0,
+      this.openSearchOnEmpty = false});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -101,6 +135,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   bool _invalidResponseSnackShown = false;
+  bool _emptySearchRedirectDone = false;
   final Set<String> _likeInFlight = {};
   int _fetchSeq = 0;
   late Future<List> _adsFuture;
@@ -199,7 +234,33 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<List> _bootstrapAds() async {
     await getUserData();
-    return fetchAds(widget.city, widget.nameImg, userId);
+    final ads = await fetchAds(widget.city, widget.nameImg, userId);
+    _maybeOpenSearchOnEmpty(ads);
+    return ads;
+  }
+
+  void _maybeOpenSearchOnEmpty(List ads) {
+    if (!widget.openSearchOnEmpty ||
+        ads.isNotEmpty ||
+        _emptySearchRedirectDone ||
+        !mounted) {
+      return;
+    }
+    _emptySearchRedirectDone = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => CustomerSearchScreen(
+            initialCity: widget.city,
+            initialServiceName: widget.nameImg,
+            initialPriceMax: widget.searchParams?.priceMax,
+            emptyResultsHint:
+                'По параметрам объявления исполнители не найдены. Уточните поиск.',
+          ),
+        ),
+      );
+    });
   }
 
   String namefirm = '';
@@ -269,11 +330,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<ZakazAdDealInfo> _fetchDealForTruck(
     Map<dynamic, dynamic> truck,
-    int bdVal,
   ) {
     final adId = int.tryParse(truck['id']?.toString() ?? '') ?? 0;
     final performerId =
         int.tryParse(truck['iduser']?.toString() ?? '') ?? 0;
+    final bdVal = _bdForTruck(truck);
     return fetchZakazAdDeal(
       customerId: userId,
       adId: adId,
@@ -282,14 +343,18 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  int _bdForTruck(Map<dynamic, dynamic> truck) {
+    return bdFromPerformerAd(Map<String, dynamic>.from(truck));
+  }
+
   Widget _buildOfferActionButton({
     required BuildContext context,
     required ZakazAdDealInfo deal,
     required Map<dynamic, dynamic> truck,
-    required int bdVal,
   }) {
     final listingId = int.tryParse(truck['id']?.toString() ?? '') ?? 0;
     final performerId = truck['iduser']?.toString() ?? '';
+    final bdVal = _bdForTruck(truck);
 
     if (deal.isExecuting) {
       return _offerActionButton(
@@ -450,6 +515,30 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<List> fetchAds(String city, String nameImg, int userId) async {
     final seq = ++_fetchSeq;
+
+    if (widget.searchParams != null) {
+      final ads = await SearchServicesApi.tryFetch(
+        role: 'customer',
+        nameImg: nameImg,
+        city: city,
+        userId: userId,
+        params: widget.searchParams!,
+        allCities: widget.ignoreCityFilter,
+      );
+      if (seq != _fetchSeq) return [];
+      if (ads != null) {
+        return ads;
+      }
+      if (widget.searchParams!.freeText) {
+        return [];
+      }
+      debugPrint('[outputob] search_services unavailable, fallback to get_ads2_new');
+    }
+
+    if (nameImg.isEmpty || city.isEmpty) {
+      return [];
+    }
+
     final queryParameters = <String, String>{
       'nameImg': nameImg,
       'city': city,
@@ -507,9 +596,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Исполнители',
-          style: TextStyle(
+        title: Text(
+          widget.searchTitle ?? 'Исполнители',
+          style: const TextStyle(
             color: whiteprColor,
           ),
         ),
@@ -556,15 +645,23 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
 
                 if (snapshot.hasData) {
+                  final items = snapshot.data!;
+                  if (items.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'В этом разделе нет объявлений',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    );
+                  }
                   return ListView.builder(
-                      itemCount: snapshot.data?.length,
+                      itemCount: items.length,
                       itemBuilder: (context, index) {
-                        var truck = snapshot.data![index];
-                        if (truck == null)
-                          Text(
-                            'В этом разделе нет объявлений',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          );
+                        var truck = items[index];
                         List<Uint8List> images = [];
 
                         // Добавляем изображения в список images, только если они не null
@@ -749,28 +846,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ],
                                   );
 
-                                  final Widget phoneBlock = GestureDetector(
-                                    onTap: () {
-                                      _makePhoneCall(truck['phone']);
-                                    },
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.phone),
-                                        const SizedBox(width: 4),
-                                        SizedBox(
-                                          width: 130,
-                                          child: Text(
-                                            '${truck['phone']}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  final Widget phoneBlock = ProfileContactRow(
+                                    phone: '${truck['phone'] ?? ''}',
+                                    onChatTap: () => _openChatForTruck(truck),
                                   );
 
                                   if (isNarrow) {
@@ -1097,7 +1175,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               padding: const EdgeInsets.all(
                                   8.0), // Добавьте отступы вокруг FutureBuilder
                               child: FutureBuilder<ZakazAdDealInfo>(
-                                future: _fetchDealForTruck(truck, bd!),
+                                future: _fetchDealForTruck(truck),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
                                       ConnectionState.waiting) {
@@ -1117,7 +1195,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                     context: context,
                                     deal: snapshot.data!,
                                     truck: truck,
-                                    bdVal: bd!,
                                   );
                                 },
                               ),
@@ -1137,7 +1214,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       bottomNavigationBar: widget.showBottomNav
           ? (widget.useCustomerNavigation
-              ? const CustomerBottomNav(currentIndex: 0)
+              ? CustomerBottomNav(currentIndex: widget.customerBottomNavIndex)
               : const PerformerBottomNav(currentIndex: 0))
           : null,
       // нужное расположение
@@ -1152,6 +1229,32 @@ class _MyHomePageState extends State<MyHomePage> {
       id: id,
       bd: bd,
       usePerformerEndpoint: false,
+    );
+  }
+
+  Future<void> _openChatForTruck(Map truck) async {
+    final performerId = int.tryParse(
+      '${truck['iduser'] ?? truck['idusers'] ?? ''}',
+    );
+    final adId = int.tryParse('${truck['id'] ?? ''}');
+    if (performerId == null || adId == null || performerId <= 0 || adId <= 0) {
+      return;
+    }
+    final adBd = bd ?? widget.bd;
+    if (adBd <= 0) return;
+    final name = [
+      truck['lastName'],
+      truck['firstName'],
+    ].where((e) => e != null && '$e'.trim().isNotEmpty).join(' ');
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: performerId,
+      bd: adBd,
+      adId: adId,
+      title: name.isNotEmpty ? name : 'Исполнитель',
+      currentUserId: userId,
+      showBottomNav: widget.showBottomNav,
+      isPerformer: false,
     );
   }
 

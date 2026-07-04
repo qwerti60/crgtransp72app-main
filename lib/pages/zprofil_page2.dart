@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/HistortScreen1z.dart';
+import 'package:crgtransp72app/pages/chat_list_screen.dart';
+import 'package:crgtransp72app/widgets/chat_auth_guard.dart';
 import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -16,6 +18,7 @@ import 'package:crgtransp72app/pages/zakaz_screen1.dart' show MyApp;
 import 'package:crgtransp72app/navigation/performer_active_order.dart';
 
 import '../design/colors.dart';
+import '../widgets/profile_rating_row.dart';
 import 'account_deletion.dart';
 import 'ads1.dart';
 import 'change_user.dart';
@@ -48,6 +51,8 @@ class zprofil_nameForm extends State<zprofil_name2> {
   String email = '';
   int userId = 0;
   String orderid = '';
+  double avgRating = 0;
+  int reviewsCount = 0;
   @override
   void initState() {
     super.initState();
@@ -81,6 +86,11 @@ class zprofil_nameForm extends State<zprofil_name2> {
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
           orderid = data['order_id']?.toString() ?? '';
+          final rating = ProfileRatingRow.fromApiMap(
+            Map<String, dynamic>.from(data),
+          );
+          avgRating = rating.avgRating;
+          reviewsCount = rating.reviewsCount;
         });
         print('d123 ${data}');
         print('o123 ${orderid}');
@@ -154,6 +164,15 @@ class zprofil_nameForm extends State<zprofil_name2> {
                 textAlign: TextAlign.center,
               ),
             ),
+            if (userId > 0)
+              ProfileRatingRow(
+                avgRating: avgRating,
+                reviewsCount: reviewsCount,
+                onTap: () => ProfileRatingRow.openPerformerReviews(
+                  context,
+                  userId,
+                ),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -235,6 +254,51 @@ class zprofil_nameForm extends State<zprofil_name2> {
                     );
                   },
                   child: const Text('История заказов')),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () async {
+                    if (!await ensureChatAuthorized(context)) return;
+                    if (!context.mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatListScreen(
+                          showBottomNav: true,
+                          isPerformer: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Чаты с заказчиками')),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () async {
+                    if (!await ensureChatAuthorized(context)) return;
+                    if (!context.mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatListScreen(
+                          initialTab: 1,
+                          showBottomNav: true,
+                          isPerformer: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Поддержка')),
             ),
 
             Container(

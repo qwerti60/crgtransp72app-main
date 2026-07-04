@@ -21,6 +21,30 @@ $iduserp = $input['iduserp'] ?? '';
 $iduser  = $input['iduser'] ?? '';
 $bd      = $input['bd'] ?? '';
 
+require_once __DIR__ . '/include/offer_validation.php';
+
+$performerId = (int) $iduserp;
+$orderId = (int) $iduser;
+$bdInt = (int) $bd;
+
+if ($performerId <= 0 || $orderId <= 0 || $bdInt <= 0) {
+    http_response_code(400);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid parameters'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$orderOwner = crg_customer_order_owner_id($pdo, $orderId, $bdInt);
+if ($orderOwner === null) {
+    http_response_code(404);
+    echo json_encode(['status' => 'error', 'message' => 'Order not found'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+if ($orderOwner === $performerId) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Cannot offer on your own order'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $sqlExists = 'SELECT COUNT(*)
               FROM offer_data
               WHERE iduserp = ? AND iduser = ? AND bd = ? AND status = 0
@@ -40,6 +64,13 @@ if ($exists) {
     $sqlInsert = 'INSERT INTO offer_data (cena, about, iduserp, iduser, bd)
                   VALUES (?, ?, ?, ?, ?)';
     $pdo->prepare($sqlInsert)->execute([$cena, $about, $iduserp, $iduser, $bd]);
+    $offerId = (int) $pdo->lastInsertId();
+    try {
+        require_once __DIR__ . '/include/chat_core.php';
+        crg_chat_on_offer_data($pdo, $offerId, (int) $iduserp, (int) $iduser, (int) $bd);
+    } catch (Throwable $e) {
+        // ignore chat hook errors
+    }
 
     echo json_encode(['status' => 'success', 'message' => 'Data added successfully']);
 }

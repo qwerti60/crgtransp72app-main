@@ -43,7 +43,22 @@ try {
             u.phone,
             u.email,
             og.order_id,
-            og.user_id
+            og.user_id,
+            COALESCE((
+                SELECT ROUND(AVG(r.rating), 1)
+                FROM reviewsisp r
+                WHERE r.user_id = u.idusers
+            ), 0) AS avg_rating,
+            (
+                SELECT COUNT(*)
+                FROM reviewsisp r
+                WHERE r.user_id = u.idusers
+            ) AS reviewsCount,
+            (
+                SELECT COUNT(*)
+                FROM reviewsisp r
+                WHERE r.user_id = u.idusers
+            ) AS review_count
         FROM users u
         LEFT JOIN ordersglobal og ON og.user_idok = u.idusers
         WHERE u.idusers = ?

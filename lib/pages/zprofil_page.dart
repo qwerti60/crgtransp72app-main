@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/pages/chat_list_screen.dart';
+import 'package:crgtransp72app/widgets/chat_auth_guard.dart';
 import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
@@ -11,6 +13,7 @@ import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
+import '../widgets/profile_rating_row.dart';
 import 'account_deletion.dart';
 import 'ads2.dart';
 import 'change_user.dart';
@@ -41,6 +44,8 @@ class zprofil_nameForm extends State<zprofil_name> {
   String phone = '';
   String email = '';
   int userId = 0;
+  double avgRating = 0;
+  int reviewsCount = 0;
   @override
   void initState() {
     super.initState();
@@ -126,6 +131,11 @@ class zprofil_nameForm extends State<zprofil_name> {
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
+          final rating = ProfileRatingRow.fromApiMap(
+            Map<String, dynamic>.from(data),
+          );
+          avgRating = rating.avgRating;
+          reviewsCount = rating.reviewsCount;
         });
 
         // Теперь переменные firstName, lastName, middleName, и userfoto доступны для использования в build() методе.
@@ -195,6 +205,15 @@ class zprofil_nameForm extends State<zprofil_name> {
                 textAlign: TextAlign.center,
               ),
             ),
+            if (userId > 0)
+              ProfileRatingRow(
+                avgRating: avgRating,
+                reviewsCount: reviewsCount,
+                onTap: () => ProfileRatingRow.openCustomerReviews(
+                  context,
+                  userId,
+                ),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -281,6 +300,49 @@ class zprofil_nameForm extends State<zprofil_name> {
                                 const MenuzakScreen(pageProfile: 'hist')));
                   },
                   child: const Text('История заказов')),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () async {
+                    if (!await ensureChatAuthorized(context)) return;
+                    if (!context.mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatListScreen(
+                          showBottomNav: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Чаты с исполнителями')),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () async {
+                    if (!await ensureChatAuthorized(context)) return;
+                    if (!context.mounted) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatListScreen(
+                          initialTab: 1,
+                          showBottomNav: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Поддержка')),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),

@@ -53,8 +53,15 @@ if (!$table) {
     exit;
 }
 
+$bd = match ($table) {
+    'add_ob_vidt' => 2,
+    'add_ob_gr' => 3,
+    default => 1,
+};
+
 $sql = "
     SELECT a.*,
+           {$bd} AS bd,
            u.idusers AS idusers,
            u.fotouser,
            u.firstName,
@@ -78,22 +85,29 @@ $sql = "
     FROM {$table} AS a
     LEFT JOIN users AS u ON a.iduser = u.idusers
     LEFT JOIN reviews AS r ON u.idusers = r.user_id
-    LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
     WHERE a.iduser IS NOT NULL
       AND a.iduser != ?
+      AND (a.flag IS NULL OR a.flag = 1)
       AND a.city = ?
       {$condition}
-      AND od.id IS NULL
+      AND NOT EXISTS (
+          SELECT 1
+          FROM ordersglobal og
+          INNER JOIN offer_dataf odf ON odf.id = og.idoffer AND odf.bd = {$bd}
+          WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
+            AND og.user_idok = ?
+            AND og.status = 'выполняется'
+      )
     GROUP BY a.id, u.idusers
     ORDER BY a.id DESC
 ";
 
 if ($condition !== "") {
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssss", $useId, $useId, $city, $nameImg);
+    $stmt->bind_param("sssss", $useId, $useId, $city, $useId, $nameImg);
 } else {
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sss", $useId, $useId, $city);
+    $stmt->bind_param("ssss", $useId, $useId, $city, $useId);
 }
 
 $stmt->execute();

@@ -91,12 +91,21 @@ $sql = "
     FROM {$table} AS a
     INNER JOIN users AS u ON a.iduser = u.idusers
     LEFT JOIN reviews AS r ON u.idusers = r.target_user_id
-    LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
     WHERE a.iduser IS NOT NULL
       AND a.enddatez >= ?
       AND a.iduser != ?
-      AND od.id IS NULL
       AND a.city = ?
+      AND NOT EXISTS (
+          SELECT 1 FROM offer_data od
+          WHERE od.iduser = a.id AND od.bd = {$bd} AND od.isp = 1
+            AND (od.status = 0 OR od.status IS NULL)
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM ordersglobal og
+          INNER JOIN offer_data od2 ON od2.id = og.idoffer AND od2.bd = {$bd}
+          WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
+            AND og.status IN ('выполняется', 'выполнен')
+      )
     GROUP BY a.id, u.idusers
     ORDER BY a.id DESC
 ";

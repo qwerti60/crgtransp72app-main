@@ -18,7 +18,6 @@ $offerf =
       FROM offer_dataf od
      WHERE od.iduser = a.id
        AND od.bd = " . (int) $bd . "
-       AND od.isp = 0
   ) AS offerf";
 
 /* -------------------------------------------------

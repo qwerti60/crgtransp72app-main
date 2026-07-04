@@ -165,6 +165,13 @@ try {
             $stmtInsertOrdersGlobal->bindValue(':idoffer', $offerRow['id'], PDO::PARAM_INT);
             $stmtInsertOrdersGlobal->execute();
 
+            try {
+                require_once __DIR__ . '/include/chat_core.php';
+                crg_chat_on_ordersglobal_created($pdo, (int) $pdo->lastInsertId());
+            } catch (Throwable $e) {
+                // ignore chat hook errors
+            }
+
             echo json_encode(['message' => 'Запись успешно создана'], JSON_UNESCAPED_UNICODE);
         } else {
             echo json_encode(['message' => 'Выполняется другим исполнителем'], JSON_UNESCAPED_UNICODE);

@@ -81,4 +81,3 @@ function resolveUserIdFromToken(PDO $pdo, string $token): ?int
     return $row ? (int) $row['idusers'] : null;
 }
 
-?>

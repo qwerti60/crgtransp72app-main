@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crgtransp72app/services/chat_push_handler.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreen.dart';
 import 'package:crgtransp72app/pages/SearchForm.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -297,6 +298,9 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   void initState() {
     super.initState();
     _currentPage = widget.initialPage;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ChatPushHandler.tryOpenPending(context);
+    });
     getUserData().then((_) {
       if (!mounted) return;
       if (!_isAuthorized && _currentPage >= 2) {

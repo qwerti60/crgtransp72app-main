@@ -7,6 +7,8 @@ import 'package:crgtransp72app/pages/changerol_page.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 import 'package:crgtransp72app/pages/loginpage.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/zprofil_page2.dart';
@@ -19,21 +21,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 import '../customer_ad_category.dart';
 import '../design/colors.dart';
+import '../models/search_params.dart';
+import '../services/search_services_api.dart';
 import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
 import 'performer_bottom_nav.dart';
+import 'performer_search_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class outputobz extends StatelessWidget {
   final String nameImg;
   final String city;
   final bool showBottomNav;
+  final SearchParams? searchParams;
+  final String? searchTitle;
+
+  /// Индекс вкладки [PerformerBottomNav] (0 — услуги, 1 — заявки, 2 — профиль).
+  final int performerBottomNavIndex;
+
+  /// Если быстрый подбор из «Мои объявления» пуст — открыть форму поиска.
+  final bool openSearchOnEmpty;
 
   const outputobz(
       {super.key,
       required this.nameImg,
       required this.city,
-      this.showBottomNav = true});
+      this.showBottomNav = true,
+      this.searchParams,
+      this.searchTitle,
+      this.performerBottomNavIndex = 0,
+      this.openSearchOnEmpty = false});
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +58,10 @@ class outputobz extends StatelessWidget {
       nameImg: nameImg,
       city: city,
       showBottomNav: showBottomNav,
+      searchParams: searchParams,
+      searchTitle: searchTitle,
+      performerBottomNavIndex: performerBottomNavIndex,
+      openSearchOnEmpty: openSearchOnEmpty,
     );
   }
 }
@@ -50,11 +71,20 @@ class MyHomePage extends StatefulWidget {
 
   final String city;
   final bool showBottomNav;
+  final SearchParams? searchParams;
+  final String? searchTitle;
+  final int performerBottomNavIndex;
+  final bool openSearchOnEmpty;
+
   const MyHomePage(
       {super.key,
       required this.nameImg,
       required this.city,
-      this.showBottomNav = true});
+      this.showBottomNav = true,
+      this.searchParams,
+      this.searchTitle,
+      this.performerBottomNavIndex = 0,
+      this.openSearchOnEmpty = false});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -82,6 +112,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   late Future<List> _adsFuture;
+  bool _emptySearchRedirectDone = false;
 
   bool get _isAuthorized => userId > 0;
 
@@ -120,10 +151,39 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _adsFuture = Future.value(<dynamic>[]);
     _resolveBd();
-    getUserData();
-    _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
+    _adsFuture = _bootstrapAds();
+  }
+
+  Future<List> _bootstrapAds() async {
+    await getUserData();
+    final ads = await fetchAds(widget.city, widget.nameImg, userId);
+    _maybeOpenSearchOnEmpty(ads);
+    return ads;
+  }
+
+  void _maybeOpenSearchOnEmpty(List ads) {
+    if (!widget.openSearchOnEmpty ||
+        ads.isNotEmpty ||
+        _emptySearchRedirectDone ||
+        !mounted) {
+      return;
+    }
+    _emptySearchRedirectDone = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PerformerSearchScreen(
+            showBottomNav: widget.showBottomNav,
+            initialCity: widget.city,
+            initialServiceName: widget.nameImg,
+            emptyResultsHint:
+                'По параметрам объявления заявки не найдены. Уточните поиск.',
+          ),
+        ),
+      );
+    });
   }
 
   int _bdForTruck(Map truck) {
@@ -257,6 +317,33 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List> fetchAds(String city, String nameImg, int userId) async {
+    if (widget.searchParams != null) {
+      final parsed = await SearchServicesApi.tryFetch(
+        role: 'performer',
+        nameImg: nameImg,
+        city: city,
+        userId: userId,
+        params: widget.searchParams!,
+      );
+      if (parsed != null) {
+        if (parsed.isNotEmpty) {
+          final rowBd = int.tryParse(parsed[0]['bd']?.toString() ?? '');
+          if (rowBd != null && rowBd > 0 && mounted) {
+            setState(() => bd = rowBd);
+          }
+        }
+        return parsed;
+      }
+      if (widget.searchParams!.freeText) {
+        return [];
+      }
+      debugPrint('[outputobz] search_services unavailable, fallback to getads3');
+    }
+
+    if (nameImg.isEmpty || city.isEmpty) {
+      return [];
+    }
+
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
         path: '/api/getads3.php',
@@ -303,11 +390,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Объявления',
-          style: TextStyle(
-            color: whiteprColor,
-          ),
+        title: Text(
+          widget.searchTitle ?? 'Объявления',
+          style: const TextStyle(color: whiteprColor),
         ),
         backgroundColor: blueaccentColor,
       ),
@@ -550,28 +635,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                       ],
                                     );
 
-                                    final Widget phoneBlock = GestureDetector(
-                                      onTap: () {
-                                        _makePhoneCall(truck['phone']);
-                                      },
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.phone),
-                                          const SizedBox(width: 4),
-                                          SizedBox(
-                                            width: 130,
-                                            child: Text(
-                                              '${truck['phone']}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                    final Widget phoneBlock = ProfileContactRow(
+                                      phone: '${truck['phone'] ?? ''}',
+                                      onChatTap: () => _openChatForTruck(truck),
                                     );
 
                                     if (isNarrow) {
@@ -1021,8 +1087,32 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       bottomNavigationBar: widget.showBottomNav
-          ? const PerformerBottomNav(currentIndex: 0)
+          ? PerformerBottomNav(currentIndex: widget.performerBottomNavIndex)
           : null,
+    );
+  }
+
+  Future<void> _openChatForTruck(Map truck) async {
+    final customerId = int.tryParse(
+      '${truck['iduser'] ?? truck['idusers'] ?? ''}',
+    );
+    final adId = int.tryParse('${truck['id'] ?? ''}');
+    if (customerId == null || adId == null || customerId <= 0 || adId <= 0) {
+      return;
+    }
+    final name = [
+      truck['lastName'],
+      truck['firstName'],
+    ].where((e) => e != null && '$e'.trim().isNotEmpty).join(' ');
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: customerId,
+      bd: _bdForTruck(truck),
+      adId: adId,
+      title: name.isNotEmpty ? name : 'Заказчик',
+      currentUserId: userId,
+      showBottomNav: widget.showBottomNav,
+      isPerformer: true,
     );
   }
 

@@ -21,6 +21,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import '../search/ad_match.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -750,6 +751,15 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold)),
                                   ],
+                                ),
+                              ),
+                            if (!isInactive)
+                              AdMatchSearchButton(
+                                label: 'Найти исполнителей',
+                                onPressed: () => openPerformersForCustomerAd(
+                                  context,
+                                  Map<String, dynamic>.from(truck),
+                                  embedInShell: !widget.showBottomNav,
                                 ),
                               ),
                           ],

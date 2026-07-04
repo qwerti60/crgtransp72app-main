@@ -97,11 +97,48 @@
 
 ---
 
-## 3. Заказчик: поиск исполнителей (`lib/pages/SearchFormisp.dart`)
+## 3. Заказчик: поиск исполнителей (вкладка «Заказы»)
 
-- **Город (населённый пункт)** — `GET /api/cities.php`
-- **Услуга** — `GET /api/getsearsh.php`
-- Кнопка **«Найти»** → экран списка **`outputob`** с выбранными `nameImg` (услуга) и `city`, с меню заказчика при необходимости.
+Экран: **`CustomerSearchScreen`** (`lib/pages/customer_search_screen.dart`), обёртка — `SearchFormisp.dart`.
+
+| Поле | Источник |
+|------|----------|
+| **Поисковый запрос** | текст (опционально) |
+| **Город** | `GET /api/cities.php` |
+| **Услуга** | `GET /api/getsearsh.php` |
+| **Сортировка** | релевантность / рейтинг / цена / дата |
+| **Куда доставить** | текст (доп. фильтр, bd=1) |
+| **Бюджет до** | число (доп. фильтр) |
+
+Кнопка **«Найти»** → **`outputob`** («Исполнители») с `SearchParams` → `GET /api/search_services.php?role=customer&…`.
+
+Классический путь без расширенного поиска: **Услуги** → город → `outputob` через `get_ads2_new.php`.
+
+### 3.1. Быстрый подбор из «Мои объявления»
+
+На карточке **активного** заказа (`ads2.dart`) — кнопка **«Найти исполнителей»** → `outputob` с параметрами из объявления (`lib/search/ad_match.dart`).
+
+---
+
+## 3а. Исполнитель: поиск заявок (вкладка «Заявки»)
+
+Экран: **`PerformerSearchScreen`** (`lib/pages/performer_search_screen.dart`), обёртка — `SearchForm.dart`.
+
+| Поле | Источник |
+|------|----------|
+| **Поисковый запрос** | текст (опционально) |
+| **Город** | `GET /api/cities.php` |
+| **Услуга** | `GET /api/getsearsh.php` |
+| **Сортировка** | релевантность / рейтинг / цена / дата |
+| **Бюджет заказа до** | число (доп. фильтр) |
+
+Кнопка **«Найти»** → **`outputobz`** («Объявления») → `GET /api/search_services.php?role=performer&…`.
+
+Классический путь: **Объявления** → город → `outputobz` через `getads3.php`.
+
+### 3а.1. Быстрый подбор из «Мои объявления»
+
+На **опубликованном** объявлении исполнителя (`ads1.dart`, `flag = 1`) — кнопка **«Найти заявки»** → `outputobz` с параметрами из объявления.
 
 ---
 
@@ -190,7 +227,7 @@
 |----------|----------------|
 | **Услуги** | `get_vt_z.dart` — `MyAppI1z`, `MyAppI1zPage` |
 | **Заказ спецтехники**, **Заказ грузовыех перевозок**, **Заказ грузчиков** (секции сетки на «Услугах») | `get_vt_z.dart`, `MyImageGrid` |
-| **Поиск заявок** | `SearchFormisp.dart` |
+| **Поиск исполнителей** | `CustomerSearchScreen` — AppBar **«Поиск исполнителей»** (`SearchFormisp`) |
 | **Исполнители** | `outputob.dart` |
 | **Объявления** | `outputobz.dart` |
 | **Список городов …** (подставляется услуга), **Выбранный город** | `CityScreenisp.dart` |
@@ -199,12 +236,14 @@
 
 ### 7.4. Заказчик: профиль `zprofil_name` (`zprofil_page.dart`)
 
+Под именем пользователя: **рейтинг** (звёзды, средний балл) и **иконка отзывов** со счётчиком — виджет `ProfileRatingRow` (`lib/widgets/profile_rating_row.dart`). По нажатию → `ReviewScreen` (отзывы о заказчике). Данные: `avg_rating`, `reviewsCount` из `GET /api/getuserinfo.php`.
+
 Пункты меню (кнопки на экране профиля):
 
 | Подпись кнопки | Куда ведёт (экран / маршрут) |
 |----------------|------------------------------|
-| **Личные данные** | `MenuzakScreen(pageProfile: 'zprofil_ld')` → форма `zprofil_ld` (без отдельного заголовка AppBar; редактирование ФИО и фото) |
-| **Мои объявления** | `MenuzakScreen('Ads2App')` → `Ads2App` / **Мои объявления** (`ads2.dart`) |
+| **Личные данные** | `MenuzakScreen(pageProfile: 'zprofil_ld')` → `zprofil_ld` (рейтинг под именем; `ReviewScreen` / `ReviewScreenz` по роли) |
+| **Мои объявления** | `MenuzakScreen('Ads2App')` → `Ads2Page` (`ads2.dart`); вложенный `Navigator`, нижнее меню снаружи; кнопка **«Найти исполнителей»** на активных карточках |
 | **Заявки** | `zprofil_zakaz` → AppBar **Объявления заявки** (`zprofil_zakaz.dart`) |
 | **Избранное** | `OutputobzlikesPage` → **Избранные исполнители** (`outputobzlikes.dart`) |
 | **История заказов** | `MenuzakScreen('hist')` → **История заказов заказчика** (`history_zak.dart`) |
@@ -236,7 +275,7 @@
 |----------|----------------|
 | **Услуги** | `get_vt.dart` — `MyAppI1`, `MyAppI1Page` (аналог заказчика) |
 | **Заказ спецтехники**, **Заказ грузовыех перевозок**, **Заказ грузчиков** | `get_vt.dart`, сетка |
-| **Поиск заявок** | `SearchForm.dart` |
+| **Поиск заявок** | `PerformerSearchScreen` / `SearchForm.dart` |
 | **Объявления** | `outputobz.dart` |
 | **Исполнители** | `outputob.dart` |
 | **Мои объявления** | `ads2.dart`; также **Мои объявления** (с пробелом в конце строки в коде: `'Мои объявления '`) — `ads1.dart` |
@@ -251,10 +290,12 @@
 
 ### 7.8. Исполнитель: профиль `zprofil_name2` (`zprofil_page2.dart`)
 
+Под именем: **рейтинг** и **отзывы** (`ProfileRatingRow`) → по нажатию `ReviewScreenz` (отзывы об исполнителе). Данные: `GET /api/getuserinfo_order.php` (`avg_rating`, `reviewsCount` из `reviewsisp`).
+
 | Подпись кнопки | Куда ведёт (сводно) |
 |----------------|---------------------|
-| **Личные данные** | `HistortScreen(pageProfile: 'zprofil_ld')` → `zprofil_ld` |
-| **Мои объявления** | `HistortScreen('Ads1App')` → `Ads1Page` (**Мои объявления** / `ads1.dart`) |
+| **Личные данные** | `HistortScreen(pageProfile: 'zprofil_ld')` → `zprofil_ld` (`isPerformerProfile: true`) |
+| **Мои объявления** | `HistortScreen('Ads1App')` → `Ads1Page` (`ads1.dart`); вложенный `Navigator`; кнопка **«Найти заявки»** на опубликованных карточках |
 | **Предложения** | `zprofil_zayavki` (AppBar **Предложения**) |
 | **Избранные заказчики** | `Outputobzlikes1Page` (**Избранные заказчики**) |
 | **История заказов** | `HistortScreen('hist')` → **История заказов** (`history_isp.dart`) |
@@ -285,7 +326,12 @@
 | ИНН, ОГРН, КПП, название | `lib/pages/reguser4_page_.dart` |
 | ТС перевозчика | `lib/pages/reguser_name.dart`, `lib/pages/reguser2_page.dart` |
 | Вид спецтехники | `lib/pages/reguser5_page_.dart` |
-| Поиск заказчиком | `lib/pages/SearchFormisp.dart` |
+| Поиск заказчиком | `lib/pages/customer_search_screen.dart`, `SearchFormisp.dart` |
+| Поиск исполнителем | `lib/pages/performer_search_screen.dart`, `SearchForm.dart` |
+| Единый API поиска | `api/search_services.php`, `lib/services/search_services_api.dart` |
+| Быстрый подбор по объявлению | `lib/search/ad_match.dart` |
+| Рейтинг в профиле | `lib/widgets/profile_rating_row.dart`; API: `getuserinfo.php`, `getuserinfo_order.php` |
+| Редактирование фото объявлений | `lib/widgets/ad_edit_image_slot.dart`, `api/include/ad_image_update.php` |
 | Добавление заказов | `lib/pages/add_ob_gp_usl.dart`, `add_ob_gp_usl_t.dart`, `add_ob_gp_usl_g.dart` |
 | Базовый домен | `lib/config.dart` |
 | Названия экранов заказчик / исполнитель | п. 7 этого файла; исходники в `lib/pages/zakaz_screen1.dart`, `zakaz_screen2.dart`, `zprofil_page.dart`, `zprofil_page2.dart`, `profil_page.dart`, `menuzak.dart`, `test.dart`, `get_vt_z.dart`, `get_vt.dart` и связанные экраны из п. 7 |

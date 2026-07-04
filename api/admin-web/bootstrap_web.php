@@ -80,8 +80,27 @@ function tp_admin_web_require_login(): PDO
     return $pdo;
 }
 
+/** Авторизация для AJAX/poll — JSON 401 вместо редиректа на login. */
+function tp_admin_web_require_login_json(): PDO
+{
+    tp_admin_web_require_include('admin_auth.php');
+    $pdo = tp_pdo();
+    if (!tp_admin_authorized($pdo)) {
+        tp_admin_web_clear_auth_session();
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'unauthorized'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    return $pdo;
+}
+
 /**
- * @param 'stats'|'cities'|'vidt'|'vidg'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'settings' $activeNav
+ * @param 'stats'|'cities'|'vidt'|'vidg'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'settings'|'support' $activeNav
  */
 function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string $adminLogin = null): void
 {
@@ -94,17 +113,26 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
         'users' => ['Пользователи', 'users.php'],
         'performer_ads' => ['Объявления исполнителей', 'performer_ads.php?type=gp'],
         'customer_ads' => ['Заявки заказчиков', 'customer_ads.php?type=orders'],
+        'support' => ['Поддержка', 'support_queue.php'],
         'broadcast' => ['Рассылка', 'broadcast.php'],
         'settings' => ['Настройки', 'settings.php'],
     ];
 
     $performerAdsPending = 0;
+    $supportNewCount = 0;
     if ($adminLogin !== null && $adminLogin !== '') {
         tp_admin_web_require_include('admin_ads.php');
         try {
             $performerAdsPending = crg_admin_performer_ads_pending_total(tp_pdo());
         } catch (Throwable $e) {
             $performerAdsPending = 0;
+        }
+        tp_admin_web_require_include('chat_core.php');
+        tp_admin_web_require_include('admin_support.php');
+        try {
+            $supportNewCount = crg_admin_support_new_count(tp_pdo());
+        } catch (Throwable $e) {
+            $supportNewCount = 0;
         }
     }
 
@@ -195,6 +223,9 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
                 <span><?= tp_admin_web_h($label) ?></span>
                 <?php if ($key === 'performer_ads' && $performerAdsPending > 0) { ?>
                     <span class="nav-dot" title="На проверке: <?= (int) $performerAdsPending ?>"></span>
+                <?php } ?>
+                <?php if ($key === 'support' && $supportNewCount > 0) { ?>
+                    <span class="nav-dot" title="Новых обращений: <?= (int) $supportNewCount ?>"></span>
                 <?php } ?>
             </a>
         <?php } ?>

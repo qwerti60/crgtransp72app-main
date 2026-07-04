@@ -330,7 +330,8 @@ function crg_fcm_send(
     string $title,
     string $body,
     bool $retryOnAuth = true,
-    ?string $deliveryTag = null
+    ?string $deliveryTag = null,
+    array $data = []
 ): bool|string {
     $deviceToken = trim($deviceToken);
     $title = trim($title);
@@ -364,36 +365,48 @@ function crg_fcm_send(
 
     $GLOBALS['crg_fcm_last_message_id'] = null;
 
-    $message = [
-        'message' => [
-            'token' => $deviceToken,
-            'notification' => [
-                'title' => $title,
-                'body' => $body,
+    $messagePayload = [
+        'notification' => [
+            'title' => $title,
+            'body' => $body,
+        ],
+        'apns' => [
+            'headers' => [
+                'apns-priority' => '10',
+                'apns-push-type' => 'alert',
             ],
-            'apns' => [
-                'headers' => [
-                    'apns-priority' => '10',
-                    'apns-push-type' => 'alert',
-                ],
-                'payload' => [
-                    'aps' => [
-                        'alert' => ['title' => $title, 'body' => $body],
-                        'sound' => 'default',
-                        'badge' => 1,
-                    ],
-                ],
-            ],
-            'android' => [
-                'priority' => 'high',
-                'notification' => [
-                    'channel_id' => crg_fcm_android_channel_id(),
+            'payload' => [
+                'aps' => [
+                    'alert' => ['title' => $title, 'body' => $body],
                     'sound' => 'default',
-                    'tag' => $deliveryTag,
-                    'notification_count' => 1,
+                    'badge' => 1,
                 ],
             ],
         ],
+        'android' => [
+            'priority' => 'high',
+            'notification' => [
+                'channel_id' => crg_fcm_android_channel_id(),
+                'sound' => 'default',
+                'tag' => $deliveryTag,
+                'notification_count' => 1,
+            ],
+        ],
+    ];
+
+    if ($data !== []) {
+        $payloadData = [];
+        foreach ($data as $key => $value) {
+            $payloadData[(string) $key] = (string) $value;
+        }
+        $messagePayload['data'] = $payloadData;
+    }
+
+    $message = [
+        'message' => array_merge(
+            ['token' => $deviceToken],
+            $messagePayload
+        ),
     ];
 
     $projectId = (string) $serviceAccount['project_id'];
@@ -418,7 +431,7 @@ function crg_fcm_send(
     if ($sendStatus === 401 && $retryOnAuth) {
         $accessToken = crg_fcm_acquire_access_token($serviceAccount, true);
         if ($accessToken !== false) {
-            return crg_fcm_send($deviceToken, $title, $body, false, $deliveryTag);
+            return crg_fcm_send($deviceToken, $title, $body, false, $deliveryTag, $data);
         }
     }
 
@@ -601,8 +614,13 @@ function crg_fcm_user_device_token(PDO $pdo, int $userId): ?array
 /**
  * @return true|string|null null — нет FCM-токена у пользователя
  */
-function crg_fcm_send_to_user(PDO $pdo, int $userId, string $title, string $body): bool|string|null
-{
+function crg_fcm_send_to_user(
+    PDO $pdo,
+    int $userId,
+    string $title,
+    string $body,
+    array $data = []
+): bool|string|null {
     $tokenData = crg_fcm_user_device_token($pdo, $userId);
     if ($tokenData === null) {
         return null;
@@ -617,7 +635,8 @@ function crg_fcm_send_to_user(PDO $pdo, int $userId, string $title, string $body
         $title,
         crg_fcm_push_body_with_stamp($body),
         true,
-        $deliveryTag
+        $deliveryTag,
+        $data
     );
     if ($res === true) {
         return true;

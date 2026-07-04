@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:crgtransp72app/services/chat_push_handler.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -22,7 +24,12 @@ Future<void> initPushNotifications() async {
     android: androidInit,
     iOS: DarwinInitializationSettings(),
   );
-  await _localNotifications.initialize(initSettings);
+  await _localNotifications.initialize(
+    initSettings,
+    onDidReceiveNotificationResponse: (response) {
+      ChatPushHandler.handlePayloadJson(response.payload);
+    },
+  );
 
   if (Platform.isAndroid) {
     const channel = AndroidNotificationChannel(
@@ -49,6 +56,8 @@ Future<void> _showForegroundNotification(RemoteMessage message) async {
   final id = message.messageId?.hashCode ??
       DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
+  final payload = message.data.isNotEmpty ? json.encode(message.data) : null;
+
   await _localNotifications.show(
     id,
     notification.title,
@@ -69,6 +78,7 @@ Future<void> _showForegroundNotification(RemoteMessage message) async {
         presentSound: true,
       ),
     ),
+    payload: payload,
   );
 
   debugPrint('FCM foreground shown: ${notification.title}');

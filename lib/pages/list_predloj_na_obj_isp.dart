@@ -4,6 +4,8 @@ import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -270,11 +272,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
     final response = await http.post(
-      Uri.parse('https://ivnovav.ru/api/check_isp.php'),
+      Uri.parse('${Config.baseUrl}/api/check_isp.php'),
       body: {
         'idusers': idUser.toString(),
         'bd': bd.toString(),
         'iduserp': idUserP.toString(),
+        'source': 'customer_order',
       },
     );
 
@@ -553,27 +556,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ),
                                   const SizedBox(width: 8),
                                   Flexible(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        _makePhoneCall(truck['phone']);
-                                      },
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.phone),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              '${truck['phone']}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                    child: ProfileContactRow(
+                                      phone: '${truck['phone']}',
+                                      onChatTap: () => _openChatForTruck(truck),
                                     ),
                                   )
                                 ],
@@ -873,7 +858,7 @@ class _MyHomePageState extends State<MyHomePage> {
     required bool accept,
   }) async {
     // Переключаем статус на сервере (isp 0<->1).
-    await updateOffer(widget.bd, widget.nameImg, userId, iduserp);
+    await updateOffer(widget.bd, widget.nameImg, iduserp, accept: accept);
 
     if (!mounted) return;
     // Локально обновляем состояние: при принятии блокируем остальные,
@@ -902,8 +887,8 @@ class _MyHomePageState extends State<MyHomePage> {
               deviceToken: data['fcm_token'],
               title: 'Привет от crgtransp72app!',
               body: accept
-                  ? 'Ваше предложение принято исполнителем!'
-                  : 'От вашего предложения исполнитель отказался!',
+                  ? 'Ваше предложение принято заказчиком!'
+                  : 'Заказчик отказался от вашего предложения',
             );
             print('Уведомление отправлено');
           } catch (e) {
@@ -920,15 +905,17 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> updateOffer(int bd, String nameImg, int userID, iduserp) async {
-    final uri =
-        Uri.parse('https://ivnovav.ru/api/updatePriemZak.php'); // Новый endpoint
+  Future<void> updateOffer(int bd, String nameImg, dynamic iduserp,
+      {required bool accept}) async {
+    final uri = Uri.parse('${Config.baseUrl}/api/updatePriemZak.php');
 
     try {
       final response = await http.post(uri, body: {
-        'idusers': widget.nameImg, // Пользовательский ID
-        'bd': bd.toString(), // Поле bd
-        'iduserp': iduserp.toString() // Поле bd
+        'idusers': widget.nameImg,
+        'bd': bd.toString(),
+        'iduserp': iduserp.toString(),
+        'source': 'customer_order',
+        'action': accept ? 'accept' : 'refuse',
       });
       print('ttt');
       print(userId.toString());
@@ -964,6 +951,28 @@ class _MyHomePageState extends State<MyHomePage> {
       id: id,
       bd: bd,
       usePerformerEndpoint: false,
+    );
+  }
+
+  Future<void> _openChatForTruck(Map truck) async {
+    final performerId = int.tryParse('${truck['iduserp'] ?? truck['idusers'] ?? ''}');
+    final adId = int.tryParse(widget.nameImg);
+    if (performerId == null || adId == null || performerId <= 0 || adId <= 0) {
+      return;
+    }
+    final name = [
+      truck['lastName'],
+      truck['firstName'],
+    ].where((e) => e != null && '$e'.trim().isNotEmpty).join(' ');
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: performerId,
+      bd: widget.bd,
+      adId: adId,
+      title: name.isNotEmpty ? name : 'Исполнитель',
+      currentUserId: userId,
+      showBottomNav: widget.useCustomerMenu,
+      isPerformer: false,
     );
   }
 

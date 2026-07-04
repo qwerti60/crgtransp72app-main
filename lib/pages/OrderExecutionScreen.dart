@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/scrmenu.dart';
@@ -626,6 +627,28 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _openOrderChat() async {
+    final customerId = int.tryParse(widget.customerUserId?.trim() ?? '');
+    final adId = int.tryParse(widget.orderId);
+    final performerId = int.tryParse(userIdok.isNotEmpty ? userIdok : widget.userId);
+    if (customerId == null ||
+        adId == null ||
+        performerId == null ||
+        customerId <= 0 ||
+        adId <= 0) {
+      showErrorSnackbar('Не удалось открыть чат по заказу');
+      return;
+    }
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: customerId,
+      bd: widget.bd ?? 1,
+      adId: adId,
+      title: 'Заказчик',
+      currentUserId: performerId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -714,6 +737,23 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                     Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              fixedSize: const Size(double.infinity, 50),
+                              foregroundColor: whiteprColor,
+                              backgroundColor: blueaccentColor,
+                              disabledForegroundColor: grayprprColor,
+                              shape: const BeveledRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(3))),
+                            ),
+                            icon: const Icon(Icons.chat_bubble_outline,
+                                color: whiteprColor),
+                            label: const Text('Чат по заказу',
+                                style: TextStyle(color: whiteprColor)),
+                            onPressed: _openOrderChat,
+                          ),
+                          const Divider(thickness: 1, height: 16),
                           TextButton.icon(
                             style: TextButton.styleFrom(
                               fixedSize: const Size(double.infinity, 50),

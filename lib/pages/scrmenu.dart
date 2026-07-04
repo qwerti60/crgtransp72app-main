@@ -61,7 +61,7 @@ Widget buildProfilePage(
     String pageProfile, userId1, orderId123, String uidok) {
   switch (pageProfile) {
     case 'zprofil_ld':
-      return const zprofil_ld(showBottomNav: false);
+      return const zprofil_ld(showBottomNav: false, isPerformerProfile: true);
     case 'Ads1App':
       return const Ads1Page();
     case 'zprofil_zayavki':

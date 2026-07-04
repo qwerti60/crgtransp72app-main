@@ -20,6 +20,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../config.dart';
 import '../customer_ad_category.dart';
 import '../design/colors.dart';
+import '../search/ad_match.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'changerol_page.dart';
@@ -644,12 +645,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ],
                                 ),
                               ),
-                            if ((int.tryParse(truck['flag'].toString()) ?? 0) !=
-                                    0 &&
-                                (int.tryParse(
-                                            truck['offerf']?.toString() ?? '0') ??
-                                        0) >
-                                    0)
+                            if ((int.tryParse(truck['offerf']?.toString() ?? '0') ??
+                                    0) >
+                                0)
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -689,12 +687,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ],
                                 ),
                               ),
-                            if ((int.tryParse(truck['flag'].toString()) ?? 0) ==
-                                    0 ||
-                                (int.tryParse(
-                                            truck['offerf']?.toString() ?? '0') ??
-                                        0) ==
-                                    0)
+                            if ((int.tryParse(truck['offerf']?.toString() ?? '0') ??
+                                    0) ==
+                                0)
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
@@ -709,6 +704,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold)),
                                   ],
+                                ),
+                              ),
+                            if ((int.tryParse(truck['flag'].toString()) ?? 0) ==
+                                1)
+                              AdMatchSearchButton(
+                                label: 'Найти заявки',
+                                onPressed: () => openOrdersForPerformerAd(
+                                  context,
+                                  Map<String, dynamic>.from(truck),
+                                  embedInShell: !widget.showBottomNav,
                                 ),
                               ),
                           ],

@@ -5,6 +5,7 @@ import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 
 import '../design/colors.dart';
+import '../widgets/profile_rating_row.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
@@ -20,8 +21,13 @@ import 'dart:async';
 
 class zprofil_ld extends StatefulWidget {
   final bool showBottomNav;
+  final bool isPerformerProfile;
 
-  const zprofil_ld({super.key, this.showBottomNav = true});
+  const zprofil_ld({
+    super.key,
+    this.showBottomNav = true,
+    this.isPerformerProfile = false,
+  });
   @override
   zprofil_ldForm createState() => zprofil_ldForm();
 }
@@ -38,6 +44,8 @@ class zprofil_ldForm extends State<zprofil_ld> {
   String phone = '';
   String email = '';
   int userId = 0;
+  double avgRating = 0;
+  int reviewsCount = 0;
   @override
   void initState() {
     super.initState();
@@ -271,8 +279,11 @@ class zprofil_ldForm extends State<zprofil_ld> {
       print("Token is null");
       return;
     }
+    final apiPath = widget.isPerformerProfile
+        ? '/api/getuserinfo_order.php'
+        : '/api/getuserinfo.php';
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.baseUrl}$apiPath?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -291,6 +302,11 @@ class zprofil_ldForm extends State<zprofil_ld> {
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
           fotouser =
               data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
+          final rating = ProfileRatingRow.fromApiMap(
+            Map<String, dynamic>.from(data),
+          );
+          avgRating = rating.avgRating;
+          reviewsCount = rating.reviewsCount;
         });
 
         // Теперь переменные firstName, lastName, middleName, и userfoto доступны для использования в build() методе.
@@ -361,6 +377,18 @@ class zprofil_ldForm extends State<zprofil_ld> {
                 textAlign: TextAlign.center,
               ),
             ),
+            if (userId > 0)
+              ProfileRatingRow(
+                avgRating: avgRating,
+                reviewsCount: reviewsCount,
+                onTap: () {
+                  if (widget.isPerformerProfile) {
+                    ProfileRatingRow.openPerformerReviews(context, userId);
+                  } else {
+                    ProfileRatingRow.openCustomerReviews(context, userId);
+                  }
+                },
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),

@@ -28,7 +28,26 @@ try {
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT idusers, fotouser, firstName, lastName, middleName, city, phone, email FROM users WHERE idusers = ?");
+    $stmt = $pdo->prepare("
+        SELECT u.idusers, u.fotouser, u.firstName, u.lastName, u.middleName, u.city, u.phone, u.email,
+               COALESCE((
+                   SELECT ROUND(AVG(r.rating), 1)
+                   FROM reviews r
+                   WHERE r.target_user_id = u.idusers
+               ), 0) AS avg_rating,
+               (
+                   SELECT COUNT(*)
+                   FROM reviews r
+                   WHERE r.target_user_id = u.idusers
+               ) AS reviewsCount,
+               (
+                   SELECT COUNT(*)
+                   FROM reviews r
+                   WHERE r.target_user_id = u.idusers
+               ) AS review_count
+        FROM users u
+        WHERE u.idusers = ?
+    ");
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

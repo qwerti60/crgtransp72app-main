@@ -130,6 +130,13 @@ try {
         throw new Exception('Не удалось обновить статус заказа.');
     }
 
+    try {
+        require_once __DIR__ . '/include/chat_core.php';
+        crg_chat_on_ordersglobal_status($pdo, $orderGlobalId, $new_status);
+    } catch (Throwable $e) {
+        // ignore chat hook errors
+    }
+
     $selectStmt = $pdo->prepare('SELECT * FROM ordersglobal WHERE id = :id');
     $selectStmt->bindValue(':id', $orderGlobalId, PDO::PARAM_INT);
     $selectStmt->execute();

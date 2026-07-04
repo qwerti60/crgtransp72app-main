@@ -52,32 +52,51 @@ try {
     }
 
     // Счётчики по городам должны совпадать с get_ads2_new.php (тот же набор объявлений).
-    // Раньше: flag=1, без offer_data, без GROUP BY для gp/vidt — в скобках было меньше, чем в списке.
+    $bd = match ($mainTable) {
+        'add_ob_vidt' => 2,
+        'add_ob_gr' => 3,
+        default => 1,
+    };
+
     if ($mainTable === 'add_ob_gr') {
         $sql = "SELECT a.city, COUNT(DISTINCT a.id) AS cnt
                 FROM add_ob_gr AS a
-                LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
                 WHERE a.iduser IS NOT NULL
                   AND a.iduser != ?
-                  AND od.id IS NULL
+                  AND (a.flag IS NULL OR a.flag = 1)
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM ordersglobal og
+                      INNER JOIN offer_dataf odf ON odf.id = og.idoffer AND odf.bd = {$bd}
+                      WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
+                        AND og.user_idok = ?
+                        AND og.status = 'выполняется'
+                  )
                 GROUP BY a.city
                 ORDER BY a.city COLLATE utf8mb4_unicode_ci";
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception($conn->error);
-        $stmt->bind_param('s', $useId);
+        $stmt->bind_param('ss', $useId, $useId);
     } else {
         $sql = "SELECT a.city, COUNT(DISTINCT a.id) AS cnt
                 FROM {$mainTable} AS a
-                LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
                 WHERE a.{$mainColumn} = ?
                   AND a.iduser IS NOT NULL
                   AND a.iduser != ?
-                  AND od.id IS NULL
+                  AND (a.flag IS NULL OR a.flag = 1)
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM ordersglobal og
+                      INNER JOIN offer_dataf odf ON odf.id = og.idoffer AND odf.bd = {$bd}
+                      WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
+                        AND og.user_idok = ?
+                        AND og.status = 'выполняется'
+                  )
                 GROUP BY a.city
                 ORDER BY a.city COLLATE utf8mb4_unicode_ci";
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception($conn->error);
-        $stmt->bind_param('ss', $namex, $useId);
+        $stmt->bind_param('sss', $namex, $useId, $useId);
     }
 
     $stmt->execute();

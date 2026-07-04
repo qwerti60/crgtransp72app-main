@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crgtransp72app/pages/chat_thread_screen.dart';
 import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/SendReviewForm.dart' hide Config;
 import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
@@ -21,6 +22,7 @@ class OrderExecutionScreenzak extends StatefulWidget {
   final String orderId;
   final bool showBottomNav;
   final String orderSource;
+  final int? bd;
 
   const OrderExecutionScreenzak({
     Key? key,
@@ -28,6 +30,7 @@ class OrderExecutionScreenzak extends StatefulWidget {
     required this.orderId,
     this.showBottomNav = false,
     this.orderSource = 'customer_order',
+    this.bd,
   }) : super(key: key);
 
   @override
@@ -343,6 +346,29 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _openOrderChat() async {
+    final performerId = int.tryParse(widget.userId.trim());
+    final customerId = int.tryParse(userIdok.trim());
+    final adId = int.tryParse(widget.orderId);
+    if (performerId == null ||
+        customerId == null ||
+        adId == null ||
+        performerId <= 0 ||
+        customerId <= 0 ||
+        adId <= 0) {
+      showErrorSnackbar('Не удалось открыть чат по заказу');
+      return;
+    }
+    await ChatThreadScreen.openDeal(
+      context: context,
+      counterpartUserId: performerId,
+      bd: widget.bd ?? 1,
+      adId: adId,
+      title: 'Исполнитель',
+      currentUserId: customerId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -374,6 +400,26 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
                               .displayMedium!
                               .copyWith(fontWeight: FontWeight.bold)),
                     ]),
+                  if (orderStatus == null ||
+                      !['выполнен', 'отменен'].contains(orderStatus))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          fixedSize: const Size(double.infinity, 50),
+                          foregroundColor: whiteprColor,
+                          backgroundColor: blueaccentColor,
+                          shape: const BeveledRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(3)),
+                          ),
+                        ),
+                        icon: const Icon(Icons.chat_bubble_outline,
+                            color: whiteprColor),
+                        label: const Text('Чат по заказу',
+                            style: TextStyle(color: whiteprColor)),
+                        onPressed: _openOrderChat,
+                      ),
+                    ),
                   if (orderStatus != null &&
                       ['выполнен', 'отменен'].contains(orderStatus))
                     Center(

@@ -1,4 +1,5 @@
 <?php
+/** @deprecated Используйте get_ads2_new.php */
 include 'databd.php';
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $city = isset($_GET['city']) ? $_GET['city'] : '';
@@ -51,10 +52,10 @@ if (!$table) {
 // Теперь определяем переменную $bd на основе выбранной таблицы
 switch ($table) {
     case 'add_ob_gp':
-        $bd = 2;
+        $bd = 1;
         break;
     case 'add_ob_vidt':
-        $bd = 1;
+        $bd = 2;
         break;
     case 'add_ob_gr':
         $bd = 3;
@@ -66,6 +67,7 @@ switch ($table) {
 // Формируем основной SQL-запрос
 $sql = "
     SELECT a.*,
+           {$bd} AS bd,
            u.idusers AS idusers,
            u.fotouser,
            u.firstName,
@@ -87,10 +89,17 @@ $sql = "
     FROM {$table} AS a
     INNER JOIN users AS u ON a.iduser = u.idusers
     LEFT JOIN reviews AS r ON u.idusers = r.target_user_id -- Отзывы, соответствующие пользователю
-    LEFT JOIN offer_data od ON od.id = a.id AND od.isp = 1
     WHERE a.iduser IS NOT NULL 
       AND a.iduser != '$useId' /* Исключаем записи текущего пользователя */
-      AND od.id IS NULL /* Исключаем записи, только если совпадающая запись есть в offer_data с isp=1 */
+      AND (a.flag IS NULL OR a.flag = 1)
+      AND NOT EXISTS (
+          SELECT 1
+          FROM ordersglobal og
+          INNER JOIN offer_dataf odf ON odf.id = og.idoffer AND odf.bd = {$bd}
+          WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
+            AND og.user_idok = '$useId'
+            AND og.status = 'выполняется'
+      )
       AND a.city = '$city' /* Фильтруем по городу */
     GROUP BY a.id, u.idusers              -- Группируем по объявлениям и пользователям
     ORDER BY a.id DESC

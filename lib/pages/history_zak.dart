@@ -251,21 +251,11 @@ class _MyHomePageState extends State<MyHomePage> {
             child: FutureBuilder(
               future: fetchAds(widget.bd, widget.nameImg),
               builder: (context, snapshot) {
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('name', style: DefaultTextStyle.of(context).style),
-                      Text(lastName,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                );
-
                 if (snapshot.hasData) {
-                  return ListView.builder(
-                      itemCount: snapshot.data?.length,
+                  return ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: snapshot.data?.length ?? 0,
+                      separatorBuilder: (_, __) => const Divider(height: 24),
                       itemBuilder: (context, index) {
                         var truck = snapshot.data![index];
                         if (truck == null)
@@ -298,29 +288,24 @@ class _MyHomePageState extends State<MyHomePage> {
                               base64Stringf); // Декодируем строку в список байтов
                         }
                         return Column(
-                          crossAxisAlignment: CrossAxisAlignment
-                              .stretch, // Для выравнивания содержимого в начале
-
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Container(
-                              margin: const EdgeInsets.only(
-                                top: 10, // Отступ сверху
-                                bottom: 10, // Отступ снизу
-                              ),
+                            Center(
                               child: SizedBox(
                                 width: 100,
                                 height: 100,
                                 child: base64Stringf != ''
-                                    ? Image.memory(
-                                        truckImage!,
-                                        //truckImage=null;
-                                        //fit: BoxFit.cover,
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.memory(
+                                          truckImage!,
+                                          fit: BoxFit.cover,
+                                        ),
                                       )
                                     : Image.asset(
-                                        'assets/images/fotouser.png', // Путь к вашему изображению
-                                        width: 100, // Ширина 100
-                                        height: 100, // Высота 100
-                                      ), //ндартное изображение
+                                        'assets/images/fotouser.png',
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
                             ),
                             Padding(
@@ -515,26 +500,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _historyInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 5,
-            child: Text(
-              label,
-              style: DefaultTextStyle.of(context).style,
-            ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 4,
+          const SizedBox(width: 12),
+          Flexible(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
