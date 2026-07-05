@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:crgtransp72app/firebase_options.dart';
 import 'package:crgtransp72app/push_notifications.dart';
+import 'package:crgtransp72app/design/app_theme.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/start_pages.dart';
 import 'package:flutter/material.dart';
@@ -45,9 +46,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'KipaRO',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: const SplashScreen(),
     );
   }

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/databd.php';
+require_once __DIR__ . '/include/customer_order_deal.php';
 
 $nameImg = isset($_GET['nameImg']) && is_numeric($_GET['nameImg']) ? (int) $_GET['nameImg'] : null;
 $bd = isset($_GET['bd']) && is_numeric($_GET['bd']) ? (int) $_GET['bd'] : null;
@@ -171,19 +172,28 @@ $latestSubquery = $bdFilter
     ? 'SELECT iduserp, MAX(id) AS max_id
        FROM offer_data
        WHERE iduser = ?
-         AND (status = 0 OR status IS NULL)
+         AND (status IN (0, 1) OR status IS NULL)
          AND bd = ?
        GROUP BY iduserp'
     : 'SELECT iduserp, MAX(id) AS max_id
        FROM offer_data
        WHERE iduser = ?
-         AND (status = 0 OR status IS NULL)
+         AND (status IN (0, 1) OR status IS NULL)
        GROUP BY iduserp';
 
 $outerBdFilter = $bdFilter ? ' AND od.bd = ?' : '';
 
+$bdVal = ($bd !== null && $bd > 0) ? (int) $bd : 1;
+$customerIdExpr = match ($bdVal) {
+    2 => '(SELECT ot.iduser FROM orderst ot WHERE ot.id = od.iduser LIMIT 1)',
+    3 => '(SELECT ogc.iduser FROM ordersg ogc WHERE ogc.id = od.iduser LIMIT 1)',
+    default => '(SELECT o.iduser FROM orders o WHERE o.id = od.iduser LIMIT 1)',
+};
+
 $sql = "
-    SELECT od.id, od.iduser AS order_id, od.bd, od.cena, od.about, od.iduserp,
+    SELECT od.id, od.iduser AS order_id, od.bd, od.cena, od.about, od.iduserp, od.isp,
+           " . crg_sql_customer_ad_order_status('od.iduser', $bdVal, $customerIdExpr) . ",
+           " . crg_sql_customer_ad_chosen_performer('od.iduser', $bdVal, $customerIdExpr) . ",
            u.fotouser, u.firstName, u.lastName, u.middleName, u.city, u.phone,
            u.namefirm, u.innStr, u.ogrnStr, u.kppStr,
            COALESCE(AVG(r.rating), 0) AS rating,
@@ -195,7 +205,7 @@ $sql = "
     INNER JOIN users u ON od.iduserp = u.idusers
     LEFT JOIN reviewsisp r ON u.idusers = r.user_id
     WHERE od.iduser = ?
-      AND (od.status = 0 OR od.status IS NULL)
+      AND (od.status IN (0, 1) OR od.status IS NULL)
       {$outerBdFilter}
     GROUP BY od.id, u.idusers
     ORDER BY od.id DESC

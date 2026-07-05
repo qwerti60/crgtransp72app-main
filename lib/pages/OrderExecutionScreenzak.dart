@@ -1,15 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crgtransp72app/pages/chat_thread_screen.dart';
-import 'package:crgtransp72app/pages/HistortScreen1z.dart';
-import 'package:crgtransp72app/pages/SendReviewForm.dart' hide Config;
 import 'package:crgtransp72app/pages/SendReviewFormzakaz.dart';
-import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
-import 'package:crgtransp72app/pages/scrmenu.dart';
-import 'package:crgtransp72app/pages/test.dart' as hist;
+import 'package:crgtransp72app/services/review_pair_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -43,6 +39,14 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
   Timer? timer;
   String? orderStatus; // Переменная для хранения текущего статуса заказа
   String? formattedDuration;
+  bool _hasExistingReview = false;
+
+  static const _timerDigitsStyle = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+  );
+
+  bool get _timerIsActive => orderStatus == 'Продолжается выполнение';
 
   @override
   void initState() {
@@ -58,16 +62,40 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
 
   DateTime? _parseServerDateTime(dynamic raw) {
     final s = raw?.toString().trim() ?? '';
-    if (s.isEmpty) return null;
+    if (s.isEmpty || s.startsWith('0000-00-00')) return null;
+
+    final mysql = RegExp(
+        r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$');
+    final m = mysql.firstMatch(s);
+    if (m != null) {
+      return DateTime(
+        int.parse(m.group(1)!),
+        int.parse(m.group(2)!),
+        int.parse(m.group(3)!),
+        int.parse(m.group(4)!),
+        int.parse(m.group(5)!),
+        int.parse(m.group(6)!),
+      );
+    }
+
     try {
-      return DateTime.parse(s);
+      return DateTime.parse(s).toLocal();
     } catch (_) {
       try {
-        return DateTime.parse(s.replaceFirst(' ', 'T'));
+        return DateTime.parse(s.replaceFirst(' ', 'T')).toLocal();
       } catch (_) {
         return null;
       }
     }
+  }
+
+  void _resumeRunningOrder(DateTime startDate) {
+    final elapsed = DateTime.now().difference(startDate);
+    setState(() {
+      elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
+      orderStatus = 'Продолжается выполнение';
+    });
+    startTimer(startDate);
   }
 
   Future<void> _loadOrderStatus() async {
@@ -122,21 +150,14 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
       final message = decoded['message']?.toString() ?? '';
       switch (message) {
         case 'Продолжается выполнение':
-          final startDate = _parseServerDateTime(decoded['start_time']);
-          if (startDate == null) {
-            showErrorSnackbar('Некорректное время начала заказа');
-            break;
-          }
-          setState(() => orderStatus = 'Продолжается выполнение');
-          if (timer == null || timer!.tick == 0) {
-            startTimer(startDate);
-          }
+          final startDate =
+              _parseServerDateTime(decoded['start_time']) ?? DateTime.now();
+          _resumeRunningOrder(startDate);
           break;
         case 'Запись успешно создана':
-          setState(() => orderStatus = 'Продолжается выполнение');
-          if (timer == null || timer!.tick == 0) {
-            startTimer(null);
-          }
+          final startDate =
+              _parseServerDateTime(decoded['start_time']) ?? DateTime.now();
+          _resumeRunningOrder(startDate);
           break;
         case 'Заказ выполнен':
           final startDate = _parseServerDateTime(decoded['start_time']);
@@ -153,6 +174,33 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
             timer?.cancel();
             formattedDuration = '$hours часа(-ов) $minutes минута(-ы)';
           });
+          unawaited(_refreshExistingReviewFlag());
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Заказ выполнен'),
+                content: Text(
+                  formattedDuration != null
+                      ? 'Время выполнения: $formattedDuration'
+                      : 'Заказ завершён. Вы можете оставить отзыв об исполнителе.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _openReviewForm();
+                    },
+                    child: const Text('Оставить отзыв'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Позже'),
+                  ),
+                ],
+              ),
+            );
+          }
           break;
         case 'Заказ отменен':
           final cancelDate = _parseServerDateTime(decoded['cancel_time']);
@@ -207,10 +255,17 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
   }
 
   Future<void> startTimer([DateTime? startDate]) async {
+    timer?.cancel();
+    if (startDate != null) {
+      final elapsed = DateTime.now().difference(startDate);
+      elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
+    }
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
       setState(() {
         if (startDate != null) {
-          elapsedDuration = DateTime.now().difference(startDate);
+          final elapsed = DateTime.now().difference(startDate);
+          elapsedDuration = elapsed.isNegative ? Duration.zero : elapsed;
         } else {
           elapsedDuration += const Duration(seconds: 1);
         }
@@ -271,31 +326,37 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
             timer?.cancel();
           });
         } else if (result.containsKey('duration_seconds')) {
-          // Новое условие проверки
-          int seconds = result['duration_seconds']; // Берём количество секунд
-          Duration duration =
-              Duration(seconds: seconds); // Создаем объект Duration
-          String hoursMinutes =
-              formatDuration(duration); // Преобразуем в удобное представление
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Заказ выполнен'),
-              content: Text(
-                  'Время выполнения заказа: $hoursMinutes'), // Отображаем продолжительность
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
+          int seconds = result['duration_seconds'];
+          Duration duration = Duration(seconds: seconds);
+          String hoursMinutes = formatDuration(duration);
           setState(() {
             orderStatus = newStatus;
             timer?.cancel();
             formattedDuration = hoursMinutes;
           });
+          unawaited(_refreshExistingReviewFlag());
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Заказ выполнен'),
+                content: Text('Время выполнения заказа: $hoursMinutes'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _openReviewForm();
+                    },
+                    child: const Text('Оставить отзыв'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Позже'),
+                  ),
+                ],
+              ),
+            );
+          }
         } else {
           showDialog(
             context: context,
@@ -366,12 +427,48 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
       adId: adId,
       title: 'Исполнитель',
       currentUserId: customerId,
+      showBottomNav: true,
+      isPerformer: false,
     );
+  }
+
+  Future<void> _refreshExistingReviewFlag() async {
+    final performerId = int.tryParse(widget.userId) ?? 0;
+    final customerId = int.tryParse(userIdok) ?? 0;
+    if (performerId <= 0 || customerId <= 0) return;
+
+    final existing = await fetchReviewBetween(
+      table: ReviewPairTable.customerAboutPerformer,
+      performerId: performerId,
+      customerId: customerId,
+    );
+    if (!mounted) return;
+    setState(() => _hasExistingReview = existing != null);
+  }
+
+  Future<void> _openReviewForm() async {
+    final parsedUserIdOk = int.tryParse(widget.orderId);
+    if (parsedUserIdOk == null || userIdok.isEmpty) {
+      showErrorSnackbar('Не удалось открыть форму отзыва');
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SendReviewFormzakaz(
+          currentUserId: userIdok,
+          targetUserId: widget.orderId,
+          parsedUserIdOk: int.parse(widget.userId),
+        ),
+      ),
+    );
+    if (mounted) await _refreshExistingReviewFlag();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         leading: BackButton(),
         title: Text('Выполнение заказа №${widget.orderId}',
@@ -381,24 +478,22 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
       bottomNavigationBar: widget.showBottomNav
           ? const CustomerBottomNav(currentIndex: 1)
           : null,
-      body: isLoading
+      body: isLoading && !_timerIsActive
           ? const Center(child: CircularProgressIndicator())
           : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (elapsedDuration > Duration.zero &&
-                      (orderStatus == null ||
-                          orderStatus == 'Продолжается выполнение'))
+                  if (orderStatus == 'Продолжается выполнение' ||
+                      (elapsedDuration > Duration.zero &&
+                          orderStatus != 'выполнен' &&
+                          orderStatus != 'отменен'))
                     Column(children: [
                       Text('Время выполнения:',
-                          style: Theme.of(context).textTheme.titleLarge),
+                          style: Theme.of(context).textTheme.titleMedium),
                       Text(formatDuration(elapsedDuration),
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayMedium!
-                              .copyWith(fontWeight: FontWeight.bold)),
+                          style: _timerDigitsStyle),
                     ]),
                   if (orderStatus == null ||
                       !['выполнен', 'отменен'].contains(orderStatus))
@@ -440,50 +535,12 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
                             Text('Время выполнения: $formattedDuration',
                                 style: Theme.of(context).textTheme.bodyLarge,
                                 textAlign: TextAlign.center),
-                          if (orderStatus ==
-                              'выполнен') // Добавляем условие вывода кнопки продолжения
+                          if (orderStatus == 'выполнен')
                             ElevatedButton(
-                              onPressed: () {
-                                final parsedUserIdOk = int.tryParse(widget
-                                    .orderId); // Пробуем преобразовать строку в int
-                                print(
-                                    'Current User ID: ${widget.userId.toString()}'); //141
-                                print('Target User ID: $userId'); //140
-                                print(
-                                    'Parsed User ID Ok zab: $parsedUserIdOk'); //106
-
-                                if (parsedUserIdOk != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => HistortScreen1z(
-                                            pageProfile: 'SendReviewForm',
-                                            userId1: userIdok,
-                                            orderId: widget.orderId.toString(),
-                                            parsedUserIdOk:
-                                                widget.userId.toString())
-                                        /*   SendReviewFormzakaz(
-                                              currentUserId:
-                                                  widget.userId.toString(),
-                                              targetUserId:
-                                                  widget.orderId.toString(),
-                                              parsedUserIdOk: parsedUserIdOk,
-                                            )
-                                        SendReviewForm(
-                                              currentUserId:
-                                                  widget.userId.toString(),
-                                              targetUserId: userId.toString(),
-                                              parsedUserIdOk: parsedUserIdOk,
-                                            )*/
-                                        ),
-                                  );
-                                } else {
-                                  // Если преобразование не удалось, вывести предупреждение или ошибку
-                                  print(
-                                      'Ошибка: Невозможно преобразовать "$userIdok" в целое число.');
-                                }
-                              },
-                              child: Text('Оставьте отзыв о исполнителе'),
+                              onPressed: _openReviewForm,
+                              child: Text(_hasExistingReview
+                                  ? 'Изменить отзыв о исполнителе'
+                                  : 'Оставьте отзыв о исполнителе'),
                             ),
                         ],
                       ),

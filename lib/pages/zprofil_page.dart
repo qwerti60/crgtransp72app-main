@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:crgtransp72app/navigation/customer_orders_hub_nav.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/chat_list_screen.dart';
 import 'package:crgtransp72app/widgets/chat_auth_guard.dart';
@@ -13,6 +14,7 @@ import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 
 import '../design/colors.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/profile_rating_row.dart';
 import 'account_deletion.dart';
 import 'ads2.dart';
@@ -129,8 +131,7 @@ class zprofil_nameForm extends State<zprofil_name> {
           phone = data['phone'];
           email = data['email'];
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
-          fotouser =
-              data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
+          fotouser = decodeUserPhotoFromApi(data['fotouser']);
           final rating = ProfileRatingRow.fromApiMap(
             Map<String, dynamic>.from(data),
           );
@@ -148,47 +149,35 @@ class zprofil_nameForm extends State<zprofil_name> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
+      appBar: AppBar(
+        title: const Text(
+          'Профиль',
+          style: TextStyle(
+            color: whiteprColor,
+          ),
+        ),
+        backgroundColor: blueaccentColor,
+      ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: double.infinity,
-              height: 150,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image:
-                      AssetImage("assets/images/bgcolor_head_blue_white.png"),
-                  fit: BoxFit.fill,
-                ),
-              ),
-              child: Center(
-                // Центрируем изображение
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: fotouser != null
-                      ? Image.memory(
-                          fotouser!,
-                          // fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print('Ошибка при загрузке изображения: $error');
-                            // Возвращает виджет, который отображается в случае ошибки
-                            return Icon(Icons.error);
-                          },
-                        )
-                      : Image.asset(
-                          'assets/images/fotouser.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                                'Ошибка при загрузке изображения из ассетов: $error');
-                            // Возвращает виджет, который отображается в случае ошибки
-                            return Icon(Icons.error);
-                          },
-                        ),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: ProfileAvatar(
+                fotouser: fotouser,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MenuzakScreen(
+                        pageProfile: 'zprofil_ld',
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             Container(
@@ -239,11 +228,7 @@ class zprofil_nameForm extends State<zprofil_name> {
                     foregroundColor: TexticonsColor,
                   ),
                   onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                const MenuzakScreen(pageProfile: 'Ads2App')));
+                    openCustomerMyAdsOrOrdersHub(context);
                   },
                   child: const Text('Мои объявления')),
             ),

@@ -3,7 +3,19 @@ header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=UTF-8');
 
 include 'databd.php'; // $host, $username, $password, $dbname
-$useId = isset($_GET['useId']) ? $_GET['useId'] : '';
+require_once __DIR__ . '/include/viewer_user.php';
+
+$viewerId = crg_viewer_user_id_from_request($_GET);
+if ($viewerId <= 0) {
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode([
+        'lookup_table' => '',
+        'main_table' => '',
+        'cities' => [['city' => 'В этом разделе ещё нет городов с объявлениями', 'cnt' => 0]],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+$useId = (string) $viewerId;
 
 $namex = $_GET['namex'] ?? '';
 if ($namex === '') {

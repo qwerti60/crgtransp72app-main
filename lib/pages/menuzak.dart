@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/outputobzlikes.dart';
 import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:flutter/material.dart';
 
+import '../design/colors.dart';
 import '../navigation/shell_bottom_nav_spec.dart';
 
 class MenuzakScreen extends StatelessWidget {
@@ -23,6 +24,7 @@ class MenuzakScreen extends StatelessWidget {
         ShellTabBodyIds.customerProfileRouteTabIndex(pageProfile);
 
     return Scaffold(
+      backgroundColor: whiteprColor,
       body: Navigator(
         onGenerateRoute: (settings) {
           return MaterialPageRoute<void>(

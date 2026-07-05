@@ -9,6 +9,7 @@ import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 
+import '../design/colors.dart';
 import '../navigation/shell_bottom_nav_spec.dart';
 import '../pages/ads1.dart';
 import '../pages/history_isp.dart';
@@ -37,8 +38,10 @@ class HistortScreen1 extends StatelessWidget {
     final navIndex = ShellTabBodyIds.performerProfileRouteTabIndex(
       pageProfile ?? '',
     );
+    final innerOwnsMenu = pageProfile == 'list_predloj_na_zayavki';
 
     return Scaffold(
+      backgroundColor: whiteprColor,
       body: Navigator(
         onGenerateRoute: (settings) {
           return MaterialPageRoute<void>(
@@ -52,7 +55,9 @@ class HistortScreen1 extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: PerformerBottomNav(currentIndex: navIndex),
+      bottomNavigationBar: innerOwnsMenu
+          ? null
+          : PerformerBottomNav(currentIndex: navIndex),
     );
   }
 }
@@ -80,6 +85,7 @@ Widget buildProfilePage(
       return list_predloj_na_zayavki(
         nameImg: userId1?.toString() ?? '',
         bd: int.tryParse(orderId123?.toString() ?? '') ?? 0,
+        showBottomNav: true,
       );
     case 'SearchForm':
       return outputobz(

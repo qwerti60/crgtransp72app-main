@@ -1,8 +1,9 @@
 # Логика поиска услуг в приложении CRG Transp 72
 
-**Версия документа:** 1.1  
-**Дата:** 2 июля 2026  
-**Статус:** частично реализовано (API + UI прототипы в приложении v6.0.0+26)  
+**Версия документа:** 1.4  
+**Дата:** 5 июля 2026  
+**Статус:** реализовано (MVP + сценарии сделок)  
+**Свод сценариев:** [app_scenarios_ru.md](./app_scenarios_ru.md)  
 **Репозиторий:** crgtransp72app-main
 
 ---
@@ -41,17 +42,20 @@
 | Заказчик | `CustomerSearchScreen` (`SearchFormisp`) | `outputob` — **Исполнители** | `search_services.php` (`role=customer`) |
 | Исполнитель | `PerformerSearchScreen` (`SearchForm`) | `outputobz` — **Объявления** | `search_services.php` (`role=performer`) |
 | Быстрый подбор из «Мои объявления» | кнопка на карточке | тот же результат | параметры из объявления → `search_services.php` |
+| Счётчики `(N)` в форме | оба | до поиска | `search_order_counts.php` (только при `useId` > 0) |
 
 Файлы: `lib/pages/customer_search_screen.dart`, `lib/pages/performer_search_screen.dart`, `lib/services/search_services_api.dart`, `api/search_services.php`, `api/include/search_services_core.php`.
 
 **Уже применяемые фильтры:**
 
 - `enddatez >= сегодня` — приём заявок не истёк;
-- `iduser != текущий пользователь` — не показывать свои объявления;
+- `iduser != текущий пользователь` — не показывать свои объявления (`viewer_user.php`, обязателен `useId` для supply);
 - `city = выбранный город` (точное совпадение строки);
 - категория через справочники `vidg` / `vidt` / `gruzchik`;
 - исключение объявлений с принятым откликом (`offer_data`, `isp = 1`);
-- исключение сделок в `ordersglobal` со статусом `выполняется` / `выполнен`.
+- исключение сделок в `ordersglobal` со статусом `выполняется` / `выполнен`;
+- учёт **`bd`** при сравнении `order_id` (коллизия id между `orders` / `orderst` / `ordersg`) — см. [app_scenarios_ru.md](./app_scenarios_ru.md) §11;
+- объявления исполнителя с `flag = 0` (на модерации) скрыты от заказчика в supply-поиске.
 
 ---
 
@@ -362,7 +366,7 @@ add_ob_gr WHERE
 | Цены — VARCHAR | сложно фильтровать «до N руб.» | нормализация при сохранении или парсинг |
 | Один id в разных таблицах | риск путаницы сделок | всегда `(bd, ad_id)` |
 | Нет полнотекстового индекса | медленный LIKE на больших объёмах | FULLTEXT или search index |
-| ordersglobal без bd | ложные совпадения id | join через offer_data.bd + idoffer |
+| `ordersglobal` без bd | ложные совпадения id | join через `offer_data.bd` + `customer_order_deal.php` ✓ |
 
 ---
 
@@ -387,6 +391,8 @@ add_ob_gr WHERE
 | `get_citiesisp.php` | города для заказчика |
 | `getads3.php` | выдача заказов для исполнителя (классический режим) |
 | `get_ads2_new.php` | выдача исполнителей для заказчика (классический режим) |
+| `search_order_counts.php` | счётчики `(N)` в формах поиска (только при `useId` > 0) |
+| `include/viewer_user.php` | `crg_viewer_user_id_from_request()` — id зрителя из `useId` |
 | `getofferusern_new.php` | отклики исполнителя (с учётом ordersglobal) |
 | `zak_get_ads.php` | мои объявления + is_active / order_status |
 | `check_subscription.php` | доступ исполнителя к каталогу |
@@ -402,6 +408,92 @@ add_ob_gr WHERE
 - [x] UI: строка поиска + панель фильтров (`search_form_widgets.dart`)
 - [x] Кнопка «Найти исполнителей» в ads2; «Найти заявки» в ads1
 - [x] Тесты вручную: bd+id, история после удаления, выполненные объявления
+- [x] Счётчики `search_order_counts.php` синхронны с фильтрами выдачи
+- [x] Fallback `search_services` → `get_ads2_new` / `getads3`
+- [x] Dual-role: заказчик не видит свои `add_ob_*`
+
+---
+
+## 16. Связанные сценарии (промпты)
+
+Полный индекс запросов заказчика и UI-правил: **[app_scenarios_ru.md](./app_scenarios_ru.md)** (§6–7, §16).
+
+Ключевые правила поиска из промптов:
+
+- Результаты быстрого поиска из профиля и «Мои объявления» — **с нижним меню** (`embedInCustomerShell` / `embedInShell`).
+- Пустой быстрый подбор → открыть **полный экран поиска**.
+- Свободный текст «экскаватор в Тюмени» — парсинг города и категории на сервере (`free_text` / `q` в `search_services_core.php`).
+- Выполненные заявки заказчика **не показываются** исполнителям (`getads3.php`, `search_services_core.php`).
+
+---
+
+## 17. Счётчики, dual-role и баг «Винзили + Грузчики» (5 июля 2026)
+
+### 17.1. Счётчики в форме поиска
+
+`api/search_order_counts.php` возвращает количество объявлений по городам и категориям **до** полного поиска (для подписи `(N)` в `CustomerSearchScreen` / `PerformerSearchScreen`).
+
+| Параметр | Поведение |
+|----------|-----------|
+| `useId` отсутствует или ≤ 0 | Пустые счётчики (клиент не запрашивает при `_userId == 0`) |
+| `role=customer` | Supply: исполнители (`add_ob_*`) |
+| `role=performer` | Demand: заявки заказчика (`orders*`) |
+
+Логика фильтров **та же**, что в `search_services_core.php` (свои объявления, `flag`, `ordersglobal`, принятые отклики).
+
+### 17.2. Dual-role: заказчик не видит свои supply
+
+Пользователь с объявлениями исполнителя (`add_ob_gp` / `add_ob_vidt` / `add_ob_gr`) **в роли заказчика** не должен видеть их в поиске и в «Заявки».
+
+| API | Фильтр |
+|-----|--------|
+| `get_ads2_new.php` | Без валидного `useId` → `[]`; `a.iduser != viewer` |
+| `get_citiesisp.php` | Исключение городов только с объявлениями viewer |
+| `get_ads_zakaz_customer.php`, `getofferuserz_new.php` | `a.iduser != viewer` |
+| `search_services_core.php` | `search_fetch_supply_get_ads2()` + `iduser != viewer` |
+| `outputob.dart` | Клиентский фильтр `iduser` при пустом ответе fallback |
+| `zprofil_zakaz.dart` | Скрыть карточки, где `a.iduser = id заказчика` |
+
+`viewer` = `crg_viewer_user_id_from_request()` из `api/include/viewer_user.php`.
+
+### 17.3. Fallback при пустом `search_services`
+
+Если `search_services.php` вернул `[]`, клиент повторяет классический запрос:
+
+| Роль | Fallback |
+|------|----------|
+| Заказчик | `get_ads2_new.php` (`outputob.dart`) |
+| Исполнитель | `getads3.php` |
+
+Это страховка при расхождении SQL в расширенном и классическом поиске.
+
+### 17.4. Категория «Грузчики» (bd=3)
+
+В supply-поиске категория разрешается функцией `search_resolve_supply_category()` — по тому же принципу, что `get_ads2_new.php` (таблица `add_ob_gr`, справочник `gruzchik`).
+
+**Симптом из промпта:** город **Винзили** показывает `(1)` по **Грузчики**, а `search_services` возвращает `[]`.
+
+**Причины (исправлено в коде):**
+
+1. Счётчик и выдача использовали **разные** условия JOIN / `flag` / `iduser`.
+2. Для bd=3 не подставлялась таблица `add_ob_gr` так же, как в legacy API.
+
+**Проверка после деплоя:** при одном `useId`, городе и категории счётчик и список карточек должны совпадать.
+
+### 17.5. Нижнее меню при «Найти исполнителей»
+
+Из «Мои объявления» заказчика (`ads2.dart` внутри `MenuzakScreen`):
+
+- `openPerformersForCustomerAd(..., embedInShell: true)` → `showBottomNav: false` у `outputob` / `CustomerSearchScreen`.
+- Иначе появлялось **двойное** `CustomerBottomNav`.
+
+См. [app_scenarios_ru.md](./app_scenarios_ru.md) §6.3.
+
+---
+
+## 18. План будущих доработок
+
+Подробный backlog: функции PHP, UI Flutter, миграции БД, тесты и приоритеты — в **[search_future_ru.md](./search_future_ru.md)**.
 
 ---
 

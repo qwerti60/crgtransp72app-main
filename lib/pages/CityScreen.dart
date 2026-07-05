@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:crgtransp72app/design/app_theme.dart';
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/outputobz.dart';
@@ -14,9 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: CityScreen(indexName: 'Эксковаторы'),
     );
   }

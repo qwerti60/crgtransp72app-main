@@ -1,12 +1,16 @@
 <?php
-require_once __DIR__ . '/../api/databd.php';
+require_once __DIR__ . '/databd.php';
+require_once __DIR__ . '/include/viewer_user.php';
 
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $city    = isset($_GET['city']) ? $_GET['city'] : '';
-$useId   = isset($_GET['usersid']) ? $_GET['usersid'] : '';
-if ($useId === '' && isset($_GET['useId'])) {
-    $useId = $_GET['useId'];
+$viewerId = crg_viewer_user_id_from_request($_GET);
+if ($viewerId <= 0) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([], JSON_UNESCAPED_UNICODE);
+    exit;
 }
+$useId = (string) $viewerId;
 
 /** 1 — не фильтровать по полю города объявления (все исполнители по категории). */
 $allCities = isset($_GET['all_cities']) && $_GET['all_cities'] === '1';

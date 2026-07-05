@@ -9,6 +9,7 @@ import 'package:crgtransp72app/pages/zprofil_ld.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
 
+import '../design/colors.dart';
 import '../navigation/shell_bottom_nav_spec.dart';
 import '../pages/ads1.dart';
 import '../pages/subscription_screen.dart';
@@ -37,8 +38,10 @@ class HistortScreen1z extends StatelessWidget {
 
     final navIndex =
         ShellTabBodyIds.customerProfileRouteTabIndex(pageProfile);
+    final innerOwnsMenu = pageProfile == 'list_predloj_na_obj_isp';
 
     return Scaffold(
+      backgroundColor: whiteprColor,
       body: buildProfilePage(
         pageProfile,
         userId1,
@@ -46,7 +49,9 @@ class HistortScreen1z extends StatelessWidget {
         parsedUserIdOk,
         adBd: adBd,
       ),
-      bottomNavigationBar: CustomerBottomNav(currentIndex: navIndex),
+      bottomNavigationBar: innerOwnsMenu
+          ? null
+          : CustomerBottomNav(currentIndex: navIndex),
     );
   }
 }
@@ -83,7 +88,7 @@ Widget buildProfilePage(
       return list_predloj_na_obj_isp(
         nameImg: uid,
         bd: resolvedBd,
-        useCustomerMenu: false,
+        useCustomerMenu: true,
         wrapInMaterialApp: false,
       );
     default:

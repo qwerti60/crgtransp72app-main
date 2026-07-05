@@ -131,6 +131,7 @@ try {
                 {$userJoin}
                 WHERE a.id = ?
                   AND a.iduser IS NOT NULL
+                  AND CAST(a.iduser AS CHAR) != CAST(? AS CHAR)
                 LIMIT 1
             ";
 
@@ -139,9 +140,9 @@ try {
                     continue;
                 }
                 if ($hasLikes1) {
-                    $stmt->bind_param('si', $useIdRaw, $listingId);
+                    $stmt->bind_param('sis', $useIdRaw, $listingId, $useIdRaw);
                 } else {
-                    $stmt->bind_param('i', $listingId);
+                    $stmt->bind_param('is', $listingId, $useIdRaw);
                 }
                 if (!$stmt->execute()) {
                     continue;

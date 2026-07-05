@@ -22,6 +22,7 @@ $iduser  = $input['iduser'] ?? '';
 $bd      = $input['bd'] ?? '';
 
 require_once __DIR__ . '/include/offer_validation.php';
+require_once __DIR__ . '/include/offer_status.php';
 
 $performerId = (int) $iduserp;
 $orderId = (int) $iduser;
@@ -45,19 +46,40 @@ if ($orderOwner === $performerId) {
     exit;
 }
 
-$sqlExists = 'SELECT COUNT(*)
+$sqlExists = 'SELECT status
               FROM offer_data
-              WHERE iduserp = ? AND iduser = ? AND bd = ? AND status = 0
+              WHERE iduserp = ? AND iduser = ? AND bd = ?
+                AND status IN (?, ?)
+              ORDER BY id DESC
               LIMIT 1';
+$active = CRG_OFFER_STATUS_ACTIVE;
+$refused = CRG_OFFER_STATUS_REFUSED;
 $stmt = $pdo->prepare($sqlExists);
-$stmt->execute([$iduserp, $iduser, $bd]);
-$exists = $stmt->fetchColumn() > 0;
+$stmt->execute([$iduserp, $iduser, $bd, $active, $refused]);
+$existingStatus = $stmt->fetchColumn();
 
-if ($exists) {
+if ($existingStatus !== false) {
+    $existingStatus = (int) $existingStatus;
+    if ($existingStatus === CRG_OFFER_STATUS_REFUSED) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Заказчик отказался от предложения. Удалите его в разделе «Предложения».',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $sqlUpdate = 'UPDATE offer_data
                   SET cena = ?, about = ?
-                  WHERE iduserp = ? AND iduser = ? AND bd = ? AND status = 0';
-    $pdo->prepare($sqlUpdate)->execute([$cena, $about, $iduserp, $iduser, $bd]);
+                  WHERE iduserp = ? AND iduser = ? AND bd = ? AND status = ?';
+    $pdo->prepare($sqlUpdate)->execute([
+        $cena,
+        $about,
+        $iduserp,
+        $iduser,
+        $bd,
+        CRG_OFFER_STATUS_ACTIVE,
+    ]);
 
     echo json_encode(['status' => 'updated', 'message' => 'Data updated successfully']);
 } else {

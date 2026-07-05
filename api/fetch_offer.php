@@ -26,7 +26,8 @@ try {
 
     $stmt = $conn->prepare(
         'SELECT cena, about FROM offer_data
-         WHERE iduserp = :iduserp AND iduser = :userId AND bd = :bd AND status = 0
+         WHERE iduserp = :iduserp AND iduser = :userId AND bd = :bd
+           AND (status = 0 OR status IS NULL)
          LIMIT 1'
     );
     $stmt->execute([

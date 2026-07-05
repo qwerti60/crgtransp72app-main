@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../navigation/last_app_role.dart';
 import 'fcm_token.dart';
 import 'zakaz_screen1.dart';
 
@@ -26,13 +27,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToHome() async {
-    // Не ждём check_fcm_token.php — без таймаута splash мог не закрываться.
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    // Каталог услуг без регистрации (Guideline 5.1.1) — не экран входа.
+    final role = await loadLastAppRole();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const MyApp()),
+      MaterialPageRoute(
+        builder: (_) => buildMainShellHome(role: role, initialPage: 0),
+      ),
     );
   }
 

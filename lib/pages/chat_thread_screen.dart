@@ -24,7 +24,7 @@ class ChatThreadScreen extends StatefulWidget {
     this.subtitle,
     this.readOnly = false,
     this.isSupport = false,
-    this.showBottomNav = false,
+    this.showBottomNav = true,
     this.isPerformer = false,
     this.promptSupportRating = false,
     this.supportTicketId,
@@ -48,7 +48,7 @@ class ChatThreadScreen extends StatefulWidget {
     required int adId,
     required String title,
     required int currentUserId,
-    bool showBottomNav = false,
+    bool showBottomNav = true,
     bool isPerformer = false,
   }) async {
     if (!await ensureChatAuthorized(context)) return;
@@ -105,7 +105,7 @@ class ChatThreadScreen extends StatefulWidget {
     }
 
     if (!context.mounted) return;
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (_) => ChatThreadScreen(
           threadId: result.threadId!,
@@ -437,6 +437,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         backgroundColor: blueaccentColor,
         iconTheme: const IconThemeData(color: whiteprColor),

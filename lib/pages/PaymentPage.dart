@@ -161,6 +161,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           'userId': userId.toString(),
           'orderId': orderId!,
           'days': _subscriptionDays.toString(),
+          'amountRub': _subscriptionPriceRub.toString(),
         },
       );
 

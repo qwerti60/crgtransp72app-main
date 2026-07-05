@@ -52,12 +52,15 @@ try {
 
     if ($source === 'customer_order') {
         if ($action === 'refuse') {
+            require_once __DIR__ . '/include/offer_status.php';
             $stmt = $conn->prepare(
-                'DELETE FROM offer_data
+                'UPDATE offer_data SET isp = 0, status = :refused
                  WHERE iduser = :ad_id AND iduserp = :performer AND bd = :bd
                    AND (status = 0 OR status IS NULL)'
             );
+            $refused = CRG_OFFER_STATUS_REFUSED;
             $stmt->execute([
+                ':refused' => $refused,
                 ':ad_id' => $adId,
                 ':performer' => $counterpartyId,
                 ':bd' => $bd,

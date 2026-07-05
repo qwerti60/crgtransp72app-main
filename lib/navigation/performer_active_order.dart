@@ -93,7 +93,7 @@ Future<void> openPerformerOffersOrActiveOrder(BuildContext context) async {
       builder: (_) => const zprofil_zayavki(
         nameImg: '',
         base: 1,
-        showBottomNav: false,
+        showBottomNav: true,
       ),
     ),
   );

@@ -15,7 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import '../navigation/pending_performer_order.dart';
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
+import '../services/offer_check.dart';
+import '../services/performer_order_gate.dart';
 import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
 import 'performer_bottom_nav.dart';
@@ -46,9 +49,7 @@ class zprofil_zayavki extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: MyHomePage(
         nameImg: nameImg,
         base: base,
@@ -99,6 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String phone = '';
   String email = '';
   late Future<List> _adsFuture;
+  PerformerStartGate _startGate = PerformerStartGate.allowed;
 
   bool _isValidDisplayDate(dynamic value) {
     final s = value?.toString().trim() ?? '';
@@ -138,12 +140,21 @@ class _MyHomePageState extends State<MyHomePage> {
           userId = uid;
           _adsFuture = uid > 0 ? fetchAds(uid) : Future.value(<dynamic>[]);
         });
+        if (uid > 0) {
+          await _loadStartGate();
+        }
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
     } else {
       print('Ошибка при получении данных пользователя');
     }
+  }
+
+  Future<void> _loadStartGate() async {
+    final gate = await fetchPerformerStartGate();
+    if (!mounted) return;
+    setState(() => _startGate = gate);
   }
 
   Future<bool> checkOfferExists(
@@ -158,28 +169,38 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> checkAcceptedOffer(
-      dynamic orderId, int bd, dynamic performerUserId) async {
-    final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/check_isp.php'),
-      body: {
-        'idusers': orderId.toString(),
-        'bd': bd.toString(),
-        'iduserp': performerUserId.toString(),
-      },
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    );
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to check offer acceptance');
-    }
+  bool _offerAcceptedByCustomer(Map truck) {
+    if (offerRefusedFromMap(truck)) return false;
+    return _toInt(truck['isp']) == 1;
+  }
 
-    final data = json.decode(response.body);
-    final dynamic raw = data['isp'];
-    if (raw is bool) return raw;
-    if (raw is num) return raw == 1;
-    if (raw is String) return raw == '1' || raw.toLowerCase() == 'true';
-    return false;
+  bool _offerRefusedByCustomer(Map truck) => offerRefusedFromMap(truck);
+
+  int? _chosenPerformerId(Map truck) {
+    return int.tryParse(truck['chosen_performer_id']?.toString() ?? '');
+  }
+
+  String _orderStatusOf(Map truck) =>
+      (truck['order_status'] ?? '').toString();
+
+  bool _anotherPerformerChosen(Map truck) {
+    final chosen = _chosenPerformerId(truck);
+    return chosen != null && chosen > 0 && chosen != userId;
+  }
+
+  bool _myDealCompleted(Map truck) {
+    return _chosenPerformerId(truck) == userId &&
+        _orderStatusOf(truck) == 'выполнен';
+  }
+
+  bool _myDealExecuting(Map truck) {
+    return _chosenPerformerId(truck) == userId &&
+        _orderStatusOf(truck) == 'выполняется';
   }
 
   Future<void> getUserDataAds(idUser) async {
@@ -269,6 +290,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Предложения',
@@ -294,6 +316,28 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
+          if (_startGate.isBlocked)
+            Material(
+              color: Colors.orange.shade50,
+              child: InkWell(
+                onTap: () => openPerformerOrdersTab(context),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade800),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _startGate.message,
+                          style: TextStyle(color: Colors.orange.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
@@ -859,66 +903,173 @@ class _MyHomePageState extends State<MyHomePage> {
                                       (bd ?? widget.base);
                                   final int editBd = cardBd;
                                   final int deleteBd = cardBd;
+                                  final bool refused =
+                                      _offerRefusedByCustomer(truck);
+                                  final bool anotherChosen =
+                                      _anotherPerformerChosen(truck);
+                                  final bool dealCompleted =
+                                      _myDealCompleted(truck);
+                                  final bool dealExecuting =
+                                      _myDealExecuting(truck);
                                   return Container(
                                     color:
                                         Colors.white, // По желанию добавьте фон
                                     padding: const EdgeInsets.all(
                                         8.0), // Добавьте отступы вокруг блока кнопок
-                                    child: FutureBuilder<bool>(
-                                      future: Future.value(true),
-                                      builder: (context, snapshot) {
-                                        if (snapshot.hasData &&
-                                            snapshot.data!) {
-                                          return Column(
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 20.0),
-                                                margin: const EdgeInsets.only(
-                                                    top: 20.0),
-                                                child: SizedBox(
-                                                  width: double.infinity,
-                                                  child: TextButton(
-                                                    style: TextButton.styleFrom(
-                                                      fixedSize: const Size(
-                                                          double.infinity, 50),
-                                                      foregroundColor:
-                                                          whiteprColor,
-                                                      backgroundColor:
-                                                          blueaccentColor,
-                                                      disabledForegroundColor:
-                                                          grayprprColor,
-                                                      shape:
-                                                          const BeveledRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius.all(
-                                                                Radius.circular(
-                                                                    3)),
-                                                      ),
-                                                    ),
-                                                    onPressed: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (context) =>
-                                                              OfferScreen(
-                                                            userid: truck['id']
-                                                                .toString(),
-                                                            useridobj:
-                                                                truck['iduser']
-                                                                    .toString(),
-                                                            bd: editBd,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                    child: const Text(
-                                                        'Редактировать предложение'),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (refused)
+                                          Container(
+                                            width: double.infinity,
+                                            margin: const EdgeInsets.only(
+                                              top: 12,
+                                              bottom: 4,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.red.shade300,
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Заказчик отказался от вашего предложения',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ),
+                                        if (anotherChosen)
+                                          Container(
+                                            width: double.infinity,
+                                            margin: const EdgeInsets.only(
+                                              top: 12,
+                                              bottom: 4,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.orange.shade300,
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Исполнитель уже выбран',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ),
+                                        if (dealCompleted)
+                                          Container(
+                                            width: double.infinity,
+                                            margin: const EdgeInsets.only(
+                                              top: 12,
+                                              bottom: 4,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.green.shade300,
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Заказ выполнен',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ),
+                                        if (!refused &&
+                                            !anotherChosen &&
+                                            !dealCompleted)
+                                          Container(
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 20.0),
+                                            margin: const EdgeInsets.only(
+                                                top: 20.0),
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: TextButton(
+                                                style: TextButton.styleFrom(
+                                                  fixedSize: const Size(
+                                                      double.infinity, 50),
+                                                  foregroundColor: whiteprColor,
+                                                  backgroundColor:
+                                                      blueaccentColor,
+                                                  disabledForegroundColor:
+                                                      grayprprColor,
+                                                  shape:
+                                                      const BeveledRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.all(
+                                                            Radius.circular(
+                                                                3)),
                                                   ),
                                                 ),
+                                                onPressed: () async {
+                                                  final changed =
+                                                      await Navigator.push<
+                                                          bool>(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          OfferScreen(
+                                                        userid: truck['id']
+                                                            .toString(),
+                                                        useridobj:
+                                                            truck['iduser']
+                                                                .toString(),
+                                                        bd: editBd,
+                                                        showBottomNav: widget
+                                                            .showBottomNav,
+                                                        performerBottomNavIndex:
+                                                            1,
+                                                      ),
+                                                    ),
+                                                  );
+                                                  if (changed == true &&
+                                                      mounted) {
+                                                    setState(() {
+                                                      _adsFuture =
+                                                          fetchAds(userId);
+                                                    });
+                                                  }
+                                                },
+                                                child: const Text(
+                                                    'Редактировать предложение'),
                                               ),
-                                              Container(
+                                            ),
+                                          ),
+                                        if (!refused &&
+                                            !anotherChosen &&
+                                            !dealCompleted)
+                                          Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                         horizontal: 20.0),
@@ -1021,35 +1172,42 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   ),
                                                 ),
                                               ),
-                                              Container(
+                                        if (!refused && !anotherChosen && !dealCompleted)
+                                          Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                         horizontal: 20.0),
                                                 margin: const EdgeInsets.only(
                                                     top: 20.0),
-                                                child: FutureBuilder<bool>(
-                                                  future: checkAcceptedOffer(
-                                                      truck['id'],
-                                                      cardBd,
-                                                      userId),
-                                                  builder: (context,
-                                                      acceptedSnapshot) {
-                                                    if (acceptedSnapshot
-                                                            .connectionState ==
-                                                        ConnectionState
-                                                            .waiting) {
-                                                      return const SizedBox(
-                                                        height: 50,
-                                                        child: Center(
-                                                          child:
-                                                              CircularProgressIndicator(),
-                                                        ),
-                                                      );
-                                                    }
-
-                                                    final bool canStart =
-                                                        acceptedSnapshot.data ??
-                                                            false;
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    final orderId =
+                                                        truck['id'].toString();
+                                                    final customerId =
+                                                        truck['iduser']
+                                                            .toString();
+                                                    final offerAccepted =
+                                                        _offerAcceptedByCustomer(
+                                                            truck);
+                                                    final dealExecuting =
+                                                        _myDealExecuting(truck);
+                                                    final canStart = (dealExecuting ||
+                                                            offerAccepted) &&
+                                                        _startGate
+                                                            .canStartForOffer(
+                                                          orderId: orderId,
+                                                          customerId:
+                                                              customerId,
+                                                        );
+                                                    final buttonLabel = _startGate
+                                                        .buttonLabelForOffer(
+                                                      orderId: orderId,
+                                                      customerId: customerId,
+                                                      offerAccepted:
+                                                          offerAccepted,
+                                                      dealExecuting:
+                                                          dealExecuting,
+                                                    );
                                                     return SizedBox(
                                                       width: double.infinity,
                                                       child: TextButton(
@@ -1075,8 +1233,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                             3)),
                                                           ),
                                                         ),
-                                                        onPressed: canStart
-                                                            ? () async {
+                                                        onPressed: !(dealExecuting ||
+                                                                offerAccepted)
+                                                            ? null
+                                                            : canStart
+                                                                ? () async {
                                                                 await notifyUserById(
                                                                   userId: truck[
                                                                           'iduser']
@@ -1114,64 +1275,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                       false,
                                                                 );
                                                               }
-                                                            : null,
-                                                        child: Text(canStart
-                                                            ? 'Начать выполнение'
-                                                            : 'Ожидает принятия заказчиком'),
+                                                                : () {
+                                                                    showPerformerStartBlockedSnack(
+                                                                      context,
+                                                                      _startGate,
+                                                                    );
+                                                                    openPerformerOrdersTab(
+                                                                        context);
+                                                                  },
+                                                        child: Text(buttonLabel),
                                                       ),
                                                     );
                                                   },
                                                 ),
                                               ),
-                                            ],
-                                          );
-                                        } else {
-                                          return Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 20.0),
-                                            margin: const EdgeInsets.only(
-                                                top: 20.0),
-                                            child: SizedBox(
-                                              width: double.infinity,
-                                              child: TextButton(
-                                                style: TextButton.styleFrom(
-                                                  fixedSize: const Size(
-                                                      double.infinity, 50),
-                                                  foregroundColor: whiteprColor,
-                                                  backgroundColor:
-                                                      blueaccentColor,
-                                                  disabledForegroundColor:
-                                                      grayprprColor,
-                                                  shape:
-                                                      const BeveledRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.all(
-                                                            Radius.circular(3)),
-                                                  ),
-                                                ),
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          OfferScreen(
-                                                        userid: truck['id']
-                                                            .toString(),
-                                                        useridobj:
-                                                            truck['iduser']
-                                                                .toString(),
-                                                        bd: editBd,
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                                child: const Text(
-                                                    'Предложить свои услуги'),
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
+                                      ],
                                     ),
                                   );
                                 },

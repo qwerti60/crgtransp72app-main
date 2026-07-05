@@ -7,6 +7,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 include __DIR__ . '/databd.php';
+require_once __DIR__ . '/include/datetime_mysql.php';
 
 function crg_isp2_order_source(): string
 {
@@ -105,6 +106,8 @@ try {
         throw new Exception('Параметры user_id, order_id или start_time отсутствуют!');
     }
 
+    $start_time = crg_normalize_mysql_datetime((string) $start_time);
+
     $performerId = (int) $user_id;
     $orderId = (string) $order_id;
 
@@ -172,7 +175,10 @@ try {
                 // ignore chat hook errors
             }
 
-            echo json_encode(['message' => 'Запись успешно создана'], JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'message' => 'Запись успешно создана',
+                'start_time' => $start_time,
+            ], JSON_UNESCAPED_UNICODE);
         } else {
             echo json_encode(['message' => 'Выполняется другим исполнителем'], JSON_UNESCAPED_UNICODE);
         }

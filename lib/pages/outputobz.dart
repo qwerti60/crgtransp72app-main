@@ -18,6 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/offer_check.dart';
 import '../config.dart';
 import '../customer_ad_category.dart';
 import '../design/colors.dart';
@@ -175,6 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => PerformerSearchScreen(
+            embedInPerformerShell: true,
             showBottomNav: widget.showBottomNav,
             initialCity: widget.city,
             initialServiceName: widget.nameImg,
@@ -188,6 +190,100 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int _bdForTruck(Map truck) {
     return int.tryParse(truck['bd']?.toString() ?? '') ?? bd ?? 1;
+  }
+
+  Future<void> _openOfferScreen(Map<dynamic, dynamic> truck) async {
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => OfferScreen(
+          userid: truck['id'].toString(),
+          useridobj: truck['iduser'],
+          bd: _bdForTruck(truck),
+          showBottomNav: true,
+          performerBottomNavIndex: widget.performerBottomNavIndex,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeletePerformerOffer(Map<dynamic, dynamic> truck) async {
+    final listingId = int.tryParse(truck['id']?.toString() ?? '') ?? 0;
+    final bdVal = _bdForTruck(truck);
+    if (userId <= 0 || listingId <= 0) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить предложение?'),
+        content: const Text(
+          'Ваше предложение по этой заявке будет удалено. '
+          'При необходимости вы сможете оформить новое.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/api/deleteoffer.php'),
+        body: {
+          'iduserp': userId.toString(),
+          'iduser': listingId.toString(),
+          'bd': bdVal.toString(),
+        },
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        setState(() {
+          _adsFuture = fetchAds(widget.city, widget.nameImg, userId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Предложение удалено')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось удалить предложение')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка сети при удалении')),
+      );
+    }
+  }
+
+  Widget _offerActionButton({
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        style: TextButton.styleFrom(
+          fixedSize: const Size(double.infinity, 50),
+          foregroundColor: whiteprColor,
+          backgroundColor: color,
+          disabledForegroundColor: grayprprColor,
+          shape: const BeveledRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(3)),
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(label),
+      ),
+    );
   }
 
   Future<void> _resolveBd() async {
@@ -389,6 +485,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: Text(
           widget.searchTitle ?? 'Объявления',
@@ -966,65 +1063,91 @@ class _MyHomePageState extends State<MyHomePage> {
                                   ),
                                 ),
                               Container(
-                                color: Colors.white, // По желанию добавьте фон
-                                padding: const EdgeInsets.all(
-                                    8.0), // Добавьте отступы вокруг FutureBuilder
-                                child: FutureBuilder<bool>(
+                                color: Colors.white,
+                                padding: const EdgeInsets.all(8.0),
+                                child: FutureBuilder<OfferCheckResult>(
                                   future: userId > 0
-                                      ? checkOfferExists(
-                                          userId, truck['id'], _bdForTruck(truck))
-                                      : Future.value(false),
+                                      ? fetchOfferCheckState(
+                                          performerUserId: userId,
+                                          orderId: int.tryParse(
+                                                  truck['id'].toString()) ??
+                                              0,
+                                          bd: _bdForTruck(truck),
+                                        )
+                                      : Future.value(OfferCheckResult.empty),
                                   builder: (context, snapshot) {
-                                    if (snapshot.hasData && snapshot.data!) {
-                                      // Если запись существует
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20.0),
-                                        margin:
-                                            const EdgeInsets.only(top: 20.0),
-                                        child: SizedBox(
-                                          width: double.infinity,
-                                          child: TextButton(
-                                            style: TextButton.styleFrom(
-                                              fixedSize: const Size(
-                                                  double.infinity, 50),
-                                              foregroundColor: whiteprColor,
-                                              backgroundColor: blueaccentColor,
-                                              disabledForegroundColor:
-                                                  grayprprColor,
-                                              shape:
-                                                  const BeveledRectangleBorder(
-                                                borderRadius: BorderRadius.all(
-                                                    Radius.circular(3)),
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              if (!_isAuthorized) {
-                                                _showAuthRequiredDialog();
-                                                return;
-                                              }
+                                    final state =
+                                        snapshot.data ?? OfferCheckResult.empty;
 
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      OfferScreen(
-                                                          userid: truck['id']
-                                                              .toString(),
-                                                          useridobj:
-                                                              truck['iduser'],
-                                                          bd: _bdForTruck(truck)),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text(
-                                                'Редактировать предложение'),
+                                    if (state.refused) {
+                                      return Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(top: 20),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.red.shade300,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Заказчик отказался от вашего предложения. '
+                                          'Удалите предложение в разделе «Предложения», '
+                                          'чтобы откликнуться снова.',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
                                           ),
                                         ),
                                       );
-                                    } else {
-                                      // Если записи нет
+                                    }
+
+                                    if (state.editable) {
                                       return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20.0),
+                                        margin:
+                                            const EdgeInsets.only(top: 20.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            _offerActionButton(
+                                              label: 'Редактировать предложение',
+                                              color: blueaccentColor,
+                                              onPressed: () {
+                                                if (!_isAuthorized) {
+                                                  _showAuthRequiredDialog();
+                                                  return;
+                                                }
+                                                _openOfferScreen(truck);
+                                              },
+                                            ),
+                                            const SizedBox(height: 12),
+                                            _offerActionButton(
+                                              label: 'Удалить предложение',
+                                              color: Colors.red.shade700,
+                                              onPressed: () {
+                                                if (!_isAuthorized) {
+                                                  _showAuthRequiredDialog();
+                                                  return;
+                                                }
+                                                _confirmDeletePerformerOffer(
+                                                    truck);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+
+                                    return Container(
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 20.0),
                                         margin:
@@ -1051,28 +1174,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 return;
                                               }
 
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      OfferScreen(
-                                                          userid: truck['id']
-                                                              .toString(),
-                                                          useridobj:
-                                                              truck['iduser'],
-                                                          bd: _bdForTruck(truck)),
-                                                ),
-                                              );
+                                              _openOfferScreen(truck);
                                             },
                                             child: const Text(
                                                 'Предложить свои услуги'),
                                           ),
                                         ),
                                       );
-                                    }
                                   },
                                 ),
-                              )
+                              ),
                             ],
                           );
                         });
@@ -1111,7 +1222,7 @@ class _MyHomePageState extends State<MyHomePage> {
       adId: adId,
       title: name.isNotEmpty ? name : 'Заказчик',
       currentUserId: userId,
-      showBottomNav: widget.showBottomNav,
+      showBottomNav: true,
       isPerformer: true,
     );
   }

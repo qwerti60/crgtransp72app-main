@@ -37,7 +37,7 @@ try {
             WHERE iduserp = :iduserp
               AND iduser = :iduser
               AND bd = :bd
-              AND status = 0';
+              AND status IN (0, 2)';
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([

@@ -4,6 +4,7 @@ import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/chat_list_screen.dart';
 import 'package:crgtransp72app/widgets/chat_auth_guard.dart';
+import 'package:crgtransp72app/pages/performer_finances_screen.dart';
 import 'package:crgtransp72app/pages/PaymentPage.dart';
 import 'package:crgtransp72app/pages/ads2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
@@ -18,6 +19,7 @@ import 'package:crgtransp72app/pages/zakaz_screen1.dart' show MyApp;
 import 'package:crgtransp72app/navigation/performer_active_order.dart';
 
 import '../design/colors.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/profile_rating_row.dart';
 import 'account_deletion.dart';
 import 'ads1.dart';
@@ -83,8 +85,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
           phone = data['phone']?.toString() ?? '';
           email = data['email']?.toString() ?? '';
           // Проверяем, есть ли изображение пользователя и преобразуем его из base64.
-          fotouser =
-              data['fotouser'] != null ? base64Decode(data['fotouser']) : null;
+          fotouser = decodeUserPhotoFromApi(data['fotouser']);
           orderid = data['order_id']?.toString() ?? '';
           final rating = ProfileRatingRow.fromApiMap(
             Map<String, dynamic>.from(data),
@@ -107,47 +108,35 @@ class zprofil_nameForm extends State<zprofil_name2> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
+      appBar: AppBar(
+        title: const Text(
+          'Профиль',
+          style: TextStyle(
+            color: whiteprColor,
+          ),
+        ),
+        backgroundColor: blueaccentColor,
+      ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: double.infinity,
-              height: 150,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image:
-                      AssetImage("assets/images/bgcolor_head_blue_white.png"),
-                  fit: BoxFit.fill,
-                ),
-              ),
-              child: Center(
-                // Центрируем изображение
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: fotouser != null
-                      ? Image.memory(
-                          fotouser!,
-                          // fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print('Ошибка при загрузке изображения: $error');
-                            // Возвращает виджет, который отображается в случае ошибки
-                            return Icon(Icons.error);
-                          },
-                        )
-                      : Image.asset(
-                          'assets/images/fotouser.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                                'Ошибка при загрузке изображения из ассетов: $error');
-                            // Возвращает виджет, который отображается в случае ошибки
-                            return Icon(Icons.error);
-                          },
-                        ),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: ProfileAvatar(
+                fotouser: fotouser,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HistortScreen(
+                        pageProfile: 'zprofil_ld',
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             Container(
@@ -301,6 +290,22 @@ class zprofil_nameForm extends State<zprofil_name2> {
                   child: const Text('Поддержка')),
             ),
 
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: TexticonsColor,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PerformerFinancesScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Финансы')),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),

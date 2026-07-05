@@ -1,8 +1,9 @@
 # Логика чатов в приложении CRG Transp 72
 
-**Версия документа:** 1.0  
-**Дата:** 3 июля 2026  
-**Статус:** проект (не реализовано)  
+**Версия документа:** 1.1  
+**Дата:** 4 июля 2026  
+**Статус:** реализовано (основной функционал)  
+**Свод сценариев:** [app_scenarios_ru.md](./app_scenarios_ru.md) §9  
 **Репозиторий:** crgtransp72app-main
 
 ---
@@ -592,37 +593,42 @@ Badge: число ticket со `status = new` (как красная точка �
 
 ---
 
-## 12. Этапы внедрения
+## 12. Этапы внедрения — статус (4 июля 2026)
 
-| Фаза | Содержание | Результат |
-|------|------------|-----------|
-| **1. Support MVP** | таблицы, API support + messages, admin `support_*`, FCM, текст | пользователь ↔ оператор |
-| **2. Deal chat** | thread по offer/ordersglobal, UI в приложении | переписка по заказу |
-| **3. Улучшения** | фото, шаблоны в админке, SLA на stats, оценка support | операционная зрелость |
-| **4. Модерация P2P** | просмотр deal admin, жалобы, WebSocket | контроль споров |
+| Фаза | Содержание | Статус |
+|------|------------|--------|
+| **1. Support MVP** | таблицы, API support + messages, admin `support_*`, FCM, текст | ✓ |
+| **2. Deal chat** | thread по offer/ordersglobal, UI в приложении | ✓ |
+| **3. Улучшения** | фото/документы, polling admin, оценка support | ✓ (MVP) |
+| **4. Модерация P2P** | просмотр deal admin, жалобы, WebSocket | не реализовано |
 
-### 12.1. Чеклист фазы 1 (Support MVP)
+Свод сценариев и точек входа: **[app_scenarios_ru.md](./app_scenarios_ru.md) §9**.
+
+### 12.1. Чеклист фазы 1–3 (Support + Deal)
 
 **БД**
 
-- [ ] миграция: `support_tickets`, `chat_threads`, `chat_messages`
-- [ ] индексы §4.1, §4.3
+- [x] миграция: `support_tickets`, `chat_threads`, `chat_messages` (`sql/migrate_chat_support.sql`)
+- [x] индексы §4.1, §4.3
 
 **API**
 
-- [ ] `support/create.php`, `chat/threads.php`, `chat/messages.php`, `chat/send.php`, `chat/read.php`, `chat/poll.php`
+- [x] `support/create.php`, `chat/threads.php`, `chat/messages.php`, `chat/send.php`, `chat/read.php`, `chat/poll.php`
+- [x] `support_poll.php` (admin-web)
 
 **admin-web**
 
-- [ ] `support_queue.php`, `support_view.php`, `support_assign.php`, `support_close.php`
-- [ ] пункт меню + badge
-- [ ] `admin_support.php`
+- [x] `support_queue.php`, `support_view.php`, `support_assign.php`, `support_close.php`
+- [x] пункт меню + badge
+- [x] `admin_support.php`, `support_attachment.php`
 
 **Flutter**
 
-- [ ] «Поддержка» в профиле
-- [ ] список + экран переписки
-- [ ] обработка FCM `chat_message`
+- [x] «Поддержка» и списки чатов в профиле (отдельно для заказчика / исполнителя)
+- [x] экран переписки без нижнего меню
+- [x] FCM `chat_message` → открытие thread
+- [x] вложения (изображения, документы)
+- [x] `SupportRatingSheet` после `resolved`
 
 ---
 
@@ -702,6 +708,7 @@ CREATE TABLE chat_messages (
 
 | Документ | Содержание |
 |----------|------------|
+| **[app_scenarios_ru.md](./app_scenarios_ru.md)** | **Свод всех сценариев и промптов (§9 — чаты)** |
 | [admin_guide.md](./admin_guide.md) | текущие разделы admin-web |
 | [search_logic_ru.md](./search_logic_ru.md) | пара `(bd, ad_id)` |
 | [REG_DATA_FORMS_RU.md](../REG_DATA_FORMS_RU.md) | авторизация пользователя |

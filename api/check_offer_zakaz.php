@@ -58,6 +58,11 @@ try {
         }
     }
 
+    // Завершённые/отменённые сделки — можно оформить новую заявку, старая строка не считается активной.
+    if (in_array($orderStatus, ['выполнен', 'отменен'], true)) {
+        $exists = false;
+    }
+
     echo json_encode([
         'exists' => $exists,
         'order_status' => $orderStatus,

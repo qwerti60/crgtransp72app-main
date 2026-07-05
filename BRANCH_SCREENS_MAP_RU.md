@@ -85,6 +85,11 @@
 - Поиск заявок у заказчика: `SearchFormisp` → `CustomerSearchScreen`; при переходе на `outputob.dart` передаётся `SearchParams` → `search_services.php`; для shell заказчика — `embedInCustomerShell: true`.
 - Поиск заявок у исполнителя: `SearchForm` → `PerformerSearchScreen` → `outputobz` + `search_services.php`.
 - **Мои объявления:** редактирование открывается во вложенном `Navigator` (`Ads1Shell` / `Ads2Shell` или обёртки `menuzak` / `HistortScreen`); после сохранения — `Navigator.pop`, не новый `MaterialApp`.
+- **Выполнение заказа:** `OrderExecutionScreen` (исполнитель), `OrderExecutionScreenzak` (заказчик) — без нижнего меню; чат по сделке — fullscreen (`rootNavigator`). Подробно: [docs/app_scenarios_ru.md](./docs/app_scenarios_ru.md).
+- **Заказчик с активной сделкой:** вкладка «Заказы» и «Мои объявления» из профиля ведут на экран-счётчик (`customer_orders_hub_nav.dart`, `check_order_statusisp.php`).
+- **После выполнения:** в «Мои объявления» заказчика — плашка «Выполнено · неактивно»; объявление скрыто из поиска исполнителей; отклонившие исполнители видят «Исполнитель уже выбран».
+- **Исполнение и чаты:** `OrderExecutionScreen.dart`, `OrderExecutionScreenzak.dart`, `customer_orders_hub_nav.dart`, `chat_thread_screen.dart` — см. [docs/app_scenarios_ru.md](./docs/app_scenarios_ru.md).
+- **Предложения:** `zprofil_zayavki.dart` (исполнитель), `list_predloj_na_obj_isp.dart` (заказчик) — без лишнего меню при открытии из карточки.
 - В `outputob.dart` параметр `useCustomerNavigation`: `true` — меню заказчика (`CustomerBottomNav`), `false` — меню грузоперевозчика (`PerformerBottomNav`).
 - `outputobz.dart` — экран объявлений для грузоперевозчика: использовать `PerformerBottomNav`.
 - `OfferScreen2`: при `useCustomerNavigation: true` после отправки — `zprofil_zakaz` + `useCustomerMenu: true`; при `false` (исполнитель) — по-прежнему `zprofil_zayavki` с `useCustomerMenu: false`.

@@ -10,8 +10,6 @@ import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_obj_isp.dart';
 import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
 import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
-import 'package:crgtransp72app/pages/scrmenu.dart';
-import 'package:crgtransp72app/pages/test.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,6 +17,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 
 import '../config.dart';
 import '../customer_ad_category.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import '../search/ad_match.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,9 +37,7 @@ class Ads1App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: showBottomNav
           ? const Ads1Shell()
           : const MyHomePage(showBottomNav: false),
@@ -289,6 +286,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Мои объявления ',
@@ -658,31 +656,44 @@ class _MyHomePageState extends State<MyHomePage> {
                                     Text('Заказов:',
                                         style:
                                             DefaultTextStyle.of(context).style),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        final adBd = bdFromPerformerAd(
-                                            Map<String, dynamic>.from(truck));
-                                        Navigator.of(context,
-                                                rootNavigator: true)
-                                            .push(
-                                          MaterialPageRoute(
-                                            builder: (_) => HistortScreen1(
-                                                pageProfile:
-                                                    'list_predloj_na_zayavki',
-                                                userId1: truck['id'].toString(),
-                                                orderId: adBd.toString(),
-                                                parsedUserIdOk: ''),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            blueaccentColor, // Это сделает кнопку синей
-                                      ),
-                                      child: Text('${truck['offerf']}',
+                                    SizedBox(
+                                      width: 42,
+                                      height: 42,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          final adBd = bdFromPerformerAd(
+                                              Map<String, dynamic>.from(truck));
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  list_predloj_na_zayavki(
+                                                nameImg:
+                                                    truck['id'].toString(),
+                                                bd: adBd,
+                                                showBottomNav:
+                                                    widget.showBottomNav,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: blueaccentColor,
+                                          foregroundColor: whiteprColor,
+                                          shape: const CircleBorder(),
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: const Size(42, 42),
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        child: Text(
+                                          '${truck['offerf']}',
                                           style: const TextStyle(
                                             color: whiteprColor,
-                                          )),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -713,7 +724,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                 onPressed: () => openOrdersForPerformerAd(
                                   context,
                                   Map<String, dynamic>.from(truck),
-                                  embedInShell: !widget.showBottomNav,
                                 ),
                               ),
                           ],

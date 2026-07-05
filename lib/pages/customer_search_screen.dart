@@ -2,7 +2,11 @@ import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/models/search_params.dart';
 import 'package:crgtransp72app/network/api_timeout.dart';
+import 'package:crgtransp72app/pages/customer_bottom_nav.dart';
+import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/outputob.dart';
+import 'package:crgtransp72app/search/search_counts_client.dart';
+import 'package:crgtransp72app/search/search_counts_helpers.dart';
 import 'package:crgtransp72app/widgets/search_form_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +15,8 @@ import 'dart:convert';
 /// Заказчик → поиск исполнителей (вкладка «Заказы»).
 class CustomerSearchScreen extends StatefulWidget {
   final bool embedInCustomerShell;
+  /// Своё нижнее меню (для экранов, открытых поверх shell через push).
+  final bool showBottomNav;
   final String? initialCity;
   final String? initialServiceName;
   final String? initialPriceMax;
@@ -19,6 +25,7 @@ class CustomerSearchScreen extends StatefulWidget {
   const CustomerSearchScreen({
     super.key,
     this.embedInCustomerShell = false,
+    this.showBottomNav = false,
     this.initialCity,
     this.initialServiceName,
     this.initialPriceMax,
@@ -34,10 +41,19 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   final _priceController = TextEditingController();
   final _cityToController = TextEditingController();
 
+  /// Результаты открываются поверх shell (rootNavigator) — нужно своё меню.
+  bool get _showNavOnResults =>
+      widget.showBottomNav || widget.embedInCustomerShell;
+
   List<Map<String, dynamic>> services = [];
   List<Map<String, dynamic>> cities = [];
+  Map<String, int> _cityCounts = {};
+  Map<String, int> _serviceCounts = {};
+  String? _categoriesHint;
+  int _userId = 0;
   bool _isLoading = true;
   bool _loadFailed = false;
+  bool _countsLoading = false;
 
   String? selectedServiceName;
   String? selectedCityName;
@@ -72,6 +88,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       _loadFailed = false;
     });
     try {
+      await _loadUserId();
+
       final responseServices = await http
           .get(Uri.parse('${Config.baseUrl}/api/getsearsh.php'))
           .timeout(kApiTimeout);
@@ -95,6 +113,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         _isLoading = false;
         _loadFailed = false;
       });
+
+      await _fetchCounts();
     } catch (e) {
       debugPrint('CustomerSearchScreen fetchData: $e');
       if (!mounted) return;
@@ -102,6 +122,94 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         _isLoading = false;
         _loadFailed = true;
       });
+    }
+  }
+
+  Future<void> _loadUserId() async {
+    try {
+      final token = await getSecurefcm_token();
+      if (token == null || token.isEmpty) return;
+
+      final response = await http
+          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+          .timeout(kApiTimeout);
+      if (response.statusCode != 200) return;
+
+      final data = json.decode(response.body);
+      if (data is Map && data['idusers'] != null) {
+        _userId = int.tryParse(data['idusers'].toString()) ?? 0;
+      }
+    } catch (e) {
+      debugPrint('CustomerSearchScreen _loadUserId: $e');
+    }
+  }
+
+  Future<void> _fetchCounts({bool servicesOnly = false}) async {
+    if (!mounted || _userId <= 0) return;
+    setState(() => _countsLoading = true);
+
+    try {
+      final result = await SearchCountsClient.fetch(
+        userId: _userId,
+        role: 'customer',
+        city: selectedCityName,
+        breakdown: true,
+      );
+
+      if (!mounted || result == null) {
+        if (mounted) setState(() => _countsLoading = false);
+        return;
+      }
+
+      final breakdownNames = selectedCityName != null
+          ? result.servicesWithCountInCity(selectedCityName)
+          : <String>[];
+
+      if (!mounted) return;
+      setState(() {
+        if (!servicesOnly) {
+          _cityCounts = result.cities;
+        }
+        if (selectedCityName != null && selectedCityName!.isNotEmpty) {
+          _serviceCounts = result.services;
+          _categoriesHint = searchOtherCategoriesHint(
+            isPerformer: false,
+            cityName: selectedCityName,
+            cityCounts: _cityCounts,
+            serviceCounts: _serviceCounts,
+            breakdownNames: breakdownNames,
+          );
+        } else {
+          _serviceCounts = {};
+          _categoriesHint = null;
+        }
+        _countsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('CustomerSearchScreen _fetchCounts: $e');
+      if (mounted) {
+        setState(() => _countsLoading = false);
+      }
+    }
+  }
+
+  String _labelWithCount(String name, Map<String, int> counts) {
+    final count = searchLookupCount(counts, name);
+    return '$name ($count)';
+  }
+
+  List<Map<String, dynamic>> get _sortedServices =>
+      searchSortServicesByCount(services, _serviceCounts);
+
+  void _onCityChanged(String? value) {
+    setState(() {
+      selectedCityName = value;
+      selectedServiceName = null;
+      _serviceCounts = {};
+      _categoriesHint = null;
+    });
+    if (value != null && value.isNotEmpty) {
+      _fetchCounts(servicesOnly: true);
     }
   }
 
@@ -134,12 +242,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       freeText: hasQuery && !(hasCity && hasService),
     );
 
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => outputob(
           nameImg: selectedServiceName ?? '',
           city: selectedCityName ?? '',
-          showBottomNav: true,
+          showBottomNav: _showNavOnResults,
           customerBottomNavIndex: 1,
           useCustomerNavigation: true,
           searchParams: params,
@@ -166,6 +274,9 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
             if (widget.emptyResultsHint != null)
               SearchInfoBanner(widget.emptyResultsHint!),
             const SearchInfoBanner(
+              'Ищете объявления исполнителей. Число у города — сумма по всем категориям.',
+            ),
+            const SearchInfoBanner(
               'Можно ввести запрос целиком, например «экскаватор в Тюмени», '
               'или выбрать город и услугу отдельно.',
             ),
@@ -176,40 +287,58 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
             ),
             SearchFieldLabel('Город (необязательно)'),
             SearchDropdownField<String>(
-              isLoading: _isLoading,
+              isLoading: _isLoading || _countsLoading,
               loadFailed: _loadFailed,
               isEmpty: cities.isEmpty,
               onRetry: fetchData,
               failedMessage: 'Не удалось загрузить города',
               hint: 'Выберите город или укажите в запросе',
               value: selectedCityName,
-              onChanged: (v) => setState(() => selectedCityName = v),
+              onChanged: _onCityChanged,
               items: cities
                   .map(
-                    (city) => DropdownMenuItem<String>(
-                      value: city['name'] as String,
-                      child: Text(city['name'], style: kSearchFieldTextStyle),
-                    ),
+                    (city) {
+                      final name = city['name'] as String;
+                      return DropdownMenuItem<String>(
+                        value: name,
+                        child: Text(
+                          _labelWithCount(name, _cityCounts),
+                          style: kSearchFieldTextStyle,
+                        ),
+                      );
+                    },
                   )
                   .toList(),
             ),
             SearchFieldLabel('Услуга (необязательно)'),
+            if (_categoriesHint != null) SearchInfoBanner(_categoriesHint!),
             SearchDropdownField<String>(
-              isLoading: _isLoading,
+              isLoading: _isLoading || _countsLoading,
               loadFailed: _loadFailed,
               isEmpty: services.isEmpty,
               onRetry: fetchData,
               failedMessage: 'Не удалось загрузить услуги',
-              hint: 'Выберите услугу или укажите в запросе',
+              hint: selectedCityName == null || selectedCityName!.isEmpty
+                  ? 'Сначала выберите город'
+                  : 'Выберите услугу или укажите в запросе',
               value: selectedServiceName,
               onChanged: (v) => setState(() => selectedServiceName = v),
-              items: services
+              items: _sortedServices
                   .map(
-                    (service) => DropdownMenuItem<String>(
-                      value: service['name'] as String,
-                      child:
-                          Text(service['name'], style: kSearchFieldTextStyle),
-                    ),
+                    (service) {
+                      final name = service['name'] as String;
+                      final count = (selectedCityName != null &&
+                              selectedCityName!.isNotEmpty)
+                          ? searchLookupCount(_serviceCounts, name)
+                          : 0;
+                      return DropdownMenuItem<String>(
+                        value: name,
+                        child: SearchServiceCountLabel(
+                          name: name,
+                          count: count,
+                        ),
+                      );
+                    },
                   )
                   .toList(),
             ),
@@ -250,6 +379,9 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const CustomerBottomNav(currentIndex: 1)
+          : null,
     );
   }
 }

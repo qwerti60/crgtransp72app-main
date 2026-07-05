@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crgtransp72app/config.dart';
+import 'package:crgtransp72app/navigation/last_app_role.dart';
 import 'package:crgtransp72app/services/chat_push_handler.dart';
 import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/SearchFormisp.dart';
@@ -9,6 +11,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import 'get_vt_z.dart';
 import 'zprofil_page.dart';
@@ -23,7 +26,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home: MyCustomScreen(initialPage: initialPage));
+    return MaterialApp(
+      theme: crgAppTheme(),
+      home: MyCustomScreen(initialPage: initialPage),
+    );
   }
 }
 
@@ -42,7 +48,6 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   bool _isLoadingAuth = true;
   bool hasActiveOrder = false; // Есть ли активная запись
   String? retrievedOrderId; // Извлекаемый идентификатор заказа
-
 
   Future<void> getUserData() async {
     try {
@@ -63,7 +68,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       }
 
       final response = await http
-          .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'))
+          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
           .timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
@@ -115,7 +120,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
 
   Future<Map<String, dynamic>> checkOrderStatus(String userIdok) async {
     final uri = Uri.parse(
-        'https://ivnovav.ru/api/check_order_statusisp.php?userIdok=$userIdok');
+        '${Config.baseUrl}/api/check_order_statusisp.php?userIdok=$userIdok');
     final response =
         await http.get(uri).timeout(const Duration(seconds: 8));
 
@@ -134,14 +139,19 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       case 0:
         return MyAppI1zPage(isAuthenticated: _isAuthorized);
       case 1:
-        if (orderInfo != null && orderInfo['result'] == true) {
+        if (orderInfo != null &&
+            orderInfo['result'] == true &&
+            (orderInfo['needs_review'] == true ||
+                orderInfo['status']?.toString() == 'выполняется')) {
           return OrderExecutionScreenzak(
             userId: orderInfo['user_id']?.toString() ?? '',
             orderId: orderInfo['order_id']?.toString() ?? '',
             showBottomNav: false,
+            orderSource: orderInfo['deal_source']?.toString() ?? 'customer_order',
+            bd: int.tryParse(orderInfo['bd']?.toString() ?? ''),
           );
         } else {
-          return const SearchFormisp(embedInCustomerShell: true); // Ads1App();
+          return const SearchFormisp(embedInCustomerShell: true);
         }
       case 2:
         if (!_isAuthorized) {
@@ -181,6 +191,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     }
 
     return Scaffold(
+        backgroundColor: whiteprColor,
         body: Column(
           children: <Widget>[
             Expanded(child: _getScreen(orderInfo)),
@@ -206,6 +217,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   void initState() {
     super.initState();
     _currentPage = widget.initialPage;
+    unawaited(saveLastAppRole(AppRole.customer));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ChatPushHandler.tryOpenPending(context);
     });
@@ -248,8 +260,9 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
           hasActiveOrder = false;
           return _buildScaffold(null);
         }
-        hasActiveOrder =
-            orderInfo['result'] == true; // Проверяем наличие активной записи
+        hasActiveOrder = orderInfo['result'] == true &&
+            (orderInfo['needs_review'] == true ||
+                orderInfo['status']?.toString() == 'выполняется');
         CustomerShellNavCache.update(
           isAuthorized: true,
           highlightOrders: hasActiveOrder,

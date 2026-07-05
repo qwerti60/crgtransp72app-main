@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import 'like_helper.dart';
 
@@ -37,9 +38,7 @@ class history_isp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: MyHomePage(nameImg: nameImg, bd: bd),
     );
   }
@@ -236,6 +235,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'История заказов',

@@ -12,8 +12,11 @@
 ```bash
 mysql --default-character-set=utf8mb4 -u root < sql/local_dev.sql
 mysql --default-character-set=utf8mb4 -u root crg_local < sql/migrate_admin_users_ads.sql
+mysql --default-character-set=utf8mb4 -u root crg_local < sql/migrate_subscription_payment_log.sql
 ./scripts/seed_test_ads.sh
 cd api && php -S 127.0.0.1:8080
 ```
 
 Вход: http://127.0.0.1:8080/admin-web/login.php — `admin` / `ChangeMe_Admin1!`
+
+После входа откроется **Статистика** с выручкой подписок (при наличии `subscription_payment_log`).

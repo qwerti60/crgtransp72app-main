@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import 'customer_bottom_nav.dart';
 import 'like_helper.dart';
@@ -41,9 +42,7 @@ class zprofil_zakaz extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: MyHomePage(
         nameImg: nameImg,
         base: base,
@@ -198,7 +197,10 @@ class _MyHomePageState extends State<MyHomePage> {
         final bi = _intFromDynamic(b['id']);
         return bi.compareTo(ai);
       });
-      return out;
+      return out.where((m) {
+        final owner = _intFromDynamic(m['iduser']);
+        return owner <= 0 || owner != uid;
+      }).toList();
     }
 
     List<Map<String, dynamic>> tryParse(http.Response response) {
@@ -385,14 +387,15 @@ class _MyHomePageState extends State<MyHomePage> {
           label: 'Редактировать заказ',
           color: blueaccentColor,
           onPressed: () {
-            Navigator.push(
-              context,
+            Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(
                 builder: (context) => OfferScreen2(
                   userid: truck['id'].toString(),
                   useridobj: truck['iduser'],
                   bd: rowBd,
                   useCustomerNavigation: true,
+                  showBottomNav: true,
+                  customerBottomNavIndex: 1,
                 ),
               ),
             ).then((_) {
@@ -527,6 +530,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Объявления заявки',

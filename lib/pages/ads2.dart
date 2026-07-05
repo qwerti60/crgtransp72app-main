@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:crgtransp72app/pages/HistortScreen1z.dart';
 import 'package:crgtransp72app/pages/add_ob_gp1.dart';
 import 'package:crgtransp72app/pages/add_ob_vidt.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
@@ -20,9 +19,39 @@ import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
 
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import '../search/ad_match.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Widget _offerCountButton({
+  required String count,
+  required VoidCallback onPressed,
+}) {
+  return SizedBox(
+    width: 42,
+    height: 42,
+    child: ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: blueaccentColor,
+        foregroundColor: whiteprColor,
+        shape: const CircleBorder(),
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(42, 42),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        count,
+        style: const TextStyle(
+          color: whiteprColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    ),
+  );
+}
 
 void main() {
   runApp(const Ads2App());
@@ -37,9 +66,7 @@ class Ads2App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: showBottomNav
           ? const Ads2Shell()
           : const MyHomePage(showBottomNav: false),
@@ -177,7 +204,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool _isAdInactive(Map<dynamic, dynamic> truck) {
     final status = (truck['order_status'] ?? '').toString();
-    if (status == 'выполнен' || status == 'выполняется') {
+    if (status == 'выполняется') {
       return true;
     }
     final isActive = truck['is_active'];
@@ -188,7 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final status = (truck['order_status'] ?? '').toString();
     switch (status) {
       case 'выполнен':
-        return 'Заказ выполнен · объявление неактивно';
+        return 'Выполнено · можно принять новые предложения';
       case 'выполняется':
         return 'Заказ выполняется · объявление неактивно';
       default:
@@ -254,6 +281,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Мои объявления',
@@ -702,36 +730,23 @@ class _MyHomePageState extends State<MyHomePage> {
                                     Text('Откликов:',
                                         style:
                                             DefaultTextStyle.of(context).style),
-                                    ElevatedButton(
+                                    _offerCountButton(
+                                      count: '${truck['offer']}',
                                       onPressed: () {
-                                        Navigator.of(context,
-                                                rootNavigator: true)
-                                            .push(
+                                        Navigator.of(context).push(
                                           MaterialPageRoute(
-                                            builder: (_) => HistortScreen1z(
-                                                pageProfile:
-                                                    'list_predloj_na_obj_isp',
-                                                userId1: truck['id'].toString(),
-                                                orderId: adBd.toString(),
-                                                parsedUserIdOk: '',
-                                                adBd: adBd),
-
-                                            /*  list_predloj_na_obj_isp(
-                                              nameImg: truck['id'].toString(),
-                                              bd: bd!,
+                                            builder: (_) =>
+                                                list_predloj_na_obj_isp(
+                                              nameImg:
+                                                  truck['id'].toString(),
+                                              bd: adBd,
+                                              useCustomerMenu:
+                                                  widget.showBottomNav,
+                                              wrapInMaterialApp: false,
                                             ),
-                                            */
                                           ),
                                         );
                                       },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            blueaccentColor, // Это сделает кнопку синей
-                                      ),
-                                      child: Text('${truck['offer']}',
-                                          style: const TextStyle(
-                                            color: whiteprColor,
-                                          )),
                                     ),
                                   ],
                                 ),
@@ -760,7 +775,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                 onPressed: () => openPerformersForCustomerAd(
                                   context,
                                   Map<String, dynamic>.from(truck),
-                                  embedInShell: !widget.showBottomNav,
                                 ),
                               ),
                           ],

@@ -252,6 +252,8 @@ class _MyHomePageState extends State<MyHomePage> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => CustomerSearchScreen(
+            embedInCustomerShell: widget.useCustomerNavigation,
+            showBottomNav: widget.showBottomNav,
             initialCity: widget.city,
             initialServiceName: widget.nameImg,
             initialPriceMax: widget.searchParams?.priceMax,
@@ -389,14 +391,16 @@ class _MyHomePageState extends State<MyHomePage> {
             await _showAuthRequiredDialog();
             return;
           }
-          Navigator.push(
-            context,
+          Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => OfferScreen2(
                 userid: truck['id'].toString(),
                 useridobj: truck['iduser'],
                 bd: bdVal,
                 useCustomerNavigation: true,
+                showBottomNav: true,
+                customerBottomNavIndex: widget.customerBottomNavIndex,
+                forceNewOffer: deal.isCompleted || deal.isCancelled,
               ),
             ),
           ).then((_) {
@@ -516,6 +520,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(String city, String nameImg, int userId) async {
     final seq = ++_fetchSeq;
 
+    if (userId <= 0) {
+      return [];
+    }
+
+    List<dynamic> _filterOwn(List ads) => ads.where((dynamic ad) {
+          if (ad is! Map) return true;
+          final owner = int.tryParse('${ad['iduser'] ?? ''}') ?? 0;
+          return owner != userId;
+        }).toList();
+
     if (widget.searchParams != null) {
       final ads = await SearchServicesApi.tryFetch(
         role: 'customer',
@@ -526,13 +540,23 @@ class _MyHomePageState extends State<MyHomePage> {
         allCities: widget.ignoreCityFilter,
       );
       if (seq != _fetchSeq) return [];
-      if (ads != null) {
-        return ads;
+      if (ads != null && ads.isNotEmpty) {
+        return _filterOwn(ads);
       }
       if (widget.searchParams!.freeText) {
-        return [];
+        return ads != null ? _filterOwn(ads) : [];
       }
-      debugPrint('[outputob] search_services unavailable, fallback to get_ads2_new');
+      if (ads != null &&
+          nameImg.isNotEmpty &&
+          (city.isNotEmpty || widget.ignoreCityFilter)) {
+        debugPrint(
+          '[outputob] search_services empty for $city / $nameImg, fallback to get_ads2_new',
+        );
+      } else if (ads != null) {
+        return _filterOwn(ads);
+      } else {
+        debugPrint('[outputob] search_services unavailable, fallback to get_ads2_new');
+      }
     }
 
     if (nameImg.isEmpty || city.isEmpty) {
@@ -575,6 +599,7 @@ class _MyHomePageState extends State<MyHomePage> {
             '[outputob] $city / $nameImg / usersid=$userId likes: '
             '${parsed.map((e) => '${e['id']}:${e['success']}').join(', ')}',
           );
+          return _filterOwn(parsed);
         }
         return parsed;
 
@@ -1253,7 +1278,7 @@ class _MyHomePageState extends State<MyHomePage> {
       adId: adId,
       title: name.isNotEmpty ? name : 'Исполнитель',
       currentUserId: userId,
-      showBottomNav: widget.showBottomNav,
+      showBottomNav: true,
       isPerformer: false,
     );
   }

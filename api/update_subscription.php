@@ -12,6 +12,7 @@ $userId = isset($_POST['userId']) ? (int)$_POST['userId'] : 0;
 $orderId = isset($_POST['orderId']) ? trim((string)$_POST['orderId']) : '';
 $days = isset($_POST['days']) ? (int)$_POST['days'] : 30;
 $days = $days > 0 ? $days : 30;
+$amountRub = isset($_POST['amountRub']) ? (int)$_POST['amountRub'] : 0;
 
 if ($userId <= 0 || $orderId === '') {
     http_response_code(400);
@@ -105,6 +106,19 @@ if (!$ok) {
     ], JSON_UNESCAPED_UNICODE);
     $mysqli->close();
     exit;
+}
+
+require_once __DIR__ . '/include/performer_finances.php';
+try {
+    $pdo = new PDO(
+        "mysql:host={$host};dbname={$dbName};charset=utf8mb4",
+        $dbUser,
+        $dbPassword,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+    crg_finances_log_subscription_payment($pdo, $userId, $orderId, $amountRub, $days, $newDate);
+} catch (Throwable $e) {
+    // Журнал оплат не блокирует успешное продление подписки.
 }
 
 echo json_encode([

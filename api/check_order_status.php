@@ -2,6 +2,8 @@
 header('Content-Type: application/json; charset=utf-8');
 
 include 'databd.php';
+require_once __DIR__ . '/include/datetime_mysql.php';
+require_once __DIR__ . '/include/performer_order_gate.php';
 
 /**
  * source:
@@ -161,6 +163,12 @@ function crg_handle_customer_order(
         $offerRow = $stmtCheckOfferData->fetch(PDO::FETCH_ASSOC);
 
         if (!empty($offerRow)) {
+            $block = crg_performer_may_start_new_deal($pdo, $performerId, $orderId, $userIdok);
+            if ($block !== null) {
+                crg_json_performer_start_blocked($block);
+                return;
+            }
+
             $stmtUpdateOfferData = $pdo->prepare('UPDATE offer_data SET status = 1 WHERE id = :id');
             $stmtUpdateOfferData->bindValue(':id', $offerRow['id'], PDO::PARAM_INT);
             $stmtUpdateOfferData->execute();
@@ -188,6 +196,7 @@ function crg_handle_customer_order(
 
             echo json_encode([
                 'message' => 'Запись успешно создана',
+                'start_time' => $startTime,
             ], JSON_UNESCAPED_UNICODE);
         } else {
             echo json_encode([
@@ -272,6 +281,12 @@ function crg_handle_performer_ad(
         return;
     }
 
+    $block = crg_performer_may_start_new_deal($pdo, $performerId, $adId, $customerIdStr);
+    if ($block !== null) {
+        crg_json_performer_start_blocked($block);
+        return;
+    }
+
     $dealBd = ($bd !== null && $bd > 0) ? $bd : (int) ($offerRow['bd'] ?? 0);
     $stmtInsert = $pdo->prepare(
         "INSERT INTO ordersglobal
@@ -295,6 +310,7 @@ function crg_handle_performer_ad(
 
     echo json_encode([
         'message' => 'Запись успешно создана',
+        'start_time' => $startTime,
     ], JSON_UNESCAPED_UNICODE);
 }
 
@@ -312,6 +328,8 @@ try {
     if ($user_id === '' || $order_id === '' || $start_time === '') {
         throw new Exception('Параметры user_id, order_id или start_time отсутствуют!');
     }
+
+    $start_time = crg_normalize_mysql_datetime((string) $start_time);
 
     $performerId = (int) $user_id;
     $orderId = (string) $order_id;

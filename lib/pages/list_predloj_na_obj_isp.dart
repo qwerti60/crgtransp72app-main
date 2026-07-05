@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 
 import 'changerol_page.dart';
@@ -47,9 +48,7 @@ class list_predloj_na_obj_isp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: home,
     );
   }
@@ -110,6 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
   // Пока одно предложение принято — кнопки «Принять» у остальных неактивны.
   int? _acceptedPerformerId;
   bool _offersStatusLoading = true;
+  String? _orderDealStatus;
 
   bool _isLikedValue(dynamic value) {
     if (value is bool) return value;
@@ -249,9 +249,21 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  /// Определяет, чьё предложение уже принято (isp = 1) среди всех предложений.
-  /// Принятым может быть только одно предложение за раз.
+  /// Определяет выбранного исполнителя (принято или сделка в ordersglobal).
   Future<void> _computeAcceptedPerformer(List offers, int bd) async {
+    if (offers.isNotEmpty) {
+      for (final t in offers) {
+        final chosen =
+            int.tryParse(t['chosen_performer_id']?.toString() ?? '') ?? 0;
+        if (chosen > 0) {
+          _acceptedPerformerId = chosen;
+          _orderDealStatus = t['order_status']?.toString();
+          _offersStatusLoading = false;
+          return;
+        }
+      }
+    }
+
     int? accepted;
     for (final t in offers) {
       final performerId =
@@ -316,6 +328,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Предложения исполнителей',
@@ -736,10 +749,14 @@ class _MyHomePageState extends State<MyHomePage> {
                                 // Какое-то ДРУГОЕ предложение уже принято?
                                 final bool acceptedElsewhere =
                                     _acceptedPerformerId != null && !hasOffer;
+                                final bool dealLocked =
+                                    _orderDealStatus == 'выполняется';
                                 // «Принять» неактивна, пока статусы грузятся
-                                // или уже принято другое предложение.
+                                // или уже выбран другой исполнитель / сделка закрыта.
                                 final bool disabled = !hasOffer &&
-                                    (_offersStatusLoading || acceptedElsewhere);
+                                    (_offersStatusLoading ||
+                                        acceptedElsewhere ||
+                                        dealLocked);
 
                                 // Цвета под состояние кнопки.
                                 final Color bgColor = hasOffer
@@ -820,7 +837,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                           padding:
                                               const EdgeInsets.only(top: 4.0),
                                           child: Text(
-                                            'Вы уже приняли другое предложение',
+                                            dealLocked || acceptedElsewhere
+                                                ? 'Исполнитель уже выбран'
+                                                : 'Вы уже приняли другое предложение',
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 12,
@@ -861,10 +880,9 @@ class _MyHomePageState extends State<MyHomePage> {
     await updateOffer(widget.bd, widget.nameImg, iduserp, accept: accept);
 
     if (!mounted) return;
-    // Локально обновляем состояние: при принятии блокируем остальные,
-    // при отказе — снова разрешаем «Принять» у всех.
     setState(() {
       _acceptedPerformerId = accept ? performerId : null;
+      _adsFuture = fetchAds(widget.bd, widget.nameImg);
     });
 
     try {
@@ -971,7 +989,7 @@ class _MyHomePageState extends State<MyHomePage> {
       adId: adId,
       title: name.isNotEmpty ? name : 'Исполнитель',
       currentUserId: userId,
-      showBottomNav: widget.useCustomerMenu,
+      showBottomNav: true,
       isPerformer: false,
     );
   }

@@ -77,9 +77,8 @@ SearchParams searchParamsFromPerformerAdMatch(Map<String, dynamic> ad) {
 
 void openPerformersForCustomerAd(
   BuildContext context,
-  Map<String, dynamic> ad, {
-  bool embedInShell = true,
-}) {
+  Map<String, dynamic> ad,
+) {
   final city = ad['city']?.toString().trim() ?? '';
   final category = categoryNameFromCustomerAd(ad);
   if (city.isEmpty || category.isEmpty) {
@@ -92,12 +91,14 @@ void openPerformersForCustomerAd(
     return;
   }
 
-  Navigator.of(context).push(
+  // Полноэкранный push + одно меню: иначе меню shell (MenuzakScreen / zakaz_screen1)
+  // остаётся под результатами и получается двойная панель.
+  Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute(
       builder: (_) => outputob(
         nameImg: category,
         city: city,
-        showBottomNav: !embedInShell,
+        showBottomNav: true,
         customerBottomNavIndex: 2,
         useCustomerNavigation: true,
         searchParams: searchParamsFromCustomerAdMatch(ad),
@@ -109,9 +110,8 @@ void openPerformersForCustomerAd(
 
 void openOrdersForPerformerAd(
   BuildContext context,
-  Map<String, dynamic> ad, {
-  bool embedInShell = true,
-}) {
+  Map<String, dynamic> ad,
+) {
   final city = ad['city']?.toString().trim() ?? '';
   final category = categoryNameFromPerformerAd(ad);
   if (city.isEmpty || category.isEmpty) {
@@ -124,12 +124,12 @@ void openOrdersForPerformerAd(
     return;
   }
 
-  Navigator.of(context).push(
+  Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute(
       builder: (_) => outputobz(
         nameImg: category,
         city: city,
-        showBottomNav: !embedInShell,
+        showBottomNav: true,
         performerBottomNavIndex: 2,
         searchParams: searchParamsFromPerformerAdMatch(ad),
         openSearchOnEmpty: true,

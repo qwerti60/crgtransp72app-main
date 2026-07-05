@@ -6,6 +6,7 @@ tp_admin_web_require_include('admin_users.php');
 tp_admin_web_require_include('admin_ads.php');
 tp_admin_web_require_include('admin_reviews.php');
 tp_admin_web_require_include('admin_subscriptions.php');
+tp_admin_web_require_include('admin_finances.php');
 
 $pdo = tp_admin_web_require_login();
 $adminLogin = (string) ($_SESSION['admin_web_login'] ?? '');
@@ -101,6 +102,7 @@ tp_admin_web_layout_start($pageTitle, 'users', $adminLogin !== '' ? $adminLogin 
     if (crg_admin_user_is_performer($rollNum)) {
         crg_admin_render_performer_subscription($pdo, $id);
     }
+    crg_admin_render_performer_finances($pdo, $id, $rollNum);
     if (crg_admin_user_is_performer($rollNum) || crg_admin_performer_review_summary($pdo, $id)['count'] > 0) {
         crg_admin_render_performer_reviews($pdo, $id);
     }

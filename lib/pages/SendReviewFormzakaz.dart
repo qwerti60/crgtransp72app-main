@@ -1,17 +1,8 @@
 import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/design/colors.dart';
-import 'package:crgtransp72app/pages/HistortScreen1z.dart';
-import 'package:crgtransp72app/pages/ads1.dart';
-import 'package:crgtransp72app/pages/bmenu.dart';
-import 'package:crgtransp72app/pages/get_vt_z.dart';
-import 'package:crgtransp72app/pages/history_isp.dart';
-import 'package:crgtransp72app/pages/list_predloj_na_zayavki.dart';
-import 'package:crgtransp72app/pages/menuzak.dart';
+import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
-import 'package:crgtransp72app/pages/scrmenu.dart';
-import 'package:crgtransp72app/pages/test.dart'; // as hist;
-import 'package:crgtransp72app/pages/zprofil_page2.dart';
-import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
+import 'package:crgtransp72app/services/review_pair_api.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
@@ -43,30 +34,56 @@ class SendReviewFormzakaz extends StatefulWidget {
 
 class _SendReviewFormState extends State<SendReviewFormzakaz> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _commentController;
 
   int _selectedRating = 0;
-  String _textComment = '';
+  bool _loadingReview = true;
+  bool _isEdit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController = TextEditingController();
+    _loadExistingReview();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadExistingReview() async {
+    final customerId = int.tryParse(widget.currentUserId) ?? 0;
+    final performerId = widget.parsedUserIdOk;
+    final existing = await fetchReviewBetween(
+      table: ReviewPairTable.customerAboutPerformer,
+      performerId: performerId,
+      customerId: customerId,
+    );
+    if (!mounted) return;
+    if (existing != null) {
+      _selectedRating = existing.rating;
+      _commentController.text = existing.comment;
+      _isEdit = true;
+    }
+    setState(() => _loadingReview = false);
+  }
 
   Future<void> _submitReview() async {
-    // Проверка заполнения формы
     if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
-
-    // Проверка наличия обязательных полей
-    if (widget.currentUserId == null || widget.targetUserId == null) {
-      showErrorDialog('Ошибка', 'Пользовательские ID не заданы');
+    if (_selectedRating < 1) {
+      showErrorDialog('Ошибка', 'Выберите оценку');
       return;
     }
 
+    final comment = _commentController.text.trim();
     final data = {
       'user_id': widget.currentUserId,
       'target_user_id': widget.targetUserId,
       'rating': _selectedRating,
-      'comment': _textComment.trim(),
+      'comment': comment,
     };
-
-    // Логируем отправляемые данные
-    print('Data to send: $data');
 
     try {
       final response = await Dio().post(
@@ -90,24 +107,17 @@ class _SendReviewFormState extends State<SendReviewFormzakaz> {
           body: 'Заказчик оставил отзыв об исполнителе',
         );
         // Открытие окна с успешным результатом и последующей навигацией
-        showSuccessDialog('Спасибо!', 'Ваш отзыв успешно отправлен.',
-            onOkPressed: () {
-          /*  Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => history_isp(
-                  nameImg: widget.currentUserId,
-                  bd: 1), // HistortScreen12(pageProfile: 'hist')),
-            ),
-          );*/
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => MenuzakScreen(pageProfile: 'hist'),
-            ),
+        final successText = _isEdit
+            ? 'Отзыв обновлён'
+            : 'Ваш отзыв успешно отправлен.';
+        showSuccessDialog('Спасибо!', successText, onOkPressed: () {
+          CustomerShellNavCache.update(
+            isAuthorized: true,
+            highlightOrders: false,
+            activeOrderUserId: '',
+            activeOrderId: '',
           );
-
-          // Логируем успешную операцию и значение userID
-          print(
-              'API Success: Review submitted by user ${widget.currentUserId} for user ${widget.targetUserId}.');
+          Navigator.of(context).pop(true);
         });
       } else {
         // Логируем сообщение об ошибке
@@ -164,67 +174,52 @@ class _SendReviewFormState extends State<SendReviewFormzakaz> {
     );
   }
 
-  int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    MyAppI1z(), // Страница объявлений
-    Ads1App(), // Страница заявок
-    zprofil_zayavki(nameImg: '', base: 1), // Страница заказчиков
-    zprofil_name2(), // Страница профиля
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  /* ------------------------- UI ------------------------------------ */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Оставьте отзыв о исполнителе',
-          style: TextStyle(
-            color: whiteprColor,
-          ),
+        title: Text(
+          _isEdit ? 'Изменить отзыв об исполнителе' : 'Оставьте отзыв о исполнителе',
+          style: const TextStyle(color: whiteprColor),
         ),
         backgroundColor: blueaccentColor,
       ),
-// appBar: AppBar(title: const Text('Оставьте отзыв')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              RatingSelector(
-                initialRating: _selectedRating,
-                onSelected: (val) => setState(() => _selectedRating = val),
-              ),
-              const SizedBox(height: 24),
-              CommentField(
-                initialValue: _textComment,
-                onSaved: (val) => _textComment = val ?? '',
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.maxFinite,
-                height: 50,
-                child: ElevatedButton(
-                  style: ButtonStyle(
-                    foregroundColor: MaterialStateProperty.all(Colors.white),
-                    backgroundColor: MaterialStateProperty.all(Colors.blue),
-                  ),
-                  onPressed: _submitReview,
-                  child: const Text('Отправить отзыв о исполнителе'),
+      body: _loadingReview
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    RatingSelector(
+                      initialRating: _selectedRating,
+                      onSelected: (val) => setState(() => _selectedRating = val),
+                    ),
+                    const SizedBox(height: 24),
+                    CommentField(controller: _commentController),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.maxFinite,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ButtonStyle(
+                          foregroundColor:
+                              MaterialStateProperty.all(Colors.white),
+                          backgroundColor:
+                              MaterialStateProperty.all(Colors.blue),
+                        ),
+                        onPressed: _submitReview,
+                        child: Text(_isEdit
+                            ? 'Сохранить изменения'
+                            : 'Отправить отзыв о исполнителе'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }
@@ -267,19 +262,17 @@ class RatingSelector extends StatelessWidget {
 /* ------------------ ПОЛЕ КОММЕНТАРИЯ ------------------------------- */
 
 class CommentField extends StatelessWidget {
-  final String initialValue;
-  final Function(String?)? onSaved;
+  final TextEditingController controller;
 
   const CommentField({
     Key? key,
-    required this.initialValue,
-    this.onSaved,
+    required this.controller,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller: TextEditingController(text: initialValue),
+      controller: controller,
       maxLines: 4,
       decoration: const InputDecoration(
         labelText: 'Комментарий',
@@ -292,7 +285,6 @@ class CommentField extends StatelessWidget {
         }
         return null;
       },
-      onSaved: onSaved,
     );
   }
 }

@@ -1,5 +1,6 @@
 <?php
 include 'databd.php';
+require_once __DIR__ . '/include/customer_order_deal.php';
 $idusers = isset($_GET['idusers']) ? $_GET['idusers'] : '';
 
 // Создаем подключение
@@ -27,42 +28,19 @@ function offerCountSql(string $adIdColumn, int $bd): string
 }
 
 /**
- * Статус сделки по объявлению заказчика (ordersglobal + offer_data.bd).
+ * Статус сделки по объявлению заказчика (ordersglobal).
  */
 function orderStatusSql(string $adIdColumn, int $bd, string $customerIdColumn): string
 {
-    return "(SELECT og.status
-        FROM ordersglobal og
-        INNER JOIN offer_data od ON od.id = og.idoffer AND od.bd = {$bd}
-        WHERE CAST(og.order_id AS CHAR) = CAST({$adIdColumn} AS CHAR)
-          AND CAST(og.user_idok AS CHAR) = CAST({$customerIdColumn} AS CHAR)
-          AND og.status IN ('выполняется', 'выполнен', 'отменен')
-        ORDER BY
-            CASE og.status
-                WHEN 'выполняется' THEN 0
-                WHEN 'выполнен' THEN 1
-                ELSE 2
-            END,
-            og.id DESC
-        LIMIT 1) AS order_status";
+    return crg_sql_customer_ad_order_status($adIdColumn, $bd, $customerIdColumn);
 }
 
 /**
- * Объявление неактивно, пока заказ выполняется или уже выполнен.
+ * Объявление неактивно, пока заказ выполняется. После «выполнен» снова принимает отклики.
  */
 function isActiveSql(string $adIdColumn, int $bd, string $customerIdColumn): string
 {
-    return "(SELECT CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM ordersglobal og
-                INNER JOIN offer_data od ON od.id = og.idoffer AND od.bd = {$bd}
-                WHERE CAST(og.order_id AS CHAR) = CAST({$adIdColumn} AS CHAR)
-                  AND CAST(og.user_idok AS CHAR) = CAST({$customerIdColumn} AS CHAR)
-                  AND og.status IN ('выполняется', 'выполнен')
-            ) THEN 0
-            ELSE 1
-        END) AS is_active";
+    return crg_sql_customer_ad_is_active($adIdColumn, $bd, $customerIdColumn);
 }
 
 // Обобщенный SQL-запрос с добавлением имени таблицы

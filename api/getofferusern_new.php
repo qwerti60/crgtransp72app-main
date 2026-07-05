@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/databd.php';
+require_once __DIR__ . '/include/customer_order_deal.php';
 
 $useId = isset($_GET['useId']) ? (int) $_GET['useId'] : 0;
 
@@ -55,7 +56,11 @@ FROM (
         COALESCE(rev.avg_rating, 0) AS avg_rating,
         COALESCE(rev.reviewsCount, 0) AS reviewsCount,
         od.iduserp AS iduserp,
-        od.bd AS bd
+        od.bd AS bd,
+        od.isp AS isp,
+        od.status AS offer_status,
+        " . crg_sql_customer_ad_order_status('b.id', 1, 'b.iduser') . ",
+        " . crg_sql_customer_ad_chosen_performer('b.id', 1, 'b.iduser') . "
     FROM offer_data od
     INNER JOIN orders b ON b.id = od.iduser
     JOIN users u ON b.iduser = u.idusers
@@ -65,6 +70,7 @@ FROM (
         GROUP BY target_user_id
     ) rev ON b.iduser = rev.target_user_id
     WHERE od.iduserp = ?
+      AND od.status IN (0, 1, 2)
 
     UNION ALL
 
@@ -102,7 +108,11 @@ FROM (
         COALESCE(rev.avg_rating, 0) AS avg_rating,
         COALESCE(rev.reviewsCount, 0) AS reviewsCount,
         od.iduserp AS iduserp,
-        od.bd AS bd
+        od.bd AS bd,
+        od.isp AS isp,
+        od.status AS offer_status,
+        " . crg_sql_customer_ad_order_status('b.id', 2, 'b.iduser') . ",
+        " . crg_sql_customer_ad_chosen_performer('b.id', 2, 'b.iduser') . "
     FROM offer_data od
     INNER JOIN orderst b ON b.id = od.iduser
     JOIN users u ON b.iduser = u.idusers
@@ -112,6 +122,7 @@ FROM (
         GROUP BY target_user_id
     ) rev ON b.iduser = rev.target_user_id
     WHERE od.iduserp = ?
+      AND od.status IN (0, 1, 2)
 
     UNION ALL
 
@@ -149,7 +160,11 @@ FROM (
         COALESCE(rev.avg_rating, 0) AS avg_rating,
         COALESCE(rev.reviewsCount, 0) AS reviewsCount,
         od.iduserp AS iduserp,
-        od.bd AS bd
+        od.bd AS bd,
+        od.isp AS isp,
+        od.status AS offer_status,
+        " . crg_sql_customer_ad_order_status('b.id', 3, 'b.iduser') . ",
+        " . crg_sql_customer_ad_chosen_performer('b.id', 3, 'b.iduser') . "
     FROM offer_data od
     INNER JOIN ordersg b ON b.id = od.iduser
     JOIN users u ON b.iduser = u.idusers
@@ -159,13 +174,8 @@ FROM (
         GROUP BY target_user_id
     ) rev ON b.iduser = rev.target_user_id
     WHERE od.iduserp = ?
+      AND od.status IN (0, 1, 2)
 ) sq
-WHERE NOT EXISTS (
-    SELECT 1 FROM ordersglobal og
-    WHERE og.user_id = sq.iduserp
-      AND CAST(og.order_id AS CHAR) = CAST(sq.id AS CHAR)
-      AND og.status IN ('выполняется', 'выполнен')
-)
 ORDER BY sq.created_at DESC, sq.id DESC
 ";
 

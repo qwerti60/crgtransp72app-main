@@ -16,6 +16,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -35,9 +36,7 @@ class outputobzlikes1 extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Truck Info',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: crgAppTheme(),
       home: MyHomePage(nameImg: nameImg, base: base),
     );
   }
@@ -274,6 +273,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Избранные заказчики',

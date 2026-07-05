@@ -1,6 +1,7 @@
 // TODO Implement this library.
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
 import 'package:crgtransp72app/pages/sendNotification.dart';
 import 'package:crgtransp72app/pages/zprofil_zayavki.dart';
 import 'package:flutter/material.dart';
@@ -24,16 +25,19 @@ import 'ads2.dart';
 
 class OfferScreen extends StatefulWidget {
   final String userid;
-
   final dynamic bd;
-
   final dynamic useridobj;
-  //final int bd;
-  const OfferScreen(
-      {super.key,
-      required this.userid,
-      required this.bd,
-      required this.useridobj});
+  final bool showBottomNav;
+  final int performerBottomNavIndex;
+
+  const OfferScreen({
+    super.key,
+    required this.userid,
+    required this.bd,
+    required this.useridobj,
+    this.showBottomNav = true,
+    this.performerBottomNavIndex = 1,
+  });
 
   @override
 
@@ -137,15 +141,17 @@ class _OfferscreenForm extends State<OfferScreen> {
 
     if (response.statusCode == 200) {
       print('Uploaded!');
-      print('Uploaded!');
-      Navigator.push(
-        context,
+      if (!mounted) return;
+      final baseBd = bd is int ? bd : int.tryParse('$bd') ?? 1;
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => const zprofil_zayavki(
+          builder: (_) => zprofil_zayavki(
             nameImg: '',
-            base: 1,
+            base: baseBd,
+            showBottomNav: true,
           ),
         ),
+        (Route<dynamic> route) => false,
       );
     } else {
       print('Failed!');
@@ -171,6 +177,7 @@ class _OfferscreenForm extends State<OfferScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Предложение услуги',
@@ -182,7 +189,11 @@ class _OfferscreenForm extends State<OfferScreen> {
       ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
-        child: Column(
+        child: Container(
+          width: double.infinity,
+          color: whiteprColor,
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -341,8 +352,12 @@ class _OfferscreenForm extends State<OfferScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? PerformerBottomNav(currentIndex: widget.performerBottomNavIndex)
+          : null,
     );
   }
 

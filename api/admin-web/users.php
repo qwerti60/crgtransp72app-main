@@ -101,6 +101,9 @@ tp_admin_web_layout_start('Пользователи', 'users', $adminLogin !== '
                 </td>
                 <td class="row-actions">
                     <a class="btn small" href="user_edit.php?id=<?= $id ?>">Изменить</a>
+                    <?php if (crg_admin_user_is_performer($rollNum)) { ?>
+                        <a class="btn secondary small" href="user_edit.php?id=<?= $id ?>#user-finances">Финансы</a>
+                    <?php } ?>
                 </td>
             </tr>
         <?php } ?>

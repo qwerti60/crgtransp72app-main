@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
+import 'package:crgtransp72app/pages/SendReviewForm.dart';
 import 'package:crgtransp72app/pages/chat_thread_screen.dart';
 import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/scrmenu.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
+import 'package:crgtransp72app/services/review_pair_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -45,6 +46,12 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
   Timer? timer;
   String? orderStatus; // Переменная для хранения текущего статуса заказа
   String? formattedDuration;
+  bool _hasExistingReview = false;
+
+  static const _timerDigitsStyle = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+  );
 
   @override
   void initState() {
@@ -131,49 +138,6 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       debugPrint('[ISP] check_order_status1 resume error: $e');
     }
 
-    var customerId = _customerIdForRequest();
-    if (customerId.isEmpty) {
-      customerId = await _resolveCustomerId();
-    }
-    // Для существующей записи в ordersglobal user_idok на сервере подставится из БД.
-    final fromPost = await _fetchStartTimeViaPost(customerId);
-    if (fromPost != null) return fromPost;
-
-    return null;
-  }
-
-  Future<DateTime?> _fetchStartTimeViaPost(String customerId) async {
-    try {
-      final body = <String, String>{
-        'user_id': widget.userId,
-        'order_id': widget.orderId,
-        'start_time': DateTime.now().toIso8601String(),
-        'user_idok': customerId,
-        'source': widget.orderSource,
-      };
-      if (widget.bd != null && widget.bd! > 0) {
-        body['bd'] = widget.bd.toString();
-      }
-      final response = await http
-          .post(
-            Uri.parse('${Config.baseUrl}/api/check_order_status.php'),
-            body: body,
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-          )
-          .timeout(const Duration(seconds: 12));
-      debugPrint('[ISP] check_order_status POST ${response.statusCode}: ${response.body}');
-      if (response.statusCode != 200) return null;
-      final decoded = json.decode(response.body);
-      if (decoded is! Map) return null;
-      final message = decoded['message']?.toString() ?? '';
-      if (message == 'Продолжается выполнение') {
-        return _parseServerDateTime(decoded['start_time']);
-      }
-    } catch (e) {
-      debugPrint('[ISP] check_order_status POST resume error: $e');
-    }
     return null;
   }
 
@@ -292,31 +256,30 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
             timer?.cancel();
           });
         } else if (result.containsKey('duration_seconds')) {
-          // Новое условие проверки
-          int seconds = result['duration_seconds']; // Берём количество секунд
-          Duration duration =
-              Duration(seconds: seconds); // Создаем объект Duration
-          String hoursMinutes =
-              formatDuration(duration); // Преобразуем в удобное представление
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Заказ выполнен'),
-              content: Text(
-                  'Время выполнения заказа: $hoursMinutes'), // Отображаем продолжительность
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
+          int seconds = result['duration_seconds'];
+          Duration duration = Duration(seconds: seconds);
+          String hoursMinutes = formatDuration(duration);
           setState(() {
             orderStatus = newStatus;
             timer?.cancel();
             formattedDuration = hoursMinutes;
           });
+          unawaited(_refreshExistingReviewFlag());
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Заказ выполнен'),
+                content: Text('Время выполнения заказа: $hoursMinutes'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
         } else {
           showDialog(
             context: context,
@@ -528,10 +491,10 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
         final message = decoded['message']?.toString() ?? '';
         switch (message) {
           case 'Продолжается выполнение':
-            final startDate = _parseServerDateTime(decoded['start_time']);
-            if (startDate == null) {
-              showErrorSnackbar('Некорректное время начала заказа');
-              break;
+            final startDate =
+                _parseServerDateTime(decoded['start_time']) ?? DateTime.now();
+            if (_parseServerDateTime(decoded['start_time']) == null) {
+              debugPrint('[ISP] start_time parse fallback to now');
             }
 
             final totalElapsedSeconds =
@@ -547,12 +510,16 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
             break;
 
           case 'Запись успешно создана':
-            _markOrdersTabActive();
-            setState(() {
-              orderStatus = 'Продолжается выполнение';
-              elapsedDuration = Duration.zero;
-            });
-            startTimer(null);
+            final startDate =
+                _parseServerDateTime(decoded['start_time']) ?? DateTime.now();
+            _resumeRunningOrder(startDate);
+            break;
+
+          case 'Нельзя начать выполнение':
+            showErrorSnackbar(
+              decoded['block_message']?.toString() ??
+                  'Нельзя начать новый заказ.',
+            );
             break;
 
           case 'Заказ выполнен':
@@ -575,6 +542,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
               timer?.cancel();
               formattedDuration = durationFormatted;
             });
+            unawaited(_refreshExistingReviewFlag());
             break;
 
           case 'Заказ отменен':
@@ -646,12 +614,51 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       adId: adId,
       title: 'Заказчик',
       currentUserId: performerId,
+      showBottomNav: true,
+      isPerformer: true,
     );
+  }
+
+  Future<void> _refreshExistingReviewFlag() async {
+    final performerId =
+        int.tryParse(userIdok.isNotEmpty ? userIdok : widget.userId) ?? 0;
+    final customerId = int.tryParse(await _resolveCustomerId()) ?? 0;
+    if (performerId <= 0 || customerId <= 0) return;
+
+    final existing = await fetchReviewBetween(
+      table: ReviewPairTable.performerAboutCustomer,
+      performerId: performerId,
+      customerId: customerId,
+    );
+    if (!mounted) return;
+    setState(() => _hasExistingReview = existing != null);
+  }
+
+  Future<void> _openReviewForm() async {
+    final performerId = userIdok.isNotEmpty ? userIdok : widget.userId;
+    final customerId = widget.customerUserId?.trim() ?? '';
+    final listingId = int.tryParse(widget.orderId) ?? 0;
+    if (customerId.isEmpty || customerId == '0' || listingId <= 0) {
+      showErrorSnackbar('Не удалось определить заказчика для отзыва');
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SendReviewForm(
+          currentUserId: performerId,
+          targetUserId: customerId,
+          parsedUserIdOk: listingId,
+        ),
+      ),
+    );
+    if (mounted) await _refreshExistingReviewFlag();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         leading: BackButton(),
         title: Text('Выполнение заказа №${widget.orderId}',
@@ -671,12 +678,9 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                           orderStatus != 'отменен'))
                     Column(children: [
                       Text('Время выполнения:',
-                          style: Theme.of(context).textTheme.titleLarge),
+                          style: Theme.of(context).textTheme.titleMedium),
                       Text(formatDuration(elapsedDuration),
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayMedium!
-                              .copyWith(fontWeight: FontWeight.bold)),
+                          style: _timerDigitsStyle),
                     ]),
                   if (orderStatus != null &&
                       ['выполнен', 'отменен'].contains(orderStatus))
@@ -698,36 +702,12 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                             Text('Время выполнения: $formattedDuration',
                                 style: Theme.of(context).textTheme.bodyLarge,
                                 textAlign: TextAlign.center),
-                          if (orderStatus ==
-                              'выполнен') // Добавляем условие вывода кнопки продолжения
+                          if (orderStatus == 'выполнен')
                             ElevatedButton(
-                              onPressed: () {
-                                final performerId = userIdok.isNotEmpty
-                                    ? userIdok
-                                    : widget.userId;
-                                final customerId =
-                                    widget.customerUserId?.trim() ?? '';
-                                if (customerId.isEmpty || customerId == '0') {
-                                  showErrorSnackbar(
-                                      'Не удалось определить заказчика для отзыва');
-                                  return;
-                                }
-                                final listingId =
-                                    int.tryParse(widget.orderId) ?? 0;
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => HistortScreen1(
-                                      pageProfile: 'SendReviewForm',
-                                      userId1: performerId,
-                                      orderId: customerId,
-                                      parsedUserIdOk: listingId.toString(),
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Text('Оставьте отзыв'),
+                              onPressed: _openReviewForm,
+                              child: Text(_hasExistingReview
+                                  ? 'Изменить отзыв'
+                                  : 'Оставьте отзыв'),
                             ),
                         ],
                       ),

@@ -1,5 +1,6 @@
 <?php
 include 'databd.php';
+require_once __DIR__ . '/include/customer_order_deal.php';
 
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $city    = isset($_GET['city']) ? $_GET['city'] : '';
@@ -102,9 +103,9 @@ $sql = "
       )
       AND NOT EXISTS (
           SELECT 1 FROM ordersglobal og
-          INNER JOIN offer_data od2 ON od2.id = og.idoffer AND od2.bd = {$bd}
           WHERE CAST(og.order_id AS CHAR) = CAST(a.id AS CHAR)
-            AND og.status IN ('выполняется', 'выполнен')
+            AND (og.bd IS NULL OR og.bd = {$bd} OR og.bd = 0)
+            AND og.status = 'выполняется'
       )
     GROUP BY a.id, u.idusers
     ORDER BY a.id DESC

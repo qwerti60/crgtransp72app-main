@@ -310,3 +310,27 @@ class SearchInfoBanner extends StatelessWidget {
     );
   }
 }
+
+/// Подпись услуги со счётчиком; зелёный цвет при count > 0.
+class SearchServiceCountLabel extends StatelessWidget {
+  final String name;
+  final int count;
+
+  const SearchServiceCountLabel({
+    super.key,
+    required this.name,
+    required this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = count > 0 ? Colors.green.shade700 : Colors.black38;
+    return Text(
+      '$name ($count)',
+      style: kSearchFieldTextStyle.copyWith(
+        color: color,
+        fontWeight: count > 0 ? FontWeight.w700 : FontWeight.bold,
+      ),
+    );
+  }
+}

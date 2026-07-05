@@ -6,7 +6,6 @@ import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
-import 'package:crgtransp72app/pages/OrderExecutionScreenzak.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -95,7 +94,10 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       if (statusResponse.statusCode != 200) return;
 
       final statusData = json.decode(statusResponse.body);
-      highlightOrders = statusData['result'] == true;
+      final needsAttention = statusData['result'] == true &&
+          (statusData['needs_review'] == true ||
+              statusData['status']?.toString() == 'выполняется');
+      highlightOrders = needsAttention;
       if (highlightOrders) {
         activeOrderUserId = statusData['user_id']?.toString() ?? '';
         activeOrderId = statusData['order_id']?.toString() ?? '';
@@ -176,14 +178,10 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
           return;
         }
 
-        if (index == 1 &&
-            _highlightOrders &&
-            _activeOrderUserId.isNotEmpty &&
-            _activeOrderId.isNotEmpty) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => const MyApp(initialPage: 1),
-            ),
+        if (index == 1) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const MyApp(initialPage: 1)),
             (Route<dynamic> route) => false,
           );
           return;

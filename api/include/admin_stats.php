@@ -50,16 +50,28 @@ function crg_admin_stats_try(callable $fn): mixed
 }
 
 /**
+ * @param array{period?: string, from?: string|null, to?: string|null} $opts
  * @return array<string, mixed>
  */
-function crg_admin_stats_dashboard(PDO $pdo): array
+function crg_admin_stats_dashboard(PDO $pdo, array $opts = []): array
 {
     tp_admin_web_require_include('admin_users.php');
     tp_admin_web_require_include('admin_ads.php');
     tp_admin_web_require_include('admin_subscriptions.php');
+    if (is_readable(__DIR__ . '/performer_finances.php')) {
+        require_once __DIR__ . '/performer_finances.php';
+    }
+
+    $period = isset($opts['period']) ? trim((string) $opts['period']) : 'month';
+    if (!in_array($period, ['day', 'week', 'month', 'custom', 'all'], true)) {
+        $period = 'month';
+    }
+    $dateFrom = isset($opts['from']) ? trim((string) $opts['from']) : '';
+    $dateTo = isset($opts['to']) ? trim((string) $opts['to']) : '';
 
     $out = [
         'generated_at' => date('Y-m-d H:i:s'),
+        'period' => $period,
         'kpi' => [],
         'users_by_role' => [],
         'users_by_city' => [],
@@ -74,6 +86,8 @@ function crg_admin_stats_dashboard(PDO $pdo): array
         'cities_ref' => 0,
         'orders_global' => [],
         'tariff' => null,
+        'subscription_analytics' => [],
+        'platform_finances' => [],
     ];
 
     if (crg_admin_stats_table_exists($pdo, 'users')) {
@@ -459,6 +473,416 @@ function crg_admin_stats_dashboard(PDO $pdo): array
         }
     }
 
+    $out['subscription_analytics'] = crg_admin_stats_subscription_analytics(
+        $pdo,
+        $period,
+        $dateFrom !== '' ? $dateFrom : null,
+        $dateTo !== '' ? $dateTo : null
+    );
+    $out['platform_finances'] = crg_admin_stats_platform_finances(
+        $pdo,
+        $period,
+        $dateFrom !== '' ? $dateFrom : null,
+        $dateTo !== '' ? $dateTo : null
+    );
+
+    $sa = $out['subscription_analytics'];
+    if (($sa['period']['revenue_rub'] ?? null) !== null) {
+        $out['kpi']['subscription_revenue_period'] = (int) ($sa['period']['revenue_rub'] ?? 0);
+    }
+    if (($sa['all_time']['revenue_rub'] ?? null) !== null) {
+        $out['kpi']['subscription_revenue_all_time'] = (int) ($sa['all_time']['revenue_rub'] ?? 0);
+    }
+    $pf = $out['platform_finances'];
+    if (isset($pf['deals_gmv_rub'])) {
+        $out['kpi']['deals_gmv_period'] = (int) round((float) $pf['deals_gmv_rub']);
+    }
+    if (isset($pf['deals_count'])) {
+        $out['kpi']['deals_count_period'] = (int) $pf['deals_count'];
+    }
+
+    return $out;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function crg_admin_stats_subscription_analytics(
+    PDO $pdo,
+    string $period,
+    ?string $dateFrom = null,
+    ?string $dateTo = null
+): array {
+    $empty = [
+        'period_info' => ['key' => $period, 'label' => '', 'from' => '', 'to' => ''],
+        'period' => [],
+        'all_time' => [],
+        'snapshot' => [],
+        'payments_by_day' => [],
+        'recent_payments' => [],
+        'has_payment_log' => false,
+    ];
+
+    if (!function_exists('crg_finances_resolve_period')) {
+        if (!is_readable(__DIR__ . '/performer_finances.php')) {
+            return $empty;
+        }
+        require_once __DIR__ . '/performer_finances.php';
+    }
+
+    $hasLog = crg_finances_payment_log_table_exists($pdo);
+    $empty['has_payment_log'] = $hasLog;
+
+    if ($period === 'all') {
+        $range = [
+            'from' => '1970-01-01 00:00:00',
+            'to' => date('Y-m-d 00:00:00', strtotime('+1 day')),
+            'label' => 'За всё время',
+        ];
+    } else {
+        $range = crg_finances_resolve_period($period, $dateFrom, $dateTo);
+    }
+
+    $empty['period_info'] = [
+        'key' => $period,
+        'label' => $range['label'],
+        'from' => $range['from'],
+        'to' => $range['to'],
+    ];
+
+    if ($hasLog) {
+        $empty['period'] = crg_admin_stats_payment_metrics($pdo, $range['from'], $range['to']);
+        $empty['all_time'] = crg_admin_stats_payment_metrics(
+            $pdo,
+            '1970-01-01 00:00:00',
+            date('Y-m-d 00:00:00', strtotime('+1 day'))
+        );
+        $empty['payments_by_day'] = crg_admin_stats_payments_by_day($pdo, $range['from'], $range['to']);
+        $empty['recent_payments'] = crg_admin_stats_recent_payments($pdo, $range['from'], $range['to'], 15);
+    }
+
+    if (crg_admin_subscriptions_table_exists($pdo)) {
+        $empty['snapshot'] = crg_admin_stats_subscription_snapshot($pdo, $range['from'], $range['to']);
+    }
+
+    return $empty;
+}
+
+/**
+ * @return array<string, int|float>
+ */
+function crg_admin_stats_payment_metrics(PDO $pdo, string $from, string $to): array
+{
+    $base = [
+        'revenue_rub' => 0,
+        'payments_count' => 0,
+        'unique_payers' => 0,
+        'new_subscriptions' => 0,
+        'renewals' => 0,
+        'avg_payment_rub' => 0.0,
+    ];
+
+    if (!crg_finances_payment_log_table_exists($pdo)) {
+        return $base;
+    }
+
+    $row = crg_admin_stats_try(static function () use ($pdo, $from, $to): array {
+        $st = $pdo->prepare(
+            'SELECT COUNT(*) AS cnt,
+                    COUNT(DISTINCT iduser) AS payers,
+                    COALESCE(SUM(amount_rub), 0) AS revenue,
+                    COALESCE(ROUND(AVG(amount_rub), 2), 0) AS avg_rub
+             FROM subscription_payment_log
+             WHERE paid_at >= ? AND paid_at < ?'
+        );
+        $st->execute([$from, $to]);
+
+        return $st->fetch() ?: [];
+    });
+    if (!is_array($row)) {
+        return $base;
+    }
+
+    $base['payments_count'] = (int) ($row['cnt'] ?? 0);
+    $base['unique_payers'] = (int) ($row['payers'] ?? 0);
+    $base['revenue_rub'] = (int) ($row['revenue'] ?? 0);
+    $base['avg_payment_rub'] = (float) ($row['avg_rub'] ?? 0);
+
+    $typeRow = crg_admin_stats_try(static function () use ($pdo, $from, $to): array {
+        $st = $pdo->prepare(
+            'SELECT
+                SUM(CASE WHEN prior_cnt = 0 THEN 1 ELSE 0 END) AS new_cnt,
+                SUM(CASE WHEN prior_cnt > 0 THEN 1 ELSE 0 END) AS renewal_cnt
+             FROM (
+                SELECT p.id,
+                       (SELECT COUNT(*) FROM subscription_payment_log p2
+                        WHERE p2.iduser = p.iduser
+                          AND (p2.paid_at < p.paid_at OR (p2.paid_at = p.paid_at AND p2.id < p.id))
+                       ) AS prior_cnt
+                FROM subscription_payment_log p
+                WHERE p.paid_at >= ? AND p.paid_at < ?
+             ) t'
+        );
+        $st->execute([$from, $to]);
+
+        return $st->fetch() ?: [];
+    });
+    if (is_array($typeRow)) {
+        $base['new_subscriptions'] = (int) ($typeRow['new_cnt'] ?? 0);
+        $base['renewals'] = (int) ($typeRow['renewal_cnt'] ?? 0);
+    }
+
+    return $base;
+}
+
+/**
+ * @return list<array{date: string, count: int, revenue_rub: int, new_count: int, renewal_count: int}>
+ */
+function crg_admin_stats_payments_by_day(PDO $pdo, string $from, string $to): array
+{
+    if (!crg_finances_payment_log_table_exists($pdo)) {
+        return [];
+    }
+
+    $rows = crg_admin_stats_try(static function () use ($pdo, $from, $to): array {
+        $st = $pdo->prepare(
+            'SELECT DATE(paid_at) AS d,
+                    COUNT(*) AS cnt,
+                    COALESCE(SUM(amount_rub), 0) AS revenue,
+                    SUM(CASE WHEN prior_cnt = 0 THEN 1 ELSE 0 END) AS new_cnt,
+                    SUM(CASE WHEN prior_cnt > 0 THEN 1 ELSE 0 END) AS renewal_cnt
+             FROM (
+                SELECT p.paid_at, p.amount_rub,
+                       (SELECT COUNT(*) FROM subscription_payment_log p2
+                        WHERE p2.iduser = p.iduser
+                          AND (p2.paid_at < p.paid_at OR (p2.paid_at = p.paid_at AND p2.id < p.id))
+                       ) AS prior_cnt
+                FROM subscription_payment_log p
+                WHERE p.paid_at >= ? AND p.paid_at < ?
+             ) t
+             GROUP BY DATE(paid_at)
+             ORDER BY d'
+        );
+        $st->execute([$from, $to]);
+
+        return $st->fetchAll() ?: [];
+    });
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = [
+            'date' => (string) ($r['d'] ?? ''),
+            'count' => (int) ($r['cnt'] ?? 0),
+            'revenue_rub' => (int) ($r['revenue'] ?? 0),
+            'new_count' => (int) ($r['new_cnt'] ?? 0),
+            'renewal_count' => (int) ($r['renewal_cnt'] ?? 0),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function crg_admin_stats_recent_payments(PDO $pdo, string $from, string $to, int $limit = 15): array
+{
+    if (!crg_finances_payment_log_table_exists($pdo)) {
+        return [];
+    }
+
+    $rows = crg_admin_stats_try(static function () use ($pdo, $from, $to, $limit): array {
+        $st = $pdo->prepare(
+            'SELECT p.id, p.iduser, p.order_id, p.amount_rub, p.days_added, p.paid_at,
+                    p.subscription_until, u.firstName, u.lastName, u.city,
+                    (SELECT COUNT(*) FROM subscription_payment_log p2
+                     WHERE p2.iduser = p.iduser
+                       AND (p2.paid_at < p.paid_at OR (p2.paid_at = p.paid_at AND p2.id < p.id))
+                    ) AS prior_cnt
+             FROM subscription_payment_log p
+             LEFT JOIN users u ON u.idusers = p.iduser
+             WHERE p.paid_at >= ? AND p.paid_at < ?
+             ORDER BY p.paid_at DESC, p.id DESC
+             LIMIT ' . max(1, min(50, $limit))
+        );
+        $st->execute([$from, $to]);
+
+        return $st->fetchAll() ?: [];
+    });
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($rows as $r) {
+        $first = trim((string) ($r['firstName'] ?? ''));
+        $last = trim((string) ($r['lastName'] ?? ''));
+        $name = trim($first . ' ' . $last);
+        $out[] = [
+            'id' => (int) ($r['id'] ?? 0),
+            'iduser' => (int) ($r['iduser'] ?? 0),
+            'user_name' => $name !== '' ? $name : ('ID ' . (int) ($r['iduser'] ?? 0)),
+            'city' => (string) ($r['city'] ?? ''),
+            'order_id' => (string) ($r['order_id'] ?? ''),
+            'amount_rub' => (int) ($r['amount_rub'] ?? 0),
+            'days_added' => (int) ($r['days_added'] ?? 0),
+            'paid_at' => (string) ($r['paid_at'] ?? ''),
+            'subscription_until' => (string) ($r['subscription_until'] ?? ''),
+            'is_renewal' => (int) ($r['prior_cnt'] ?? 0) > 0,
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @return array<string, int|float>
+ */
+function crg_admin_stats_subscription_snapshot(PDO $pdo, string $from, string $to): array
+{
+    $snap = [
+        'active' => 0,
+        'expired' => 0,
+        'ending_7' => 0,
+        'renewed_users' => 0,
+        'never_subscribed' => 0,
+        'not_renewed' => 0,
+        'expired_in_period' => 0,
+        'performers_total' => 0,
+        'with_sub' => 0,
+        'conversion_pct' => 0.0,
+        'renewal_rate_pct' => 0.0,
+    ];
+
+    $sub = crg_admin_stats_try(static function () use ($pdo): array {
+        $st = $pdo->query(
+            'SELECT
+                SUM(CASE WHEN s.date >= CURDATE() THEN 1 ELSE 0 END) AS active,
+                SUM(CASE WHEN s.date < CURDATE() THEN 1 ELSE 0 END) AS expired,
+                SUM(CASE WHEN s.date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS ending_7,
+                SUM(CASE WHEN s.count > 1 THEN 1 ELSE 0 END) AS renewed,
+                SUM(CASE WHEN s.date < CURDATE() AND s.count >= 1 THEN 1 ELSE 0 END) AS not_renewed,
+                COUNT(*) AS with_sub
+             FROM (
+                SELECT iduser, MAX(id) AS max_id FROM subscriptions GROUP BY iduser
+             ) t
+             JOIN subscriptions s ON s.id = t.max_id'
+        );
+
+        return $st->fetch() ?: [];
+    });
+    if (is_array($sub)) {
+        $snap['active'] = (int) ($sub['active'] ?? 0);
+        $snap['expired'] = (int) ($sub['expired'] ?? 0);
+        $snap['ending_7'] = (int) ($sub['ending_7'] ?? 0);
+        $snap['renewed_users'] = (int) ($sub['renewed'] ?? 0);
+        $snap['not_renewed'] = (int) ($sub['not_renewed'] ?? 0);
+        $snap['with_sub'] = (int) ($sub['with_sub'] ?? 0);
+    }
+
+    $performers = crg_admin_stats_try(static function () use ($pdo): int {
+        $st = $pdo->query('SELECT COUNT(*) FROM users WHERE rollNum IN (2, 3, 4)');
+
+        return (int) $st->fetchColumn();
+    });
+    if ($performers !== null) {
+        $snap['performers_total'] = $performers;
+        $snap['never_subscribed'] = max(0, $performers - $snap['with_sub']);
+        if ($performers > 0) {
+            $snap['conversion_pct'] = round(100 * $snap['with_sub'] / $performers, 1);
+        }
+    }
+    if ($snap['with_sub'] > 0) {
+        $snap['renewal_rate_pct'] = round(100 * $snap['renewed_users'] / $snap['with_sub'], 1);
+    }
+
+    $fromDate = substr($from, 0, 10);
+    $toDate = date('Y-m-d', strtotime(substr($to, 0, 10) . ' -1 day'));
+    $expiredInPeriod = crg_admin_stats_try(static function () use ($pdo, $fromDate, $toDate): int {
+        $st = $pdo->prepare(
+            'SELECT COUNT(*) FROM (
+                SELECT s.iduser, s.date
+                FROM (
+                    SELECT iduser, MAX(id) AS max_id FROM subscriptions GROUP BY iduser
+                ) t
+                JOIN subscriptions s ON s.id = t.max_id
+             ) x
+             WHERE x.date >= ? AND x.date <= ?'
+        );
+        $st->execute([$fromDate, $toDate]);
+
+        return (int) $st->fetchColumn();
+    });
+    if ($expiredInPeriod !== null) {
+        $snap['expired_in_period'] = $expiredInPeriod;
+    }
+
+    return $snap;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function crg_admin_stats_platform_finances(
+    PDO $pdo,
+    string $period,
+    ?string $dateFrom = null,
+    ?string $dateTo = null
+): array
+{
+    $out = [
+        'period_info' => ['key' => $period, 'label' => '', 'from' => '', 'to' => ''],
+        'subscription_revenue_rub' => 0,
+        'deals_gmv_rub' => 0.0,
+        'deals_count' => 0,
+        'deals_by_day' => [],
+        'total_earned_rub' => 0.0,
+    ];
+
+    if (!function_exists('crg_finances_resolve_period')) {
+        if (!is_readable(__DIR__ . '/performer_finances.php')) {
+            return $out;
+        }
+        require_once __DIR__ . '/performer_finances.php';
+    }
+
+    if ($period === 'all') {
+        $range = [
+            'from' => '1970-01-01 00:00:00',
+            'to' => date('Y-m-d 00:00:00', strtotime('+1 day')),
+            'label' => 'За всё время',
+        ];
+    } else {
+        $range = crg_finances_resolve_period($period, $dateFrom, $dateTo);
+    }
+
+    $out['period_info'] = [
+        'key' => $period,
+        'label' => $range['label'],
+        'from' => $range['from'],
+        'to' => $range['to'],
+    ];
+
+    if (crg_finances_payment_log_table_exists($pdo)) {
+        $metrics = crg_admin_stats_payment_metrics($pdo, $range['from'], $range['to']);
+        $out['subscription_revenue_rub'] = (int) ($metrics['revenue_rub'] ?? 0);
+    }
+
+    if (crg_admin_stats_table_exists($pdo, 'ordersglobal')) {
+        $deals = crg_finances_fetch_platform_income($pdo, $range['from'], $range['to']);
+        $out['deals_gmv_rub'] = (float) ($deals['total_rub'] ?? 0);
+        $out['deals_count'] = (int) ($deals['items_count'] ?? 0);
+        $out['deals_by_day'] = $deals['by_day'] ?? [];
+    }
+
+    $out['total_earned_rub'] = round(
+        (float) $out['subscription_revenue_rub'] + (float) $out['deals_gmv_rub'],
+        2
+    );
+
     return $out;
 }
 
@@ -469,6 +893,17 @@ function crg_admin_stats_fmt_int(?int $n): string
     }
 
     return number_format($n, 0, ',', ' ');
+}
+
+function crg_admin_stats_fmt_rub(int|float|null $n): string
+{
+    if ($n === null) {
+        return '—';
+    }
+
+    $isInt = is_int($n) || (is_float($n) && $n === floor($n));
+
+    return number_format((float) $n, $isInt ? 0 : 2, ',', ' ') . ' ₽';
 }
 
 function crg_admin_stats_fmt_pct(int $part, int $whole): string

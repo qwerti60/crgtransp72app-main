@@ -42,7 +42,10 @@ class ProfileRatingRow extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ReviewScreen(userId: userId.toString()),
+        builder: (_) => ReviewScreen(
+          userId: userId.toString(),
+          showBottomNav: true,
+        ),
       ),
     );
   }
@@ -52,7 +55,10 @@ class ProfileRatingRow extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ReviewScreenz(userId: userId.toString()),
+        builder: (_) => ReviewScreenz(
+          userId: userId.toString(),
+          showBottomNav: true,
+        ),
       ),
     );
   }

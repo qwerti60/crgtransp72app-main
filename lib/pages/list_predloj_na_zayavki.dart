@@ -18,7 +18,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../design/colors.dart';
+import '../services/performer_order_gate.dart';
 import 'like_helper.dart';
+import 'performer_bottom_nav.dart';
 import 'zakaz_screen2.dart';
 
 import 'changerol_page.dart';
@@ -26,24 +28,36 @@ import 'sendNotification.dart';
 
 class list_predloj_na_zayavki extends StatelessWidget {
   final String nameImg;
-  final int bd; // добавляем параметр base
+  final int bd;
+  final bool showBottomNav;
 
   const list_predloj_na_zayavki({
     Key? key,
     required this.nameImg,
-    required this.bd, // добавляем обязательное поле
+    required this.bd,
+    this.showBottomNav = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return MyHomePage(nameImg: nameImg, bd: bd);
+    return MyHomePage(
+      nameImg: nameImg,
+      bd: bd,
+      showBottomNav: showBottomNav,
+    );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   final String nameImg;
   final int bd;
-  const MyHomePage({super.key, required this.nameImg, required this.bd});
+  final bool showBottomNav;
+  const MyHomePage({
+    super.key,
+    required this.nameImg,
+    required this.bd,
+    this.showBottomNav = false,
+  });
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -86,6 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   int userId = 0;
+  PerformerStartGate _startGate = PerformerStartGate.allowed;
   final Map<String, bool> _likedOverrides = {};
 
   bool _isLikedValue(dynamic value) {
@@ -131,12 +146,19 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() {
           userId = data['idusers'];
         });
+        await _loadStartGate();
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
     } else {
       print('Ошибка при получении данных пользователя');
     }
+  }
+
+  Future<void> _loadStartGate() async {
+    final gate = await fetchPerformerStartGate();
+    if (!mounted) return;
+    setState(() => _startGate = gate);
   }
 
   Future<void> getUserDataAds(idUser) async {
@@ -325,6 +347,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: whiteprColor,
       appBar: AppBar(
         title: const Text(
           'Предложения заказчиков',
@@ -338,6 +361,28 @@ class _MyHomePageState extends State<MyHomePage> {
       // Использование Column для размещения нескольких виджетов в body
       body: Column(
         children: [
+          if (_startGate.isBlocked)
+            Material(
+              color: Colors.orange.shade50,
+              child: InkWell(
+                onTap: () => openPerformerOrdersTab(context),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade800),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _startGate.message,
+                          style: TextStyle(color: Colors.orange.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Второй виджет при необходимости
           // Пример с FutureBuilder
           Expanded(
@@ -931,6 +976,21 @@ class _MyHomePageState extends State<MyHomePage> {
                                         );
 
                                         if (hasOffer) {
+                                          final orderId = widget.nameImg;
+                                          final customerId =
+                                              truck['iduserp'].toString();
+                                          final canStartExecution = _startGate
+                                              .canStartForOffer(
+                                            orderId: orderId,
+                                            customerId: customerId,
+                                          );
+                                          final startLabel = _startGate
+                                              .buttonLabelForOffer(
+                                            orderId: orderId,
+                                            customerId: customerId,
+                                            offerAccepted: true,
+                                            dealExecuting: false,
+                                          );
                                           buttonWidget = Column(children: [
                                             buttonWidget,
                                             Container(
@@ -946,7 +1006,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     foregroundColor:
                                                         whiteprColor,
                                                     backgroundColor:
-                                                        blueaccentColor,
+                                                        canStartExecution
+                                                            ? blueaccentColor
+                                                            : Colors.grey,
                                                     disabledForegroundColor:
                                                         grayprprColor,
                                                     shape: const BeveledRectangleBorder(
@@ -956,7 +1018,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                                     3))),
                                                   ),
 
-                                                  onPressed: () async {
+                                                  onPressed: canStartExecution
+                                                      ? () async {
                                                     debugPrint(
                                                         'Нажали на кнопку'); // 1. Проверяем вызов
 
@@ -1066,9 +1129,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       _showSnack(context,
                                                           'Ошибка: $e');
                                                     }
-                                                  }, // ───────────────────────────────────────────────────────── child
-                                                  child: const Text(
-                                                      'Начать выполнение'),
+                                                  }
+                                                      : () {
+                                                          showPerformerStartBlockedSnack(
+                                                            context,
+                                                            _startGate,
+                                                          );
+                                                          openPerformerOrdersTab(
+                                                              context);
+                                                        },
+                                                  child: Text(startLabel),
                                                 ),
                                               ),
                                             ),
@@ -1095,6 +1165,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? const PerformerBottomNav(currentIndex: 1)
+          : null,
     );
   }
 
@@ -1125,7 +1198,7 @@ class _MyHomePageState extends State<MyHomePage> {
       adId: adId,
       title: name.isNotEmpty ? name : 'Заказчик',
       currentUserId: userId,
-      showBottomNav: false,
+      showBottomNav: true,
       isPerformer: true,
     );
   }

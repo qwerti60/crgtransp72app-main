@@ -2,6 +2,8 @@
 
 Базовый URL API из `lib/config.dart`: **https://ivnovav.ru**
 
+**Свод сценариев и бизнес-логики (все промпты):** [docs/app_scenarios_ru.md](./docs/app_scenarios_ru.md)
+
 Документ составлен по экранам Flutter (`lib/pages/…`). Если на сервере изменят поля API, актуальность нужно сверять с PHP.
 
 ---

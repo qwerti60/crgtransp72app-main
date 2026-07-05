@@ -9,10 +9,9 @@ include __DIR__ . '/databd.php';
 
 $iduserp = isset($_POST['iduserp']) ? (int) $_POST['iduserp'] : 0;
 $userId  = isset($_POST['userId']) ? (int) $_POST['userId'] : 0;
-// bd в POST больше не обязателен: в списке заявок часто передают «категорию объявления»,
-// а в offer_dataf хранится bd строки заявки — они могут различаться.
+$bd      = isset($_POST['bd']) ? (int) $_POST['bd'] : 0;
 
-if ($iduserp <= 0 || $userId <= 0) {
+if ($iduserp <= 0 || $userId <= 0 || $bd <= 0) {
     http_response_code(400);
     echo json_encode(['message' => 'Некорректные параметры'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -28,12 +27,13 @@ try {
 
     $stmt = $conn->prepare(
         'SELECT cena, about, bd FROM offer_dataf
-         WHERE iduserp = :iduserp AND iduser = :userId
+         WHERE iduserp = :iduserp AND iduser = :userId AND bd = :bd
          LIMIT 1'
     );
     $stmt->execute([
         ':iduserp' => $iduserp,
         ':userId'  => $userId,
+        ':bd'      => $bd,
     ]);
 
     if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {

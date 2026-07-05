@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:crgtransp72app/pages/performer_finances_screen.dart';
 import 'package:crgtransp72app/pages/history_isp.dart';
 import 'package:crgtransp72app/pages/outputobzlikes1.dart';
 import 'package:crgtransp72app/pages/performer_bottom_nav.dart';
@@ -47,6 +48,8 @@ Widget buildProfilePage(String pageProfile, {required String orderId}) {
       return const Ads1Page();
     case 'zprofil_zayavki':
       return const zprofil_zayavki(nameImg: '', base: 1);
+    case 'finances':
+      return const PerformerFinancesScreen(showBottomNav: false);
     case 'hist':
       return history_isp(nameImg: orderId, bd: 1);
     case 'izbrannoe':

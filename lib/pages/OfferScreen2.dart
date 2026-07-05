@@ -35,6 +35,12 @@ class OfferScreen2 extends StatefulWidget {
   /// Нижнее меню только если экран открыт без родительского shell (иначе дублируется с CityScreenIsp / профилем).
   final bool showBottomNav;
 
+  /// Вкладка [CustomerBottomNav] при useCustomerNavigation (1 — заказы/заявки).
+  final int customerBottomNavIndex;
+
+  /// Пустая форма для новой заявки (после завершения/отмены или первого отклика).
+  final bool forceNewOffer;
+
   const OfferScreen2({
     super.key,
     required this.userid,
@@ -42,6 +48,8 @@ class OfferScreen2 extends StatefulWidget {
     required this.useridobj,
     this.useCustomerNavigation = false,
     this.showBottomNav = false,
+    this.customerBottomNavIndex = 1,
+    this.forceNewOffer = false,
   });
 
   @override
@@ -85,14 +93,10 @@ class _OfferscreenForm extends State<OfferScreen2> {
 
       final String cena = (data['cena'] ?? '').toString();
       final String about = (data['about'] ?? '').toString();
-      final int? rowBd = int.tryParse((data['bd'] ?? '').toString());
       _cenakmController.text = cena;
       _aboutController.text = about;
       if (mounted) {
         setState(() {
-          if (rowBd != null && rowBd >= 1 && rowBd <= 3) {
-            bd = rowBd;
-          }
           _hasExistingOffer = cena.trim().isNotEmpty || about.trim().isNotEmpty;
         });
       }
@@ -176,7 +180,13 @@ class _OfferscreenForm extends State<OfferScreen2> {
         });
         print('вывод id: $userIdp');
         if (idp > 0) {
-          if (widget.useCustomerNavigation) {
+          if (widget.forceNewOffer) {
+            _cenakmController.clear();
+            _aboutController.clear();
+            if (mounted) {
+              setState(() => _hasExistingOffer = false);
+            }
+          } else if (widget.useCustomerNavigation) {
             await _fetchOfferDataCustomer(idp.toString(), userid);
           } else {
             await _fetchOfferDataPerformer(idp, userid, bd);
@@ -451,7 +461,9 @@ class _OfferscreenForm extends State<OfferScreen2> {
       ),
       bottomNavigationBar: widget.showBottomNav
           ? (widget.useCustomerNavigation
-              ? const CustomerBottomNav(currentIndex: 0)
+              ? CustomerBottomNav(
+                  currentIndex: widget.customerBottomNavIndex,
+                )
               : const PerformerBottomNav(currentIndex: 0))
           : null,
     );

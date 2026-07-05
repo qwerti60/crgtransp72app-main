@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 
 import '../config.dart';
 import '../design/dimension.dart';
+import '../services/avatar_upload_prompt.dart';
 import 'changestatis_page.dart';
 import 'zakaz_screen1.dart';
 import 'zakaz_screen2.dart';
@@ -378,7 +379,14 @@ class _LoginState extends State<LoginPage> {
           );
         }
         if (!mounted) return;
-        _goAfterLogin(context, json['rollNum'] as int? ?? 0);
+        final rollNum = json['rollNum'] as int? ?? 0;
+        final isPerformer = rollNum != 1;
+        await maybePromptAvatarUploadAfterLogin(
+          context,
+          isPerformer: isPerformer,
+        );
+        if (!mounted) return;
+        _goAfterLogin(context, rollNum);
       } else {
         _showAuthError(json['message']?.toString() ?? 'Ошибка авторизации');
       }

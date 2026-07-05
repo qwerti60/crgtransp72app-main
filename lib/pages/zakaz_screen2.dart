@@ -7,11 +7,13 @@ import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:crgtransp72app/navigation/last_app_role.dart';
 import 'package:crgtransp72app/navigation/pending_performer_order.dart';
 import 'package:crgtransp72app/navigation/performer_shell_scope.dart';
 import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/navigation/shell_nav_auth_cache.dart';
 import 'package:crgtransp72app/config.dart';
+import '../design/app_theme.dart';
 import '../design/colors.dart';
 import 'changerol_page.dart';
 import 'loginpage.dart';
@@ -28,6 +30,7 @@ class MyAppZakazScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: crgAppTheme(),
       home: MyCustomScreen(initialPage: initialPage),
     );
   }
@@ -169,7 +172,10 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
             showBottomNav: false,
           );
         } else {
-          return const SearchForm(showBottomNav: false); //Ads1App();
+          return const SearchForm(
+            showBottomNav: false,
+            embedInPerformerShell: true,
+          );
         }
       case 2:
         if (!_isAuthorized) {
@@ -209,6 +215,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
     }
 
     return Scaffold(
+        backgroundColor: whiteprColor,
         appBar: safePage == 0
             ? AppBar(
                 title: const Text(
@@ -298,6 +305,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
   void initState() {
     super.initState();
     _currentPage = widget.initialPage;
+    unawaited(saveLastAppRole(AppRole.performer));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ChatPushHandler.tryOpenPending(context);
     });

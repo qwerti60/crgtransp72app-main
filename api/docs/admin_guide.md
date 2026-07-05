@@ -2,6 +2,8 @@
 
 Браузерный интерфейс для модерации пользователей и объявлений, справочников и просмотра откликов, предложений и отзывов.
 
+**Свод сценариев приложения:** см. `docs/app_scenarios_ru.md` в корне репозитория.
+
 ---
 
 ## 1. Запуск локально
@@ -24,6 +26,9 @@ cp api/databd.local.example.php api/databd.local.php
 
 # Сброс пароля админа по e-mail (таблица OTP)
 mysql --default-character-set=utf8mb4 -u root crg_local < sql/migrate_admin_password_reset.sql
+
+# Журнал оплат подписки (выручка в статистике и финансы исполнителя)
+mysql --default-character-set=utf8mb4 -u root crg_local < sql/migrate_subscription_payment_log.sql
 
 # Сервер
 cd api && php -S 127.0.0.1:8080
@@ -49,7 +54,7 @@ cd api && php -S 127.0.0.1:8080
 
 | Раздел | Назначение |
 |--------|------------|
-| **Статистика** | Сводка KPI: users, ads, subscriptions, offers, reviews |
+| **Статистика** | Сводка KPI, **выручка подписок**, GMV сделок, аналитика подписок |
 | **Города** | Справочник `cities` для фильтров в приложении |
 | **Вид техники** | Таблица `vidt` (+ картинки) |
 | **Грузоподъёмность** | Таблица `vidg` |
@@ -69,20 +74,61 @@ cd api && php -S 127.0.0.1:8080
 
 ## 3. Статистика
 
-**Страница:** `stats.php` · **Логика:** `api/include/admin_stats.php`
+**Страница:** `stats.php` · **Логика:** `api/include/admin_stats.php`, `api/include/performer_finances.php`
 
 Сводка без графических библиотек: KPI-карточки, таблицы, горизонтальные полоски. Отсутствующие таблицы в БД пропускаются без ошибки.
 
+### Параметры периода (GET)
+
+| Параметр | Значения | Назначение |
+|----------|----------|------------|
+| `period` | `day`, `week`, `month`, `all`, `custom` | Период для выручки и аналитики подписок (по умолчанию `month`) |
+| `from`, `to` | `YYYY-MM-DD` | Для `period=custom` |
+
+Пример: `stats.php?period=week` · `stats.php?period=custom&from=2026-06-01&to=2026-06-30`
+
+### Функции бэкенда
+
+| Функция | Файл | Назначение |
+|---------|------|------------|
+| `crg_admin_stats_dashboard($pdo, $opts)` | `admin_stats.php` | Полная сводка; `$opts`: `period`, `from`, `to` |
+| `crg_admin_stats_subscription_analytics()` | `admin_stats.php` | Метрики подписок за период и all-time |
+| `crg_admin_stats_platform_finances()` | `admin_stats.php` | Выручка подписок + GMV сделок |
+| `crg_finances_resolve_period()` | `performer_finances.php` | Границы дат для day/week/month/custom |
+| `crg_finances_fetch_platform_income()` | `performer_finances.php` | Сумма выполненных сделок по платформе |
+
+### Блоки на странице
+
 | Блок | Источник данных |
 |------|-----------------|
+| **Выручка и оборот** | `subscription_payment_log` (SUM `amount_rub`), `ordersglobal` + `offer_data` / `offer_dataf` (GMV) |
+| **Подписки за период** | `subscription_payment_log` — count, new vs renewal (подзапрос `prior_cnt`) |
+| **Срез подписок** | `subscriptions` (latest row per `iduser`), `users.rollNum IN (2,3,4)` |
 | Пользователи | `users` — total, `rollNum`, `city`, `created_at`, `fcm_token`, `flag` |
 | Объявления исполнителей | `add_ob_gp`, `add_ob_vidt`, `add_ob_gr` — `flag`, loop через `crg_admin_performer_ad_types()` |
 | Заявки заказчиков | `orders`, `orderst`, `ordersg` — active: `enddatez >= CURDATE()` |
-| Подписки | `subscriptions` (latest row per user), `subscription_config` — оценка выручки |
 | Отклики | `offer_data` — `bd`, `status`, `cena`, `timestamp` |
 | Предложения | `offer_dataf` — `bd`, `cena` |
 | Отзывы | `reviewsisp`, `reviews` — rating distribution |
-| Сделки | `ordersglobal` — `status` (если таблица есть) |
+| Сделки | `ordersglobal` — `status` |
+
+### Метрики подписок (детально)
+
+| KPI | SQL / логика |
+|-----|----------------|
+| `revenue_rub` | `SUM(amount_rub)` из `subscription_payment_log` за период |
+| `new_subscriptions` | Платёж, у которого нет более ранних записей того же `iduser` |
+| `renewals` | Платёж с `prior_cnt > 0` |
+| `not_renewed` | Latest `subscriptions.date < CURDATE()` AND `count >= 1` |
+| `never_subscribed` | Исполнители без строки в `subscriptions` |
+| `est_revenue_rub` / MRR | `active × subscription_config.price_rub` (оценка, не факт) |
+| `expired_in_period` | Latest `subscriptions.date` между `from` и `to` |
+
+Без таблицы `subscription_payment_log` блок выручки пустой; срез по `subscriptions` всё равно работает.
+
+**Оплаты по дням:** `crg_admin_stats_payments_by_day()` — GROUP BY `DATE(paid_at)`.
+
+**Последние оплаты:** `crg_admin_stats_recent_payments()` — JOIN `users`, флаг `is_renewal`.
 
 ---
 
@@ -123,6 +169,7 @@ cd api && php -S 127.0.0.1:8080
 |---------|------------|
 | `subscriptions` | Подписка пользователя: `iduser`, `date` (окончание), `payment` (ID платежа), `count` (число оплат) |
 | `subscription_config` | Тариф: `days`, `price_rub`, `is_active` — редактируется в админке (**Настройки**) |
+| `subscription_payment_log` | История оплат (миграция `sql/migrate_subscription_payment_log.sql`) |
 
 **Статус** (как в `check_subscription.php`):
 
@@ -134,7 +181,29 @@ cd api && php -S 127.0.0.1:8080
 
 Оплата в приложении: `PaymentPage` → `payment-proxy.php` → `update_subscription.php` (продление на `days` из конфига). Тариф читается через `get_subscription_config.php`. Без активной подписки исполнитель видит экран оформления подписки.
 
-В админке: колонка **Подписка** в списке пользователей; на карточке исполнителя — блок с датой окончания, ID платежа и числом оплат; **Настройки** — изменение цены и срока тарифа.
+В админке: колонка **Подписка** в списке пользователей; на карточке исполнителя — блок с датой окончания, ID платежа и числом оплат; ссылка **Финансы**; **Настройки** — изменение цены и срока тарифа.
+
+### Финансы исполнителя (карточка пользователя)
+
+**Рендер:** `api/include/admin_finances.php` → `crg_admin_render_performer_finances()`  
+**Логика:** `api/include/performer_finances.php`  
+**Мобильное API:** `api/get_performer_finances.php`
+
+| Таблица | Назначение |
+|---------|------------|
+| `subscription_payment_log` | Журнал оплат: `iduser`, `order_id`, `amount_rub`, `days_added`, `paid_at`, `subscription_until` |
+| `ordersglobal` + `offer_data` / `offer_dataf` | Доход по **выполненным** сделкам (`status = 'выполнен'`) |
+
+Запись в журнал при оплате: `update_subscription.php` → `crg_finances_log_subscription_payment()`.
+
+GET-параметры на `user_edit.php?id=…`:
+
+| Параметр | Значения |
+|----------|----------|
+| `fin_period` | `day`, `week`, `month`, `custom` |
+| `fin_from`, `fin_to` | Даты для `custom` |
+
+Якорь: `#user-finances`.
 
 ---
 
@@ -449,6 +518,9 @@ curl -sS "https://ваш-домен/api/search_services.php?role=customer&nameIm
 3. Миграция сброса пароля (OTP по e-mail):  
    `mysql -u USER -p u2395188_apps < sql/migrate_admin_password_reset.sql`
 
+3a. Журнал оплат подписки (выручка в статистике, финансы на карточке):  
+   `mysql -u USER -p u2395188_apps < sql/migrate_subscription_payment_log.sql`
+
 4. Залить на хост каталоги `api/admin-web/` и `api/include/` (и остальной `api/` без перезаписи `databd.php` с prod-паролями).
 
 5. **Первый вход:** войти как `admin`, в **Настройки** указать e-mail и сменить пароль. Альтернатива — SQL:
@@ -487,6 +559,8 @@ api/
     ├── admin_cities.php, admin_ref_lists.php
     ├── admin_users.php, admin_ads.php
     ├── admin_stats.php
+    ├── admin_finances.php
+    ├── performer_finances.php
     ├── admin_broadcast.php
     ├── admin_subscriptions.php
     ├── admin_reviews.php
@@ -501,6 +575,7 @@ api/
 | `sql/migrate_admin_accounts.sql` | `admin_accounts` + admin по умолчанию |
 | `sql/migrate_admin_password_reset.sql` | `admin_password_reset_otp`, колонка `email` |
 | `sql/migrate_admin_users_ads.sql` | Тестовые users/ads, subscriptions, reviews |
+| `sql/migrate_subscription_payment_log.sql` | `subscription_payment_log` — журнал оплат, выручка в stats |
 
 ---
 
@@ -509,6 +584,9 @@ api/
 | Задача | Действие |
 |--------|----------|
 | Сводка по приложению | **Статистика** (`stats.php`) |
+| Выручка подписок за период | **Статистика** → `period=day|week|month|all|custom` |
+| История оплат исполнителя | **Пользователи** → `user_edit.php?id=…#user-finances` |
+| Доход исполнителя по сделкам | То же, блок «Доходы», `fin_period` |
 | Первый вход / e-mail админа | **Настройки** → e-mail → сменить пароль |
 | Одобить нового пользователя | Пользователи → карточка → статус «Одобрен» или кнопка на списке |
 | Опубликовать объявление | Объявления исполнителей → карточка → «Одобрить и опубликовать» |
@@ -522,7 +600,7 @@ api/
 | Рассылка по подписке / городу / роли | **Рассылка** → **Проверить выборку** → **Отправить** |
 | Отклонить объявление с уведомлением | Объявления исполнителей → карточка → **Отклонить и уведомить** |
 | Пользователь не видит исполнителей в поиске | §11: опубликовать объявления (`flag=1`), подписка, город/категория в справочниках, `search_services_core.php` на сервере |
-| Жалоба «поиск ничего не находит» | Проверить заявку: `enddatez`, город; исполнителя: `flag`, подписка; см. [search_logic_ru.md](./search_logic_ru.md) |
+| Жалоба «поиск ничего не находит» | Проверить заявку: `enddatez`, город; исполнителя: `flag`, подписка; см. `docs/search_logic_ru.md` |
 | Инструкция для менеджера | Меню → **Руководство** (`manager_guide.php`) |
 | Инструкция для разработчика | Меню → **Техническое** (`guide.php`) |
 
@@ -534,7 +612,11 @@ api/
 |------|----------|-----------|
 | `docs/admin_manager_guide.md` | `manager_guide.php` | Менеджер: модерация, без SQL и API |
 | `docs/admin_guide.md` | `guide.php` | Разработчик / администратор сервера |
+| `docs/app_scenarios_ru.md` | — | Свод всех сценариев и промптов заказчика |
 | `docs/search_logic_ru.md` | — | Алгоритм поиска в приложении (для разработчика) |
+| `docs/deals_logic_ru.md` | — | Сделки, offer_data, ordersglobal |
+| `docs/deals_logic_ru.md` | — | Сделки, offer_data, ordersglobal |
+| `docs/chat_logic_ru.md` | — | Чаты и техподдержка |
 
 ---
 

@@ -30,9 +30,11 @@ flutter build appbundle --release
 |----------|----------|
 | [Карта веток экранов и меню](./BRANCH_SCREENS_MAP_RU.md) | Заказчик vs исполнитель, навигация, shell |
 | [Данные регистрации, поиска, объявлений](./REG_DATA_FORMS_RU.md) | Поля форм, API, названия экранов |
+| [Логика сделок](./docs/deals_logic_ru.md) | `offer_data`, `ordersglobal`, два сценария |
+| **[Сценарии приложения](./docs/app_scenarios_ru.md)** | **Свод всех согласованных сценариев, UI и навигации (промпты заказчика)** |
 | [Логика поиска](./docs/search_logic_ru.md) | Алгоритм поиска, `search_services.php` |
 | [Логика поиска (PDF)](./docs/search_logic_ru.pdf) | То же в PDF |
-| [Логика чатов](./docs/chat_logic_ru.md) | Чаты user↔user, техподдержка, admin-web (проект) |
+| [Логика чатов](./docs/chat_logic_ru.md) | Чаты user↔user, техподдержка, admin-web |
 | [ТЗ проекта](./TZ_PROEKT_OBSHEE_RU.md) | Общее техническое задание |
 | [Заметки для App Store](./APP_STORE_REVIEW_NOTES_RU.md) | Публикация в App Store |
 
