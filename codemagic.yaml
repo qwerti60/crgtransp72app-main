@@ -15,6 +15,9 @@ workflows:
         BUNDLE_ID: ru.app72.crgtransp72app
         BUILD_NAME: 6.0.0
         BUILD_NUMBER: 26
+        # Числовой Apple ID: App Store Connect → приложение → App Information → Apple ID
+        # Добавьте APP_STORE_APPLE_ID в группу Secret в UI Codemagic (например: 6738291045)
+        APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS: '--apple-id "$APP_STORE_APPLE_ID"'
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
