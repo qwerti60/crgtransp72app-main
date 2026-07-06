@@ -12,9 +12,9 @@ workflows:
       xcode: latest
       cocoapods: default
       vars:
-        BUNDLE_ID: com.example.crgtransp72app
+        BUNDLE_ID: ru.app72.crgtransp72app
         BUILD_NAME: 6.0.0
-        BUILD_NUMBER: 25
+        BUILD_NUMBER: 26
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
@@ -54,7 +54,10 @@ workflows:
           keychain add-certificates
       - name: Apply code signing profiles
         script: |
-          xcode-project use-profiles --project ios/Runner.xcodeproj
+          xcode-project use-profiles --project ios/Runner.xcworkspace
+          /usr/libexec/PlistBuddy -c "Print :application-identifier" ios/Runner.xcodeproj/project.pbxproj 2>/dev/null || true
+          grep -q "PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;" ios/Runner.xcodeproj/project.pbxproj \
+            || (echo "Xcode bundle id does not match BUNDLE_ID=$BUNDLE_ID" && exit 1)
           test -f /Users/builder/export_options.plist || (echo "export_options.plist missing" && exit 1)
           plutil -lint /Users/builder/export_options.plist
       - name: Build iOS IPA
