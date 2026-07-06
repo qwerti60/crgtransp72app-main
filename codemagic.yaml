@@ -87,11 +87,25 @@ workflows:
           fi
       - name: Configure App Store Connect upload
         script: |
-          if [ -z "${APP_STORE_APPLE_ID:-}" ]; then
-            echo "ERROR: APP_STORE_APPLE_ID не задан в группе Secret Codemagic."
-            echo "App Store Connect → приложение → App Information → Apple ID (число, например 6738291045)"
+          set -e
+          IPA=$(find build/ios/ipa -name '*.ipa' | head -1)
+          if [ -z "$IPA" ]; then
+            echo "ERROR: IPA not found"
             exit 1
           fi
+          BUILT_ID=$(unzip -p "$IPA" "Payload/Runner.app/Info.plist" | plutil -extract CFBundleIdentifier raw -)
+          echo "IPA bundle id: $BUILT_ID (ожидается: $BUNDLE_ID)"
+          if [ "$BUILT_ID" != "$BUNDLE_ID" ]; then
+            echo "ERROR: bundle id в IPA не совпадает с BUNDLE_ID"
+            exit 1
+          fi
+          if [ -z "${APP_STORE_APPLE_ID:-}" ]; then
+            echo "ERROR: APP_STORE_APPLE_ID не задан в группе Secret Codemagic."
+            echo "App Store Connect → приложение с bundle $BUNDLE_ID → App Information → Apple ID"
+            exit 1
+          fi
+          echo "ВАЖНО: APP_STORE_APPLE_ID должен быть от приложения с bundle $BUNDLE_ID,"
+          echo "не от старого com.example.crgtransp72app"
           echo "APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS=--apple-id ${APP_STORE_APPLE_ID}" >> "$CM_ENV"
           echo "Upload Apple ID: ${APP_STORE_APPLE_ID}"
     artifacts:
