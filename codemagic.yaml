@@ -15,9 +15,7 @@ workflows:
         BUNDLE_ID: ru.app72.crgtransp72app
         BUILD_NAME: 6.0.0
         BUILD_NUMBER: 26
-        # Числовой Apple ID: App Store Connect → приложение → App Information → Apple ID
-        # Добавьте APP_STORE_APPLE_ID в группу Secret в UI Codemagic (например: 6738291045)
-        APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS: '--apple-id "$APP_STORE_APPLE_ID"'
+        # APP_STORE_APPLE_ID — в группе Secret (числовой ID из App Store Connect → App Information)
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
@@ -87,6 +85,15 @@ workflows:
             tail -150 /tmp/xcodebuild_logs/*.log 2>/dev/null || true
             exit 1
           fi
+      - name: Configure App Store Connect upload
+        script: |
+          if [ -z "${APP_STORE_APPLE_ID:-}" ]; then
+            echo "ERROR: APP_STORE_APPLE_ID не задан в группе Secret Codemagic."
+            echo "App Store Connect → приложение → App Information → Apple ID (число, например 6738291045)"
+            exit 1
+          fi
+          echo "APP_STORE_CONNECT_ALTOOL_ADDITIONAL_ARGUMENTS=--apple-id ${APP_STORE_APPLE_ID}" >> "$CM_ENV"
+          echo "Upload Apple ID: ${APP_STORE_APPLE_ID}"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
