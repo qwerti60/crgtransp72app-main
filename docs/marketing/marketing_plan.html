@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Грузоперевозки72 — маркетинг-план</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-card: #121c2e;
+      --bg-paper: #ffffff;
+      --accent: #2563eb;
+      --accent-light: #3b82f6;
+      --text: #e8eef7;
+      --text-dark: #0f172a;
+      --muted: #94a3b8;
+      --muted-dark: #64748b;
+      --border: rgba(148, 163, 184, 0.2);
+      --success: #16a34a;
+      --warn: #d97706;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .toolbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(11, 18, 32, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toolbar-title { font-size: 0.9rem; color: var(--muted); }
+    .toolbar-title strong { color: var(--text); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+
+    .document {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 3rem;
+    }
+
+    .page {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2.5rem 2.75rem;
+      margin-bottom: 2rem;
+      page-break-inside: avoid;
+    }
+
+    .cover {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: linear-gradient(145deg, #121c2e 0%, #1e3a5f 100%);
+    }
+
+    .cover .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #93c5fd;
+      border: 1px solid rgba(147, 197, 253, 0.4);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 { font-size: 2.25rem; margin-bottom: 0.75rem; line-height: 1.2; }
+    h2 {
+      font-size: 1.45rem;
+      color: #93c5fd;
+      margin: 0 0 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.35);
+    }
+    h3 { font-size: 1.05rem; color: #bfdbfe; margin: 1.25rem 0 0.6rem; }
+
+    .subtitle { color: var(--muted); font-size: 1.05rem; max-width: 36rem; margin: 0 auto 1.5rem; }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
+    }
+    .meta-row span {
+      background: rgba(0,0,0,0.25);
+      padding: 0.4rem 0.85rem;
+      border-radius: 0.4rem;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    p { margin-bottom: 0.85rem; color: #cbd5e1; font-size: 0.95rem; }
+    ul, ol { margin: 0.5rem 0 1rem 1.25rem; color: #cbd5e1; font-size: 0.93rem; }
+    li { margin-bottom: 0.35rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.25rem;
+      font-size: 0.88rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+    }
+    th { background: rgba(37, 99, 235, 0.15); color: #93c5fd; font-weight: 600; }
+    td { color: #cbd5e1; }
+    tr:nth-child(even) td { background: rgba(0,0,0,0.12); }
+    .num { text-align: right; white-space: nowrap; }
+    .highlight { color: #f8fafc; font-weight: 600; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .card {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.1rem 1.25rem;
+    }
+    .card h3 { margin-top: 0; font-size: 1rem; }
+    .card p, .card li { font-size: 0.88rem; }
+
+    .admin-mock {
+      background: #1a2332;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      font-size: 0.82rem;
+    }
+    .admin-topbar {
+      background: #0f172a;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-logo { font-weight: 700; color: #60a5fa; }
+    .admin-nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .admin-nav span {
+      padding: 0.25rem 0.55rem;
+      border-radius: 0.35rem;
+      background: rgba(59,130,246,0.15);
+      color: #93c5fd;
+      font-size: 0.75rem;
+    }
+    .admin-nav span.active { background: #2563eb; color: #fff; }
+    .admin-body { padding: 1rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+    .kpi {
+      background: #121c2e;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .kpi label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.2rem; }
+    .kpi strong { font-size: 1.15rem; color: #f1f5f9; }
+
+    .callout {
+      background: rgba(37, 99, 235, 0.12);
+      border-left: 4px solid var(--accent);
+      padding: 1rem 1.25rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+      margin: 1rem 0;
+    }
+    .callout p { margin: 0; }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .toolbar { display: none !important; }
+      .document { padding: 0; max-width: 100%; }
+      .page {
+        background: #fff;
+        border: none;
+        border-radius: 0;
+        padding: 1.5cm 1.8cm;
+        margin: 0;
+        page-break-after: always;
+        box-shadow: none;
+      }
+      .cover { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      h1, h2, h3, p, li, td, th { color: #0f172a !important; }
+      h2 { color: #1d4ed8 !important; border-color: #93c5fd; }
+      h3 { color: #2563eb !important; }
+      th { background: #e2e8f0 !important; color: #0f172a !important; }
+      td { color: #334155 !important; }
+      tr:nth-child(even) td { background: #f8fafc !important; }
+      .card { background: #f8fafc !important; border-color: #e2e8f0; }
+      .admin-mock { border-color: #cbd5e1; }
+      .callout { background: #eff6ff !important; border-color: #2563eb; }
+      .meta-row span { background: #e2e8f0; color: #334155; }
+    }
+
+    @page { margin: 1.2cm; size: A4; }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="toolbar-title"><strong>Грузоперевозки72</strong> · Маркетинг-план 2026</div>
+    <div style="display:flex;gap:0.5rem">
+      <a class="btn btn-secondary" href="../portfolio/presentation.html">Презентация проекта</a>
+      <button class="btn btn-primary" type="button" onclick="downloadPdf()">⬇ Скачать PDF</button>
+    </div>
+  </div>
+
+  <div class="document">
+
+    <!-- Обложка -->
+    <section class="page cover">
+      <span class="badge">Бизнес-план · Маркетинг</span>
+      <h1>Грузоперевозки72</h1>
+      <p class="subtitle">Маркетинг-план запуска и роста в Тюмени и Тюменской области. Бюджеты, прогноз привлечения заказчиков и исполнителей, веб-админка.</p>
+      <div class="meta-row">
+        <span>Регион: Тюмень + область</span>
+        <span>Версия приложения: 6.0.0</span>
+        <span>Горизонт: 12 месяцев</span>
+        <span>Дата: июль 2026</span>
+      </div>
+    </section>
+
+    <!-- 1. Цели -->
+    <section class="page">
+      <h2>1. Цели и этапы</h2>
+      <table>
+        <thead>
+          <tr><th>Этап</th><th>Срок</th><th class="num">Заказчики (MAU)</th><th class="num">Исполнители</th><th class="num">Сделки/мес</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Запуск</td><td>мес. 1–3</td><td class="num">300–800</td><td class="num">80–200</td><td class="num">30–80</td></tr>
+          <tr><td>Рост</td><td>мес. 4–6</td><td class="num">1 500–3 000</td><td class="num">300–600</td><td class="num">150–350</td></tr>
+          <tr><td>Масштаб</td><td>мес. 7–12</td><td class="num">4 000–8 000</td><td class="num">700–1 200</td><td class="num">400–900</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <p><strong>Ключевая метрика:</strong> не установки, а активные объявления/заявки и завершённые сделки. Сначала наполняем предложение (исполнители), затем привлекаем спрос (заказчиков).</p>
+      </div>
+    </section>
+
+    <!-- 2. Аудитория -->
+    <section class="page">
+      <h2>2. Целевая аудитория</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Заказчики (спрос)</h3>
+          <ul>
+            <li>Частные лица — переезд, доставка, стройка</li>
+            <li>ИП и малый бизнес</li>
+            <li>Прорабы, УК, строительные компании</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Исполнители (предложение)</h3>
+          <ul>
+            <li>Владельцы газелей, фур, манипуляторов</li>
+            <li>Аренда спецтехники — экскаваторы, автовышки</li>
+            <li>Бригады грузчиков</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Критический массив для старта</h3>
+      <p>Минимум <strong>80–100 исполнителей</strong> и <strong>150+ объявлений</strong> по Тюмени до масштабной рекламы для заказчиков.</p>
+    </section>
+
+    <!-- 3. Стратегия 90 дней -->
+    <section class="page">
+      <h2>3. Стратегия первых 90 дней</h2>
+      <h3>Фаза 1 — Наполнение (нед. 1–4)</h3>
+      <table>
+        <thead><tr><th>Канал</th><th>Действие</th><th class="num">Бюджет</th></tr></thead>
+        <tbody>
+          <tr><td>Прямые продажи</td><td>Обзвон автобаз, СТО, аренда техники</td><td class="num">30–50 тыс. ₽</td></tr>
+          <tr><td>VK / Telegram</td><td>Группы «грузоперевозки Тюмень», «спецтехника 72»</td><td class="num">20–40 тыс. ₽</td></tr>
+          <tr><td>Реферал</td><td>1 мес. подписки бесплатно за регистрацию + объявление</td><td class="num">15–30 тыс. ₽*</td></tr>
+          <tr><td>Офлайн</td><td>Визитки на рынках, стройплощадках</td><td class="num">10–20 тыс. ₽</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.85rem;color:var(--muted)">* условная стоимость в виде упущенной выручки по подписке (~300 ₽/мес)</p>
+
+      <h3>Фаза 2 — Спрос (нед. 5–8)</h3>
+      <table>
+        <thead><tr><th>Канал</th><th>Действие</th><th class="num">Бюджет</th></tr></thead>
+        <tbody>
+          <tr><td>Яндекс Директ</td><td>«грузоперевозки тюмень», «аренда манипулятора»</td><td class="num">60–100 тыс. ₽</td></tr>
+          <tr><td>VK Реклама</td><td>Гео Тюмень, интересы стройка/переезд</td><td class="num">40–70 тыс. ₽</td></tr>
+          <tr><td>Партнёрства</td><td>Строймагазины, риелторы — QR на установку</td><td class="num">20–40 тыс. ₽</td></tr>
+          <tr><td>Контент</td><td>Видео: «как заказать технику за 2 минуты»</td><td class="num">15–25 тыс. ₽</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Фаза 3 — Петля роста (нед. 9–12)</h3>
+      <ul>
+        <li>Реферал заказчику — бонус за приглашённого</li>
+        <li>Бонус за первый отзыв после сделки</li>
+        <li>Ретаргетинг на установивших без заявки</li>
+      </ul>
+    </section>
+
+    <!-- 4. Бюджет -->
+    <section class="page">
+      <h2>4. Бюджет по сценариям</h2>
+      <table>
+        <thead>
+          <tr><th>Статья</th><th class="num">Минимум/мес</th><th class="num">Базовый/мес</th><th class="num">Агрессивный/мес</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Контекст (Яндекс)</td><td class="num">40 000</td><td class="num">80 000</td><td class="num">150 000</td></tr>
+          <tr><td>VK / myTarget</td><td class="num">25 000</td><td class="num">50 000</td><td class="num">100 000</td></tr>
+          <tr><td>Telegram-каналы</td><td class="num">10 000</td><td class="num">25 000</td><td class="num">50 000</td></tr>
+          <tr><td>Офлайн / промо</td><td class="num">10 000</td><td class="num">20 000</td><td class="num">40 000</td></tr>
+          <tr><td>Рефералы и акции</td><td class="num">15 000</td><td class="num">40 000</td><td class="num">80 000</td></tr>
+          <tr><td>Контент</td><td class="num">10 000</td><td class="num">25 000</td><td class="num">50 000</td></tr>
+          <tr><td>Партнёрства</td><td class="num">0</td><td class="num">20 000</td><td class="num">50 000</td></tr>
+          <tr><td class="highlight">Итого в месяц</td><td class="num highlight">~110 000</td><td class="num highlight">~260 000</td><td class="num highlight">~520 000</td></tr>
+          <tr><td class="highlight">Итого за год</td><td class="num highlight">~1,3 млн</td><td class="num highlight">~3,1 млн</td><td class="num highlight">~6,2 млн</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.85rem">Без ФОТ маркетолога и поддержки — только медиа и промо.</p>
+    </section>
+
+    <!-- 5. Прогноз -->
+    <section class="page">
+      <h2>5. Прогноз привлечения (базовый сценарий)</h2>
+      <p>Бюджет ~260 тыс. ₽/мес. Накопительный рост:</p>
+      <table>
+        <thead>
+          <tr><th>Месяц</th><th class="num">Установки</th><th class="num">Регистрации</th><th class="num">Заказчики</th><th class="num">Исполнители</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td class="num">400</td><td class="num">250</td><td class="num">120</td><td class="num">80</td></tr>
+          <tr><td>2</td><td class="num">600</td><td class="num">380</td><td class="num">200</td><td class="num">120</td></tr>
+          <tr><td>3</td><td class="num">900</td><td class="num">550</td><td class="num">350</td><td class="num">180</td></tr>
+          <tr><td>4</td><td class="num">1 200</td><td class="num">750</td><td class="num">550</td><td class="num">250</td></tr>
+          <tr><td>5</td><td class="num">1 500</td><td class="num">950</td><td class="num">750</td><td class="num">320</td></tr>
+          <tr><td>6</td><td class="num">1 800</td><td class="num">1 150</td><td class="num">1 000</td><td class="num">400</td></tr>
+          <tr><td>12 (итог)</td><td class="num">—</td><td class="num">—</td><td class="num">4 000–5 000</td><td class="num">800–1 000</td></tr>
+        </tbody>
+      </table>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Минимальный сценарий</h3>
+          <p>~110 тыс. ₽/мес → к концу года <strong>1 500–2 500</strong> заказчиков MAU, <strong>300–500</strong> исполнителей, <strong>150–250</strong> сделок/мес.</p>
+        </div>
+        <div class="card">
+          <h3>Агрессивный сценарий</h3>
+          <p>~520 тыс. ₽/мес → к концу года <strong>8 000–12 000</strong> заказчиков MAU, <strong>1 200–1 800</strong> исполнителей, <strong>800–1 200</strong> сделок/мес.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Экономика -->
+    <section class="page">
+      <h2>6. Экономика и KPI</h2>
+      <table>
+        <thead><tr><th>Показатель</th><th>Оценка</th></tr></thead>
+        <tbody>
+          <tr><td>CAC заказчик</td><td>150–400 ₽</td></tr>
+          <tr><td>CAC исполнитель</td><td>400–1 200 ₽</td></tr>
+          <tr><td>Подписка исполнителя</td><td>~300 ₽/мес</td></tr>
+          <tr><td>LTV исполнителя (6 мес)</td><td>~1 500–1 800 ₽</td></tr>
+          <tr><td>Окупаемость маркетинга</td><td>подписка + комиссия с сделок, мес. 8–14</td></tr>
+        </tbody>
+      </table>
+      <h3>KPI контроля</h3>
+      <table>
+        <thead><tr><th>KPI</th><th class="num">Мес. 3</th><th class="num">Мес. 6</th><th class="num">Мес. 12</th></tr></thead>
+        <tbody>
+          <tr><td>Объявлений исполнителей</td><td class="num">150+</td><td class="num">400+</td><td class="num">1 000+</td></tr>
+          <tr><td>Заявок заказчиков/мес</td><td class="num">50+</td><td class="num">200+</td><td class="num">600+</td></tr>
+          <tr><td>Завершённые сделки/мес</td><td class="num">30+</td><td class="num">150+</td><td class="num">500+</td></tr>
+          <tr><td>Retention D30</td><td class="num">15%+</td><td class="num">20%+</td><td class="num">25%+</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 7. Веб-админка -->
+    <section class="page">
+      <h2>7. Веб-админка (операционное управление)</h2>
+      <p>Браузерная панель на PHP + MySQL для модерации, аналитики и коммуникации с пользователями. Связана с мобильным приложением в реальном времени.</p>
+
+      <div class="admin-mock">
+        <div class="admin-topbar">
+          <span class="admin-logo">CRG Admin</span>
+          <div class="admin-nav">
+            <span class="active">Статистика</span>
+            <span>Пользователи</span>
+            <span>Объявления</span>
+            <span>Рассылка</span>
+            <span>Поддержка</span>
+            <span>Настройки</span>
+          </div>
+        </div>
+        <div class="admin-body">
+          <div class="kpi"><label>Выручка подписок</label><strong>84 600 ₽</strong></div>
+          <div class="kpi"><label>GMV сделок</label><strong>1,2 млн ₽</strong></div>
+          <div class="kpi"><label>Активные подписки</label><strong>282</strong></div>
+          <div class="kpi"><label>Пользователи</label><strong>3 410</strong></div>
+          <div class="kpi"><label>На модерации</label><strong>14</strong></div>
+          <div class="kpi"><label>Обращения в поддержку</label><strong>7</strong></div>
+        </div>
+      </div>
+
+      <p><strong>URL (prod):</strong> <code>https://ivnovav.ru/api/admin-web/</code> · вход: <code>login.php</code> · статистика: <code>stats.php</code></p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>📊 Статистика</h3>
+          <ul>
+            <li>Выручка подписок и GMV сделок</li>
+            <li>Новые / продления / истёкшие подписки</li>
+            <li>Пользователи, объявления, отклики, отзывы</li>
+            <li>Оплаты по дням, последние платежи</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>👥 Пользователи</h3>
+          <ul>
+            <li>Поиск, фильтр по роли и статусу</li>
+            <li>Модерация (одобрение / блок)</li>
+            <li>Подписка и финансы исполнителя</li>
+            <li>Отзывы, счётчики объявлений</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>📢 Рассылка</h3>
+          <ul>
+            <li>E-mail и FCM push</li>
+            <li>Аудитория: все, город, роль, подписка</li>
+            <li>«Подписка истекает через 3 дня»</li>
+            <li>Превью выборки, до 2000 за раз</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>💬 Поддержка</h3>
+          <ul>
+            <li>Очередь обращений из приложения</li>
+            <li>Чат оператора, шаблоны ответов</li>
+            <li>Статусы: новые → в работе → ждём ответа</li>
+            <li>Вложения, push пользователю</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>📋 Модерация</h3>
+          <ul>
+            <li>Объявления исполнителей (3 типа техники)</li>
+            <li>Заявки заказчиков</li>
+            <li>Одобрение / отклонение + e-mail и push</li>
+            <li>Отклики и предложения на карточке</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>⚙️ Справочники и настройки</h3>
+          <ul>
+            <li>Города, виды техники, грузоподъёмность</li>
+            <li>Тариф подписки (цена, срок)</li>
+            <li>Аккаунт администратора, сброс пароля</li>
+            <li>Диагностика поиска (search_debug)</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Роль админки в маркетинге</h3>
+      <table>
+        <thead><tr><th>Задача маркетинга</th><th>Инструмент админки</th></tr></thead>
+        <tbody>
+          <tr><td>Удержание исполнителей</td><td>Рассылка «подписка истекает», push + e-mail</td></tr>
+          <tr><td>Реактивация</td><td>Сегмент «подписка истекла» → акция на продление</td></tr>
+          <tr><td>Качество выдачи</td><td>Модерация объявлений — заказчик видит проверенную технику</td></tr>
+          <tr><td>Поддержка 24/7</td><td>Чат поддержки — снижение оттока после установки</td></tr>
+          <tr><td>Аналитика ROI</td><td>Статистика: выручка, конверсия подписок, GMV</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 8. План месяц 1 -->
+    <section class="page">
+      <h2>8. План первого месяца</h2>
+      <table>
+        <thead><tr><th>Неделя</th><th class="num">Бюджет</th><th>Действия</th><th class="num">Прогноз</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="num">40 тыс. ₽</td><td>50 исполнителей вручную, посты в VK/TG</td><td class="num">+30 исп.</td></tr>
+          <tr><td>2</td><td class="num">50 тыс. ₽</td><td>Реферал «месяц бесплатно», доработка стора</td><td class="num">+40 исп.</td></tr>
+          <tr><td>3</td><td class="num">70 тыс. ₽</td><td>Яндекс Директ на заказчиков</td><td class="num">+80 зак.</td></tr>
+          <tr><td>4</td><td class="num">50 тыс. ₽</td><td>Анализ воронки, отключение неэффективного</td><td class="num">итого ~120 зак., ~100 исп.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Риски и митигация</h3>
+      <table>
+        <thead><tr><th>Риск</th><th>Решение</th></tr></thead>
+        <tbody>
+          <tr><td>Пустой поиск</td><td>Сначала исполнители, реклама заказчикам после 80+ объявлений</td></tr>
+          <tr><td>Высокий CAC</td><td>Органика, партнёры, сарафан, рефералы</td></tr>
+          <tr><td>Отток исполнителей</td><td>Поток заявок, финансы в приложении, рассылка админки</td></tr>
+          <tr><td>Конкуренция Авито</td><td>УТП: регион, чаты, рейтинг, поддержка, модерация</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout" style="margin-top:1.5rem">
+        <p><strong>Итог:</strong> маркетинг-план рассчитан на поэтапный запуск в Тюмени. Веб-админка обеспечивает модерацию, рассылки, поддержку и аналитику — без неё масштабирование привлечения невозможно.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="footer">
+    Грузоперевозки72 · Маркетинг-план · docs/marketing/marketing_plan.html<br>
+    Связанные материалы: <a href="../portfolio/presentation.html" style="color:#60a5fa">презентация проекта</a> · <a href="../admin_guide.md" style="color:#60a5fa">руководство админки</a>
+  </div>
+
+  <script>
+    function downloadPdf() {
+      window.print();
+    }
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        downloadPdf();
+      }
+    });
+  </script>
+</body>
+</html>

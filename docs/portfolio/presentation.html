@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Грузоперевозки72 — презентация проекта</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-card: #121c2e;
+      --accent: #3b82f6;
+      --accent-2: #60a5fa;
+      --text: #e8eef7;
+      --muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.15);
+      --success: #22c55e;
+      --warn: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+
+    .deck { width: 100%; }
+
+    .slide {
+      min-height: 100vh;
+      padding: 3.5rem clamp(1.5rem, 5vw, 5rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      page-break-after: always;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 0%, rgba(59, 130, 246, 0.12), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(96, 165, 250, 0.08), transparent 50%);
+      pointer-events: none;
+    }
+
+    .content { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+
+    h3 { font-size: 1.1rem; color: var(--accent-2); margin-bottom: 0.5rem; }
+
+    .subtitle {
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      color: var(--muted);
+      max-width: 48rem;
+      margin-bottom: 2rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .meta span {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .card p, .card li { color: var(--muted); font-size: 0.95rem; }
+
+    .card ul { padding-left: 1.1rem; margin-top: 0.5rem; }
+
+    .card li { margin-bottom: 0.35rem; }
+
+    .icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .flow-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .flow-arrow { color: var(--accent); font-weight: bold; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+
+    th { background: var(--bg-card); color: var(--accent-2); font-weight: 600; }
+
+    td { color: var(--muted); }
+
+    .highlight { color: var(--text); font-weight: 500; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat {
+      text-align: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 2rem;
+      color: var(--accent-2);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat span { font-size: 0.85rem; color: var(--muted); }
+
+    .nav-hint {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: rgba(18, 28, 46, 0.9);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.85rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 100;
+    }
+
+    .tag {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent-2);
+      padding: 0.2rem 0.55rem;
+      border-radius: 0.35rem;
+      font-size: 0.8rem;
+      margin: 0.15rem;
+    }
+
+    .footer-note {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    @media print {
+      .nav-hint { display: none; }
+      .slide { min-height: auto; padding: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+
+    <!-- 1 -->
+    <section class="slide">
+      <div class="content">
+        <span class="badge">Портфолио · Mobile + Backend</span>
+        <h1>Грузоперевозки72</h1>
+        <p class="subtitle">
+          Маркетплейс грузоперевозок и спецтехники для Тюмени и Тюменской области.
+          Мобильное приложение для заказчиков и исполнителей с поиском, сделками, чатами и финансами.
+        </p>
+        <div class="meta">
+          <span>Flutter 6.0.0</span>
+          <span>PHP REST API</span>
+          <span>Firebase Push</span>
+          <span>iOS + Android</span>
+          <span>Админ-панель</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Проблема и решение</h2>
+        <div class="grid-2">
+          <div class="card">
+            <div class="icon">⚠️</div>
+            <h3>Было</h3>
+            <ul>
+              <li>Десятки звонков и чатов в разных мессенджерах</li>
+              <li>Нет единого рейтинга и истории сделок</li>
+              <li>Сложно найти технику по параметрам и городу</li>
+              <li>Непрозрачные условия и комиссии</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="icon">✅</div>
+            <h3>Стало</h3>
+            <ul>
+              <li>Одна площадка: поиск → отклик → сделка → отзыв</li>
+              <li>Две роли в одном аккаунте (заказчик / исполнитель)</li>
+              <li>Умный поиск с счётчиками заявок по городу</li>
+              <li>Встроенные чаты, push-уведомления, раздел финансов</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Роли пользователей</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>🚛 Заказчик</h3>
+            <ul>
+              <li>Каталог услуг: газели, фуры, краны, экскаваторы, грузчики</li>
+              <li>Поиск исполнителей по городу и параметрам</li>
+              <li>Публикация заявок и приём предложений</li>
+              <li>Таймер выполнения заказа, чат, отзывы</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>👷 Исполнитель</h3>
+            <ul>
+              <li>Размещение объявлений о технике за 2 минуты</li>
+              <li>Поиск заявок заказчиков в реальном времени</li>
+              <li>Отклики, принятие заказов, выполнение</li>
+              <li>Финансы: история заказов и выплат</li>
+            </ul>
+          </div>
+        </div>
+        <p class="footer-note">Один пользователь может быть заказчиком и исполнителем одновременно — данные изолированы по контексту сделки.</p>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Ключевые функции</h2>
+        <div class="grid-3">
+          <div class="card"><div class="icon">🔍</div><h3>Поиск</h3><p>Гибкий поиск supply/demand, счётчики «(N)» по услугам и городам, сортировка по наличию заявок.</p></div>
+          <div class="card"><div class="icon">💬</div><h3>Чаты</h3><p>Переписка по сделке, чат техподдержки 24/7, push о новых сообщениях.</p></div>
+          <div class="card"><div class="icon">💰</div><h3>Финансы</h3><p>Раздел для исполнителей: учёт заказов, комиссии, история начислений.</p></div>
+          <div class="card"><div class="icon">⭐</div><h3>Рейтинги</h3><p>Взаимные отзывы после завершения заказа, рейтинг в профиле.</p></div>
+          <div class="card"><div class="icon">🔔</div><h3>Push</h3><p>Firebase Cloud Messaging: статусы заказов, отклики, начало выполнения.</p></div>
+          <div class="card"><div class="icon">⏱️</div><h3>Сделки</h3><p>Два сценария matching, таймер выполнения, контроль статусов в реальном времени.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Как работает сделка</h2>
+        <div class="card" style="margin-bottom:1rem">
+          <h3>Сценарий 1: исполнитель → заявка заказчика</h3>
+          <div class="flow">
+            <span class="flow-step">Отклик исполнителя</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Принятие заказчиком</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Начало выполнения</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Таймер + чат</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Отзывы</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Сценарий 2: заказчик → объявление исполнителя</h3>
+          <div class="flow">
+            <span class="flow-step">Предложение заказа</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Принятие исполнителем</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Выполнение</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Завершение</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Повторный заказ возможен</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Мобильное приложение</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Стек</h3>
+            <p>
+              <span class="tag">Flutter 3.x</span>
+              <span class="tag">Dart</span>
+              <span class="tag">Firebase Auth</span>
+              <span class="tag">FCM</span>
+              <span class="tag">Firestore</span>
+              <span class="tag">Dio / HTTP</span>
+              <span class="tag">Secure Storage</span>
+            </p>
+          </div>
+          <div class="card">
+            <h3>Архитектура UI</h3>
+            <ul>
+              <li>Две независимые ветки shell-навигации (заказчик / исполнитель)</li>
+              <li>Единая тема и дизайн-система</li>
+              <li>~80+ экранов, формы объявлений по типам техники</li>
+              <li>Dual-role: изоляция supply vs demand</li>
+            </ul>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><strong>6.0</strong><span>версия приложения</span></div>
+          <div class="stat"><strong>2</strong><span>платформы (iOS, Android)</span></div>
+          <div class="stat"><strong>3</strong><span>категории заявок (bd 1/2/3)</span></div>
+          <div class="stat"><strong>24/7</strong><span>поддержка в чате</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Backend и админка</h2>
+        <table>
+          <thead>
+            <tr><th>Компонент</th><th>Описание</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="highlight">PHP REST API</td><td>50+ эндпоинтов: поиск, сделки, офферы, отзывы, подписки</td></tr>
+            <tr><td class="highlight">search_services_core</td><td>Единый движок поиска supply/demand, счётчики, visibility SQL</td></tr>
+            <tr><td class="highlight">ordersglobal</td><td>Жизненный цикл сделки: выполнение, таймер, источник сделки</td></tr>
+            <tr><td class="highlight">MySQL</td><td>orders, orderst, ordersg, add_ob_*, offer_data, users</td></tr>
+            <tr><td class="highlight">Admin Web</td><td>Модерация, статистика, финансы, пользователи, search debug</td></tr>
+            <tr><td class="highlight">Firebase</td><td>Push-уведомления, чаты (Firestore)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 7b — Админка -->
+    <section class="slide">
+      <div class="content">
+        <h2>Веб-админка</h2>
+        <p class="subtitle" style="margin-bottom:1.5rem">PHP + MySQL, сессии администратора, CSRF. Панель для модерации, аналитики и коммуникации с пользователями.</p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>📊 Статистика</h3>
+            <ul>
+              <li>Выручка подписок и GMV сделок</li>
+              <li>Новые / продления / истёкшие подписки</li>
+              <li>Пользователи, объявления, отклики, отзывы</li>
+              <li>Оплаты по дням, последние платежи</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>👥 Пользователи</h3>
+            <ul>
+              <li>Поиск, фильтр по роли и статусу</li>
+              <li>Модерация (одобрение / блок)</li>
+              <li>Подписка исполнителя, финансы</li>
+              <li>Отзывы, счётчики объявлений</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>📢 Рассылка</h3>
+            <ul>
+              <li>E-mail и FCM push</li>
+              <li>Аудитория: все, город, роль, подписка</li>
+              <li>Подписка истекает через 3 дня</li>
+              <li>Превью выборки, до 2000 за раз</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>💬 Поддержка</h3>
+            <ul>
+              <li>Очередь обращений из приложения</li>
+              <li>Статусы: новые, в работе, ждём ответа</li>
+              <li>Чат оператора, шаблоны ответов</li>
+              <li>Вложения, push пользователю</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>📋 Модерация</h3>
+            <ul>
+              <li>Объявления исполнителей (3 типа)</li>
+              <li>Заявки заказчиков</li>
+              <li>Одобрение / отклонение + уведомление</li>
+              <li>Отклики и предложения на карточке</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>⚙️ Справочники</h3>
+            <ul>
+              <li>Города, виды техники, грузоподъёмность</li>
+              <li>Виды кузова, картинки в BLOB</li>
+              <li>Тариф подписки (цена, срок)</li>
+              <li>Настройки аккаунта админа</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Технические решения</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Поиск и счётчики</h3>
+            <ul>
+              <li>Гибридный подсчёт demand: GROUP BY + отдельная логика для грузчиков</li>
+              <li>Единые SQL-фрагменты visibility (supply / demand)</li>
+              <li>API <code>search_order_counts.php</code> + UI-подсказки «(N)» в Flutter</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Безопасность данных</h3>
+            <ul>
+              <li>Фильтр «не показывать свои объявления в чужой роли»</li>
+              <li>JWT-сессии, проверка viewer на стороне API</li>
+              <li>Разделение сценариев сделки по <code>deal_source</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>CI/CD</h3>
+            <ul>
+              <li>Codemagic: сборка IPA, TestFlight</li>
+              <li>Gradle release AAB для Google Play</li>
+              <li>Автоподпись iOS (App Store Connect API)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Документация</h3>
+            <ul>
+              <li>12+ markdown-гайдов: сделки, поиск, чаты, сценарии</li>
+              <li>Smoke-скрипты для API</li>
+              <li>Карта экранов и веток навигации</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Экраны и модули</h2>
+        <div class="grid-3">
+          <div class="card"><h3>Заказчик</h3><ul><li>Каталог услуг</li><li>Поиск исполнителей</li><li>Мои заявки</li><li>Предложения</li><li>Выполнение заказа</li></ul></div>
+          <div class="card"><h3>Исполнитель</h3><ul><li>Объявления</li><li>Поиск заявок</li><li>Отклики</li><li>Финансы</li><li>Подписка</li></ul></div>
+          <div class="card"><h3>Общее</h3><ul><li>Профиль и аватар</li><li>История</li><li>Чаты</li><li>Отзывы</li><li>Оплата подписки (эквайринг)</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide">
+      <div class="content">
+        <h2>Результат</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Для бизнеса</h3>
+            <ul>
+              <li>Готовый продукт для регионального рынка логистики</li>
+              <li>Публикация в App Store и Google Play</li>
+              <li>Монетизация через сервис-сбор с успешных сделок</li>
+              <li>Админка для операционного управления</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Для портфолио</h3>
+            <ul>
+              <li>Full-stack: Flutter + PHP + MySQL + Firebase</li>
+              <li>Сложная бизнес-логика (dual-role, 2 сценария сделок)</li>
+              <li>Поисковый движок с реальными edge-cases</li>
+              <li>Production-ready: CI, подпись, документация</li>
+            </ul>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><strong>80+</strong><span>экранов Flutter</span></div>
+          <div class="stat"><strong>50+</strong><span>PHP API</span></div>
+          <div class="stat"><strong>12+</strong><span>документов</span></div>
+          <div class="stat"><strong>2</strong><span>стора (iOS, Android)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide">
+      <div class="content">
+        <span class="badge">Спасибо за внимание</span>
+        <h1>Грузоперевозки72</h1>
+        <p class="subtitle">
+          Маркетплейс грузоперевозок и спецтехники — от идеи до публикации в сторах.
+        </p>
+        <div class="meta">
+          <span>📱 iOS · Android</span>
+          <span>🌐 ivnovav.ru</span>
+          <span>📦 Flutter + PHP</span>
+          <span>🗺️ Тюмень и область</span>
+        </div>
+        <p class="footer-note" style="margin-top:2.5rem">
+          Откройте этот файл в браузере · Печать → PDF для портфолио · Стрелки ← → для навигации
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="nav-hint">← → навигация · P — печать/PDF</div>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let index = 0;
+
+    function go(i) {
+      index = Math.max(0, Math.min(slides.length - 1, i));
+      slides[index].scrollIntoView({ behavior: 'smooth' });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        go(index + 1);
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        go(index - 1);
+      }
+      if (e.key === 'p' || e.key === 'P') window.print();
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          index = slides.indexOf(entry.target);
+        }
+      });
+    }, { threshold: 0.55 });
+
+    slides.forEach((s) => observer.observe(s));
+  </script>
+</body>
+</html>
