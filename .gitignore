@@ -61,6 +61,8 @@ api/service_account.json
 key.properties
 **/key.properties
 android/android_key.zip
+codemagic-keystore.b64
+android/KEYSTORE_FOR_CODEMAGIC.b64
 .env
 .env.*
 !.env.example
