@@ -51,6 +51,7 @@ app.*.map.json
 
 # Secrets, keys, and generated Firebase config (do not commit)
 **/google-services.json
+!android/app/google-services.json
 **/GoogleService-Info.plist
 firebase.json
 assets/service_account.json

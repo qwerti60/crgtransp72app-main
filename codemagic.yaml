@@ -13,11 +13,16 @@ workflows:
     scripts:
       - name: Create google-services.json
         script: |
-          if [ -z "${GOOGLE_SERVICES_JSON_BASE64:-}" ]; then
-            echo "ERROR: GOOGLE_SERVICES_JSON_BASE64 is empty. Add it to the Secret group in Codemagic."
+          if [ -f android/app/google-services.json ]; then
+            echo "Using android/app/google-services.json from repository"
+          elif [ -n "${GOOGLE_SERVICES_JSON_BASE64:-}" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+            echo "Created google-services.json from GOOGLE_SERVICES_JSON_BASE64"
+          else
+            echo "ERROR: android/app/google-services.json missing and GOOGLE_SERVICES_JSON_BASE64 is empty."
             exit 1
           fi
-          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          test -f android/app/google-services.json || (echo "google-services.json not found" && exit 1)
       - name: Set up Android signing
         script: |
           if [ -z "${CM_KEYSTORE:-}" ]; then
