@@ -1,14 +1,13 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/site_config.php';
+
 function crg_admin_mail_from(): string
 {
-    $from = getenv('CRG_MAIL_FROM');
-    if (is_string($from) && $from !== '' && filter_var($from, FILTER_VALIDATE_EMAIL)) {
-        return $from;
-    }
+    require_once __DIR__ . '/mail_config.php';
 
-    return 'no-reply@ivnovav.ru';
+    return crg_mail_from_address();
 }
 
 function crg_admin_mail_encode_subject(string $subject): string
@@ -23,20 +22,71 @@ function crg_admin_mail_encode_subject(string $subject): string
 /** @return true|string true on success, error message on failure */
 function crg_admin_send_plain_mail(string $to, string $subject, string $body): bool|string
 {
+    require_once __DIR__ . '/mail_config.php';
+
     $to = trim($to);
     if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return 'Некорректный e-mail получателя';
     }
 
-    $from = crg_admin_mail_from();
-    $headers = 'From: ' . $from . "\r\n";
-    $headers .= "Reply-To: {$from}\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $headers .= "Content-Transfer-Encoding: 8bit\r\n";
+    $from = crg_mail_from_address();
+    $settings = crg_mail_settings();
 
-    $ok = @mail($to, crg_admin_mail_encode_subject($subject), $body, $headers);
+    if ($settings['smtp'] !== null) {
+        $smtpRes = crg_mail_smtp_send($settings['smtp'], $from, $to, $subject, $body);
+        if ($smtpRes === true) {
+            return true;
+        }
 
-    return $ok ? true : 'Не удалось отправить письмо (проверьте настройку mail на сервере)';
+        $hostingRes = crg_mail_hosting_send($from, $to, $subject, $body);
+        if ($hostingRes === true) {
+            return true;
+        }
+
+        return is_string($smtpRes) ? $smtpRes : 'Не удалось отправить письмо';
+    }
+
+    if (!crg_mail_local_exists()) {
+        return 'Почта не настроена: создайте api/mail.local.php (см. mail.local.example.php)';
+    }
+
+    return crg_mail_hosting_send($from, $to, $subject, $body);
+}
+
+function crg_mail_log_delivery(string $type, string $to, bool|string $result): void
+{
+    $dir = dirname(__DIR__) . '/logs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $line = date('Y-m-d H:i:s') . "\t{$type}\t{$to}\t"
+        . ($result === true ? 'ok' : (string) $result) . "\n";
+    @file_put_contents($dir . '/mail_delivery.log', $line, FILE_APPEND | LOCK_EX);
+}
+
+/**
+ * Письмо с кодом (тема как в админке: CRG Transp72: ...).
+ *
+ * @return true|string
+ */
+function crg_admin_send_code_mail(
+    string $to,
+    string $subjectSuffix,
+    string $code,
+    string $validMinutesText = '15 минут'
+): bool|string {
+    $subject = 'CRG Transp72: ' . $subjectSuffix;
+    $body = "Здравствуйте!\n\n";
+    $body .= "Ваш код: {$code}\n";
+    $body .= "Код действует {$validMinutesText}.\n\n";
+    $body .= "Если вы не запрашивали это действие — проигнорируйте письмо.\n\n";
+    $body .= "—\n";
+    $body .= "Грузоперевозки72\n";
+
+    $result = crg_admin_send_plain_mail($to, $subject, $body);
+    crg_mail_log_delivery($subjectSuffix, $to, $result);
+
+    return $result;
 }
 
 /**

@@ -83,7 +83,7 @@ class zprofil_ldForm extends State<zprofil_ld> {
 
     // Создаем запрос на сервер
     Uri uri =
-        Uri.parse("https://ivnovav.ru/api/upload.php"); // Измените на ваш URL
+        Uri.parse("${Config.baseUrl}/api/upload.php"); // Измените на ваш URL
     var request = http.MultipartRequest("POST", uri)
       ..fields['email'] = email // Замените на соответствующий ID пользователя
       ..files.add(http.MultipartFile.fromBytes(

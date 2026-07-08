@@ -22,13 +22,13 @@ if ($conn->connect_error) {
 }
 $conn->set_charset('utf8');
 
-$lookup = $conn->prepare("
-    SELECT id, expires_at
+$lookup = $conn->prepare('
+    SELECT id, expires_at, email
     FROM password_resets
-    WHERE email = ? AND code = ?
+    WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND code = ?
     ORDER BY id DESC
     LIMIT 1
-");
+');
 $lookup->bind_param('ss', $email, $code);
 $lookup->execute();
 $row = $lookup->get_result()->fetch_assoc();
@@ -40,6 +40,8 @@ if (!$row) {
     $conn->close();
     exit;
 }
+
+$email = trim((string) ($row['email'] ?? $email));
 
 $now = new DateTime();
 $expires = new DateTime($row['expires_at']);
@@ -58,7 +60,7 @@ if ($hashedPassword === false) {
     exit;
 }
 
-$update = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+$update = $conn->prepare('UPDATE users SET password = ? WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))');
 $update->bind_param('ss', $hashedPassword, $email);
 $ok = $update->execute();
 $update->close();
@@ -70,7 +72,7 @@ if (!$ok) {
     exit;
 }
 
-$delete = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+$delete = $conn->prepare('DELETE FROM password_resets WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))');
 $delete->bind_param('s', $email);
 $delete->execute();
 $delete->close();

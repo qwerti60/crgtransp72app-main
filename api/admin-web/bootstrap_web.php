@@ -100,7 +100,7 @@ function tp_admin_web_require_login_json(): PDO
 }
 
 /**
- * @param 'stats'|'cities'|'vidt'|'vidg'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'settings'|'support' $activeNav
+ * @param 'stats'|'cities'|'vidt'|'vidg'|'gruzchik'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'settings'|'support' $activeNav
  */
 function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string $adminLogin = null): void
 {
@@ -109,6 +109,7 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
         'cities' => ['Города', 'cities.php'],
         'vidt' => ['Вид техники', 'ref_list.php?type=vidt'],
         'vidg' => ['Грузоподъёмность', 'ref_list.php?type=vidg'],
+        'gruzchik' => ['Грузчики', 'ref_list.php?type=gruzchik'],
         'vidkuzov' => ['Вид кузова', 'ref_list.php?type=vidkuzov'],
         'users' => ['Пользователи', 'users.php'],
         'performer_ads' => ['Объявления исполнителей', 'performer_ads.php?type=gp'],
@@ -144,12 +145,24 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= tp_admin_web_h($pageTitle) ?> — админ</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <style>
         :root { --nav-bg: #0f172a; --nav-hover: #1e293b; --accent: #38bdf8; --main-bg: #f1f5f9; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--main-bg); color: #0f172a; min-height: 100vh; }
         .admin-shell { display: flex; flex-direction: row; width: 100%; min-height: 100vh; align-items: stretch; }
         .admin-nav { min-width: 14rem; width: 16rem; flex-shrink: 0; background: var(--nav-bg); color: #e2e8f0; padding: 1rem 0; display: flex; flex-direction: column; }
+        .admin-nav-brand { display: block; margin: 0 1rem 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #334155; }
+        .admin-nav-brand img {
+            width: 100%;
+            max-width: 10rem;
+            height: auto;
+            display: block;
+            background: #fff;
+            border-radius: 12px;
+            padding: 8px 10px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
         .admin-nav h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin: 0 1rem 0.5rem; font-weight: 600; }
         .admin-nav a { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 1rem; color: #e2e8f0; text-decoration: none; font-size: 0.9rem; border-left: 3px solid transparent; }
         .admin-nav a:hover { background: var(--nav-hover); }
@@ -214,7 +227,10 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
 <body>
 <div class="admin-shell">
     <nav class="admin-nav" aria-label="Разделы админки">
-        <h2>CRG Transp72</h2>
+        <a class="admin-nav-brand" href="stats.php" title="Грузоперевозки72">
+            <img src="assets/logo.png" alt="Грузоперевозки72" width="189" height="127">
+        </a>
+        <h2>Админ-панель</h2>
         <?php foreach ($nav as $key => $pair) {
             [$label, $href] = $pair;
             $cls = $activeNav === $key ? 'nav-active' : '';

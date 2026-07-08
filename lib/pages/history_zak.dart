@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -120,7 +120,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('https://ivnovav.ru/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

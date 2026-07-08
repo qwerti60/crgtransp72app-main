@@ -115,12 +115,12 @@ if ($isPostRequest) {
 
          <div>
             <label for="returnUrl">URL возврата (Success):</label>
-            <input type="text" id="returnUrl" name="returnUrl" required placeholder="https://ivnovav.ru/success">
+            <input type="text" id="returnUrl" name="returnUrl" required placeholder="http://gruzoperevozki72.ru/success">
          </div>
         
          <div>
             <label for="failUrl">URL возврата (Fail):</label>
-            <input type="text" id="failUrl" name="failUrl" required placeholder="https://ivnovav.ru/fail">
+            <input type="text" id="failUrl" name="failUrl" required placeholder="http://gruzoperevozki72.ru/fail">
          </div>
         
          <div>

@@ -324,7 +324,7 @@ class _add_ob_gpForm extends State<add_ob_gp> {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-    var uri = Uri.parse('https://ivnovav.ru/api/add_ob_gp.php');
+    var uri = Uri.parse('${Config.baseUrl}/api/add_ob_gp.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

@@ -6,68 +6,19 @@ header('Content-Type: application/json; charset=utf-8');
 require __DIR__ . '/load_databd.php';
 
 /**
- * JWT для входа: include/jwt_bootstrap.php или vendor на хостинге.
+ * JWT для входа: только api/include/jwt_bootstrap.php (без дубликата api/jwt_bootstrap.php).
  */
 function crg_autoriz1_bootstrap_jwt(): bool
 {
-    if (function_exists('crg_jwt_autoload') && crg_jwt_autoload()) {
-        return true;
-    }
-
-    foreach ([
-        __DIR__ . '/include/jwt_bootstrap.php',
-        __DIR__ . '/jwt_bootstrap.php',
-    ] as $path) {
-        if (is_readable($path)) {
-            require_once $path;
-            if (function_exists('crg_jwt_autoload') && crg_jwt_autoload()) {
-                return true;
-            }
-        }
-    }
-
-    foreach ([
-        '/var/www/u2395188/data/vendor/autoload.php',
-        dirname(__DIR__) . '/vendor/autoload.php',
-        dirname(__DIR__, 2) . '/vendor/autoload.php',
-        __DIR__ . '/vendor/autoload.php',
-    ] as $vendor) {
-        if (is_readable($vendor)) {
-            require_once $vendor;
-            break;
-        }
-    }
-
-    if (!class_exists(\Firebase\JWT\JWT::class, false)) {
-        return false;
-    }
-
-    if (!function_exists('crg_jwt_secret')) {
-        function crg_jwt_secret(): string
-        {
-            return '789456123';
-        }
-    }
-
     if (!function_exists('crg_jwt_autoload')) {
-        function crg_jwt_autoload(): bool
-        {
-            return class_exists(\Firebase\JWT\JWT::class, false);
+        $bootstrap = __DIR__ . '/include/jwt_bootstrap.php';
+        if (!is_readable($bootstrap)) {
+            return false;
         }
+        require_once $bootstrap;
     }
 
-    if (!function_exists('crg_jwt_encode')) {
-        function crg_jwt_encode(array $payload): ?string
-        {
-            try {
-                return \Firebase\JWT\JWT::encode($payload, crg_jwt_secret(), 'HS256');
-            } catch (Throwable $e) {
-                return null;
-            }
-        }
-    }
-
-    return crg_jwt_autoload();
+    return function_exists('crg_jwt_autoload') && crg_jwt_autoload();
 }
 
 $response = ['success' => false];
@@ -90,7 +41,7 @@ try {
     }
 
     if (!crg_autoriz1_bootstrap_jwt()) {
-        $response['message'] = 'Ошибка сервера (JWT): загрузите api/include/jwt_bootstrap.php или vendor на хостинг';
+        $response['message'] = 'Ошибка сервера (JWT)';
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }

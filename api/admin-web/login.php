@@ -39,9 +39,20 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Вход администратора</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <style>
         body { font-family: system-ui, sans-serif; max-width: 28rem; margin: 2rem auto; padding: 0 1rem; }
-        h1 { font-size: 1.25rem; }
+        .login-logo {
+            display: block;
+            width: min(12rem, 80vw);
+            height: auto;
+            margin: 0 auto 1.25rem;
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px 14px;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+        }
+        h1 { font-size: 1.25rem; text-align: center; }
         label { display: block; margin-top: 1rem; font-weight: 600; }
         input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: 0.5rem; margin-top: 0.25rem; }
         button { margin-top: 1.25rem; padding: 0.5rem 1rem; cursor: pointer; }
@@ -50,6 +61,7 @@ header('Content-Type: text/html; charset=utf-8');
     </style>
 </head>
 <body>
+    <img class="login-logo" src="assets/logo.png" alt="Грузоперевозки72" width="189" height="127">
     <h1>Вход администратора</h1>
     <?php if ($error !== '') { ?>
         <p class="err"><?= tp_admin_web_h($error) ?></p>

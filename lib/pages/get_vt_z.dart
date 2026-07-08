@@ -1,4 +1,6 @@
 import 'package:crgtransp72app/pages/CityScreenisp.dart';
+import 'package:crgtransp72app/api/service_images_api.dart';
+import 'package:crgtransp72app/config.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/loginpage.dart';
@@ -16,7 +18,7 @@ Future<bool> _isAuthorizedUser() async {
 
   try {
     final response = await http
-        .get(Uri.parse('https://ivnovav.ru/api/getuserinfo.php?token=$token'))
+        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
         .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) return false;
 
@@ -206,131 +208,92 @@ class MyImageGrid extends StatefulWidget {
 }
 
 class _MyImageGridState extends State<MyImageGrid> {
-  late Future<List<ImageData>> imagesVidt;
-  late Future<List<ImageData>> imagesVidg;
-  late Future<List<ImageData>> imagesGruzchik;
-  late String nameImg;
-  Future<List<ImageData>> fetchImages(String db) async {
-    final response = await http
-        .get(
-          Uri.parse('https://ivnovav.ru/api/getimage.php')
-              .replace(queryParameters: {'bd': db}),
-        )
-        .timeout(const Duration(seconds: 12));
-    if (response.statusCode == 200) {
-      return (json.decode(response.body) as List)
-          .map((data) => ImageData.fromJson(data))
-          .toList();
-    } else {
-      throw Exception('Failed to load images');
-    }
-  }
+  late Future<ServiceImagesBundle> _catalog;
 
   @override
   void initState() {
     super.initState();
-    imagesVidt = fetchImages("vidt");
-    imagesVidg = fetchImages("vidg");
-    imagesGruzchik = fetchImages("gruzchik");
+    _catalog = ServiceImagesApi.fetchAll();
   }
 
-  Widget imagesSection(String title, Future images) {
-    return FutureBuilder(
-      future: images,
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          var images = snapshot.data!;
-          return SliverToBoxAdapter(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: Text(title, style: const TextStyle(fontSize: 20)),
-                ),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(), // Add this line
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                  ),
-                  itemCount: images.length,
-// Inside GridView.builder item builder
-                  itemBuilder: (BuildContext context, int index) {
-                    return GestureDetector(
-                      onTap: () {
-                        int base =
-                            0; // Объявление переменной за пределами условного блока
-
-                        if (title == 'Заказ спецтехники') base = 2;
-                        if (title == 'Заказ грузовых перевозок') base = 1;
-                        if (title == 'Заказ грузчиков') base = 3;
-                        print('object567');
-                        print(base);
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => CityScreenIsp(
-                                      indexName: images[index].name,
-                                      bd: base,
-                                    )));
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Image.memory(
-                                base64Decode(images[index].image),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(images[index].name,
-                                textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+  Widget imagesSection(String title, List<ServiceImageItem> images) {
+    return SliverToBoxAdapter(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Text(title, style: const TextStyle(fontSize: 20)),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
             ),
-          );
-        } else if (snapshot.hasError) {
-          return SliverToBoxAdapter(
-            child: Text("${snapshot.error}"),
-          );
-        }
-        return const SliverToBoxAdapter(
-          child: Center(child: CircularProgressIndicator()),
-        );
-      },
+            itemCount: images.length,
+            itemBuilder: (BuildContext context, int index) {
+              return GestureDetector(
+                onTap: () {
+                  int base = 0;
+
+                  if (title == 'Заказ спецтехники') base = 2;
+                  if (title == 'Заказ грузовых перевозок') base = 1;
+                  if (title == 'Заказ грузчиков') base = 3;
+                  print('object567');
+                  print(base);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => CityScreenIsp(
+                                indexName: images[index].name,
+                                bd: base,
+                              )));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ServiceImagePreview(item: images[index]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(images[index].name, textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        imagesSection('Заказ спецтехники', imagesVidt),
-        imagesSection('Заказ грузовых перевозок', imagesVidg),
-        imagesSection('Заказ грузчиков', imagesGruzchik),
-      ],
-    );
-  }
-}
-
-class ImageData {
-  final String image;
-  final String name;
-
-  ImageData({required this.image, required this.name});
-
-  factory ImageData.fromJson(Map json) {
-    return ImageData(
-      image: json['image'],
-      name: json['name'],
+    return FutureBuilder<ServiceImagesBundle>(
+      future: _catalog,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final catalog = snapshot.data!;
+          return CustomScrollView(
+            slivers: [
+              imagesSection('Заказ спецтехники', catalog.vidt),
+              imagesSection('Заказ грузовых перевозок', catalog.vidg),
+              imagesSection('Заказ грузчиков', catalog.gruzchik),
+            ],
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Не удалось загрузить: ${snapshot.error}'),
+            ),
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
     );
   }
 }

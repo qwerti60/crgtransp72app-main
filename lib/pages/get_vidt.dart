@@ -1,6 +1,5 @@
-import 'dart:convert';
+import 'package:crgtransp72app/api/service_images_api.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 void main() => runApp(const MyAppI());
 
@@ -24,29 +23,12 @@ class GalleryScreen extends StatefulWidget {
 }
 
 class _GalleryScreenState extends State {
-  late Future<List<ImageData>> images; // Уточненный тип Future
+  late Future<List<ServiceImageItem>> images;
 
   @override
   void initState() {
     super.initState();
-    images = fetchImages();
-  }
-
-  Future<List<ImageData>> fetchImages() async {
-    final response =
-        await http
-            .get(
-              Uri.parse('https://ivnovav.ru/api/getimage.php')
-                  .replace(queryParameters: {'bd': 'vidt'}),
-            )
-            .timeout(const Duration(seconds: 12));
-
-    if (response.statusCode == 200) {
-      List jsonResponse = json.decode(response.body);
-      return jsonResponse.map((image) => ImageData.fromJson(image)).toList();
-    } else {
-      throw Exception('Failed to load images from server');
-    }
+    images = ServiceImagesApi.fetch('vidt');
   }
 
   @override
@@ -55,8 +37,7 @@ class _GalleryScreenState extends State {
       appBar: AppBar(
         title: const Text('Gallery'),
       ),
-      body: FutureBuilder<List<ImageData>>(
-        // Указываем явный тип данных здесь
+      body: FutureBuilder<List<ServiceImageItem>>(
         future: images,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -64,8 +45,7 @@ class _GalleryScreenState extends State {
           } else if (snapshot.hasError) {
             return Text('${snapshot.error}');
           } else {
-            List<ImageData> images = snapshot.data!;
-            // Тело GridView.builder
+            final items = snapshot.data!;
             return GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -73,62 +53,33 @@ class _GalleryScreenState extends State {
                 mainAxisSpacing: 8,
                 childAspectRatio: 0.72,
               ),
-              itemCount: images.length,
-// В вашем GridView.builder измените itemBuilder на следующий:
+              itemCount: items.length,
               itemBuilder: (BuildContext context, int index) {
                 return Padding(
-                  padding: const EdgeInsets.all(
-                      8.0), // Отступы вокруг каждого элемента
+                  padding: const EdgeInsets.all(8.0),
                   child: Column(
                     children: <Widget>[
                       SizedBox(
                         width: double.infinity,
                         height: 100,
-                        child: ClipRect(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: Image.memory(
-                              base64Decode(images[index].image),
-                              width: double.infinity,
-                              fit: BoxFit.fitWidth,
-                            ),
-                          ),
+                        child: ServiceImagePreview(
+                          item: items[index],
+                          fit: BoxFit.fitWidth,
                         ),
                       ),
-                      const SizedBox(
-                          height:
-                              8), // Добавляем пространство между картинкой и текстом
+                      const SizedBox(height: 8),
                       Align(
-                        // Обертываем Text виджет в Align
-                        alignment: Alignment.center, // Выравнивание по центру
-                        child: Text(images[index]
-                            .name), // Выводим название под картинкой
+                        alignment: Alignment.center,
+                        child: Text(items[index].name),
                       ),
                     ],
                   ),
                 );
               },
             );
-
-// Показываем индикатор загрузки
-            return const CircularProgressIndicator();
           }
         },
       ),
-    );
-  }
-}
-
-class ImageData {
-  final String image;
-  final String name;
-
-  ImageData({required this.image, required this.name});
-
-  factory ImageData.fromJson(Map json) {
-    return ImageData(
-      image: json['image'],
-      name: json['name'],
     );
   }
 }

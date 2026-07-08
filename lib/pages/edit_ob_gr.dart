@@ -309,7 +309,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
 
   void uploadData() async {
-    var uri = Uri.parse('https://ivnovav.ru/api/upload_ob_gr.php');
+    var uri = Uri.parse('${Config.baseUrl}/api/upload_ob_gr.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

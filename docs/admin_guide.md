@@ -233,7 +233,7 @@ GET-параметры на `user_edit.php?id=…`:
 | Сброс по коду (в настройках) | `tp_admin_password_request_reset_otp` + `tp_admin_password_reset_logged_in_with_code` |
 | Сброс без входа | `login_reset.php` → `tp_admin_password_complete_reset` |
 
-Письма: `admin_mail.php` (`crg_admin_send_plain_mail`, отправитель `CRG_MAIL_FROM` или `no-reply@ivnovav.ru`).
+Письма: `admin_mail.php` (`crg_admin_send_plain_mail`, отправитель `CRG_MAIL_FROM` или `crg_site_mail_from()` из `include/site_config.php`).
 
 Минимальная длина нового пароля — **10** символов (`TP_ADMIN_PASSWORD_MIN_LEN`). После смены пароля `token` сбрасывается — нужен повторный вход.
 

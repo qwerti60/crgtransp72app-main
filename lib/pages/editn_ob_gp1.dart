@@ -347,7 +347,7 @@ class _editn_ob_gpForm extends State<editn_ob_gp> {
   }
 */
   void uploadData() async {
-    var uri = Uri.parse('https://ivnovav.ru/api/update_ob_gp_u.php');
+    var uri = Uri.parse('${Config.baseUrl}/api/update_ob_gp_u.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

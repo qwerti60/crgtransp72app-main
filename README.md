@@ -3,7 +3,7 @@
 Мобильное приложение маркетплейса грузоперевозок и спецтехники (Flutter + PHP API).
 
 **Версия приложения:** 6.0.0+26 (`pubspec.yaml`)  
-**Базовый URL API:** https://ivnovav.ru
+**Базовый URL API:** http://gruzoperevozki72.ru (см. `lib/config.dart`)
 
 ## Getting Started
 

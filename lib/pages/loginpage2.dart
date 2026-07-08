@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:crgtransp72app/config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -31,7 +32,7 @@ class _RegistrationScreenState extends State {
 
   Future checkUser() async {
     final response = await http.post(
-      Uri.parse('https://ivnovav.ru/register.php'),
+      Uri.parse('${Config.baseUrl}/register.php'),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
       },

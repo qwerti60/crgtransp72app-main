@@ -4,6 +4,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require __DIR__ . '/load_databd.php';
+require_once __DIR__ . '/include/site_config.php';
 require_once __DIR__ . '/include/jwt_bootstrap.php';
 
 if (!isset($_POST['email'], $_POST['password'])) {
@@ -65,8 +66,8 @@ if (!crg_jwt_autoload()) {
 }
 
 $payload = [
-    'iss' => 'ivnovav.ru',
-    'aud' => 'ivnovav.ru',
+    'iss' => crg_site_host(),
+    'aud' => crg_site_host(),
     'iat' => time(),
     'nbf' => time(),
     'exp' => time() + 3600,

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * CRUD справочников vidt / vidg / vidkuzov для веб-админки.
+ * CRUD справочников vidt / vidg / vidkuzov / gruzchik для веб-админки.
  */
 
 /** @return array<string, array<string, mixed>> */
@@ -34,6 +34,18 @@ function crg_admin_ref_types(): array
                 ['table' => 'orders', 'column' => 'maxgruz'],
                 ['table' => 'add_ob_gp', 'column' => 'maxgruz'],
                 ['table' => 'gruz_info', 'column' => 'maxgruz'],
+            ],
+        ],
+        'gruzchik' => [
+            'label' => 'Грузчики',
+            'table' => 'gruzchik',
+            'name_col' => 'name',
+            'nav' => 'gruzchik',
+            'api' => 'gruzchik.php',
+            'has_image' => true,
+            'refs' => [
+                ['table' => 'add_ob_gr', 'column' => 'gruzchik'],
+                ['table' => 'ordersg', 'column' => 'gruzchik'],
             ],
         ],
         'vidkuzov' => [
@@ -424,6 +436,121 @@ function crg_admin_ref_image_mime(string $bytes): string
 }
 
 /**
+ * Уменьшает картинку для превью в приложении (GD). Без GD — исходные байты.
+ */
+function crg_admin_ref_resize_image(string $bytes, int $maxWidth, int $jpegQuality = 82): string
+{
+    if ($maxWidth < 1 || $bytes === '' || !function_exists('imagecreatefromstring')) {
+        return $bytes;
+    }
+
+    $src = @imagecreatefromstring($bytes);
+    if ($src === false) {
+        return $bytes;
+    }
+
+    $width = imagesx($src);
+    $height = imagesy($src);
+    if ($width < 1 || $height < 1) {
+        imagedestroy($src);
+
+        return $bytes;
+    }
+    if ($width <= $maxWidth) {
+        imagedestroy($src);
+
+        return $bytes;
+    }
+
+    $newHeight = (int) max(1, round($height * ($maxWidth / $width)));
+    $dst = imagecreatetruecolor($maxWidth, $newHeight);
+    if ($dst === false) {
+        imagedestroy($src);
+
+        return $bytes;
+    }
+
+    imagealphablending($dst, false);
+    imagesavealpha($dst, true);
+    $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+    if ($transparent !== false) {
+        imagefill($dst, 0, 0, $transparent);
+    }
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $maxWidth, $newHeight, $width, $height);
+    imagedestroy($src);
+
+    ob_start();
+    $mime = crg_admin_ref_image_mime($bytes);
+    $ok = false;
+    if ($mime === 'image/png' || $mime === 'image/gif' || $mime === 'image/webp') {
+        $ok = imagepng($dst, null, 6);
+    } else {
+        $ok = imagejpeg($dst, null, max(50, min(95, $jpegQuality)));
+    }
+    imagedestroy($dst);
+    $out = ob_get_clean();
+
+    return ($ok && is_string($out) && $out !== '') ? $out : $bytes;
+}
+
+function crg_admin_ref_image_app_url(string $table, int $id, int $maxWidth = 480): string
+{
+    if (!function_exists('crg_site_api_url')) {
+        require_once __DIR__ . '/site_config.php';
+    }
+
+    $query = http_build_query([
+        'bd' => $table,
+        'id' => $id,
+        'w' => max(0, $maxWidth),
+    ]);
+
+    return crg_site_api_url('/ref_image_app.php?' . $query);
+}
+
+/**
+ * Сжимает загруженную в админке картинку перед сохранением в БД.
+ */
+function crg_admin_ref_prepare_upload_binary(string $binary, int $maxWidth = 1200): string
+{
+    return crg_admin_ref_resize_image($binary, $maxWidth, 82);
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function crg_admin_ref_image_items(
+    PDO $pdo,
+    string $tableName,
+    int $thumbWidth,
+    bool $legacyBase64 = false
+): array {
+    $sql = "SELECT id, name, image FROM `{$tableName}` WHERE LENGTH(image) > 0 ORDER BY id";
+    $stmt = $pdo->query($sql);
+    $images = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        $item = [
+            'id' => $id,
+            'name' => (string) ($row['name'] ?? ''),
+            'image_url' => crg_admin_ref_image_app_url($tableName, $id, $thumbWidth),
+        ];
+        if ($legacyBase64) {
+            $img = crg_admin_ref_blob_to_string($row['image'] ?? '');
+            if ($img !== '') {
+                $item['image'] = base64_encode($img);
+            }
+        }
+        $images[] = $item;
+    }
+
+    return $images;
+}
+
+/**
  * @param array<string, mixed> $cfg
  * @return true|string
  */
@@ -466,25 +593,14 @@ function crg_admin_ref_save_image(PDO $pdo, array $cfg, int $id, string $binary)
         return 'Пустой файл';
     }
 
+    $binary = crg_admin_ref_prepare_upload_binary($binary);
+
     $table = (string) $cfg['table'];
     try {
         $st = $pdo->prepare("UPDATE `{$table}` SET image = ? WHERE id = ?");
+        $st->bindValue(1, $binary, PDO::PARAM_LOB);
         $st->bindValue(2, $id, PDO::PARAM_INT);
-
-        $chunkSize = 1024 * 1024;
-        if (strlen($binary) > $chunkSize) {
-            $st->bindParam(1, $null, PDO::PARAM_LOB);
-            $null = null;
-            $st->execute();
-            $offset = 0;
-            while ($offset < strlen($binary)) {
-                $st->sendLongData(0, substr($binary, $offset, $chunkSize));
-                $offset += $chunkSize;
-            }
-        } else {
-            $st->bindValue(1, $binary, PDO::PARAM_LOB);
-            $st->execute();
-        }
+        $st->execute();
     } catch (Throwable $e) {
         return 'Не удалось сохранить картинку: ' . $e->getMessage();
     }
@@ -540,14 +656,6 @@ function crg_admin_ref_image_table_config(string $table): ?array
         if (($cfg['table'] ?? '') === $table && !empty($cfg['has_image'])) {
             return $cfg;
         }
-    }
-    if ($table === 'gruzchik') {
-        return [
-            'label' => 'Грузчики',
-            'table' => 'gruzchik',
-            'name_col' => 'name',
-            'has_image' => true,
-        ];
     }
 
     return null;

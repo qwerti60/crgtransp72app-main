@@ -1,6 +1,6 @@
 # Данные при регистрации, поиске и объявлениях (по коду приложения)
 
-Базовый URL API из `lib/config.dart`: **https://ivnovav.ru**
+Базовый URL API из `lib/config.dart`: **http://gruzoperevozki72.ru**
 
 **Свод сценариев и бизнес-логики (все промпты):** [docs/app_scenarios_ru.md](./docs/app_scenarios_ru.md)
 
@@ -51,7 +51,7 @@
 - **Эл. почта** — проверка формата
 - **Пароль** — минимум **8** символов, **буквы и цифры**
 - Галочка **«Принять пользовательское соглашение»** — по нажатию открывается ссылка:  
-  **`https://ivnovav.ru/api/agreement.html`** (см. `_launchURL` в том же файле)
+  **`http://gruzoperevozki72.ru/api/agreement.html`** (см. `_launchURL` в том же файле)
 - Подтверждение e-mail: код через `POST /api/request_registration_code.php` и `POST /api/verify_registration_code.php`
 
 **Куда идёт после шага 3** (упрощённо):
@@ -195,11 +195,11 @@
 
 | Назначение | URL |
 |------------|-----|
-| База приложения | https://ivnovav.ru |
-| Пользовательское соглашение (регистрация) | https://ivnovav.ru/api/agreement.html |
+| База приложения | http://gruzoperevozki72.ru |
+| Пользовательское соглашение (регистрация) | http://gruzoperevozki72.ru/api/agreement.html |
 | Telegram-группа (кнопка на авторизации) | https://t.me/+bocT1PzkmNIyZmQy |
-| Вход | `POST https://ivnovav.ru/api/autoriz1.php` |
-| Сброс пароля | `https://ivnovav.ru/api/request_password_reset.php`, `…/confirm_password_reset.php` |
+| Вход | `POST http://gruzoperevozki72.ru/api/autoriz1.php` |
+| Сброс пароля | `http://gruzoperevozki72.ru/api/request_password_reset.php`, `…/confirm_password_reset.php` |
 
 В проекте по **`lib/`** для экрана авторизации найдена **только ссылка на Telegram**; отдельных кнопок VK / WhatsApp в `loginpage.dart` нет.
 

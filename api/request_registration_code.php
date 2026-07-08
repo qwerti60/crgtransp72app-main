@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
+require_once __DIR__ . '/include/admin_mail.php';
 
 $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -54,12 +55,14 @@ if (!$ok) {
 
 $subject = 'Код подтверждения регистрации';
 $message = "Ваш код подтверждения регистрации: {$code}\nКод действует 15 минут.";
-$headers = "From: no-reply@ivnovav.ru\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-if (!@mail($email, $subject, $message, $headers)) {
+$mailRes = crg_admin_send_plain_mail($email, $subject, $message);
+if ($mailRes !== true) {
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'Не удалось отправить e-mail']);
+    echo json_encode([
+        'status' => 'error',
+        'message' => is_string($mailRes) ? $mailRes : 'Не удалось отправить e-mail',
+    ]);
     $conn->close();
     exit;
 }

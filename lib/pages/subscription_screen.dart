@@ -330,7 +330,7 @@ Future<void> uploadData({
   required PaymentType selectedPaymentType,
   required PaymentType1 selectedPaymentType1,
 }) async {
-  final uri = Uri.parse('https://ivnovav.ru/api/updatePayment.php');
+  final uri = Uri.parse('${Config.baseUrl}/api/updatePayment.php');
 
   try {
     final response = await http.post(uri, body: {

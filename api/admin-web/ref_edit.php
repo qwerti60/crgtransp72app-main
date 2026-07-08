@@ -100,7 +100,7 @@ tp_admin_web_layout_start('Редактирование — ' . (string) $cfg['l
     <?php if ($hasImage) { ?>
         <p class="meta">Картинка для приложения (<code>getimage.php?bd=<?= tp_admin_web_h((string) $cfg['table']) ?></code>):</p>
         <?php if ($showPreview) { ?>
-            <p><img class="thumb-preview" src="ref_image.php?type=<?= tp_admin_web_h($type) ?>&id=<?= (int) $id ?>" alt=""></p>
+            <p><img class="thumb-preview" src="ref_image.php?type=<?= tp_admin_web_h($type) ?>&id=<?= (int) $id ?>&w=240" alt=""></p>
         <?php } else { ?>
             <p class="warn">Картинка не загружена — в приложении плитка может быть пустой.</p>
         <?php } ?>

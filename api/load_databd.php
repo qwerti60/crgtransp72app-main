@@ -35,3 +35,31 @@ function crg_db_config(): array
         'dbname' => (string) $dbname,
     ];
 }
+
+function crg_mysqli_connect(): mysqli
+{
+    $db = crg_db_config();
+    $conn = new mysqli($db['host'], $db['username'], $db['password'], $db['dbname']);
+    if ($conn->connect_error) {
+        throw new RuntimeException('Ошибка подключения к БД: ' . $conn->connect_error);
+    }
+    $conn->set_charset('utf8mb4');
+
+    return $conn;
+}
+
+function crg_pdo_connect(): PDO
+{
+    $db = crg_db_config();
+    $pdo = new PDO(
+        sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $db['host'], $db['dbname']),
+        $db['username'],
+        $db['password'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]
+    );
+
+    return $pdo;
+}

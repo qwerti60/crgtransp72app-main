@@ -2,7 +2,7 @@
 # Smoke-тест search_order_counts.php (см. docs/search_future_ru.md §5.2)
 set -euo pipefail
 
-BASE_URL="${1:-https://ivnovav.ru}"
+BASE_URL="${1:-http://gruzoperevozki72.ru}"
 USE_ID="${2:-2}"
 CITY="${3:-Винзили}"
 

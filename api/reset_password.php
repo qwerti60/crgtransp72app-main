@@ -4,6 +4,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 include 'databd.php';
+require_once __DIR__ . '/include/site_config.php';
 
 $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
 
@@ -108,16 +109,15 @@ if (!$okUpdate) {
 
 $subject = 'Восстановление пароля';
 $message = "Здравствуйте!\n\nВаш новый пароль: {$newPassword}\n\nРекомендуем сменить пароль после входа.";
-$headers = "From: no-reply@ivnovav.ru\r\n";
-$headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-$mailSent = @mail($email, $subject, $message, $headers);
+require_once __DIR__ . '/include/admin_mail.php';
+$mailSent = crg_admin_send_plain_mail($email, $subject, $message);
 
-if (!$mailSent) {
+if ($mailSent !== true) {
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Пароль обновлен, но не удалось отправить e-mail',
+        'message' => is_string($mailSent) ? $mailSent : 'Пароль обновлен, но не удалось отправить e-mail',
     ]);
     $conn->close();
     exit;

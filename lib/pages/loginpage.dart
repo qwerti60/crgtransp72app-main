@@ -34,6 +34,7 @@ class _LoginState extends State<LoginPage> {
   final TextEditingController _resetCodeController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   bool _obscureNewPassword = true;
+  String? _passwordResetSentToEmail;
 
   Future<String?> _requestPasswordResetCode(String email) async {
     try {
@@ -48,10 +49,16 @@ class _LoginState extends State<LoginPage> {
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200 && data['status'] == 'success') {
+        _passwordResetSentToEmail =
+            data['email']?.toString().trim().isNotEmpty == true
+                ? data['email'].toString().trim()
+                : email.trim();
         return null;
       }
+      _passwordResetSentToEmail = null;
       return data['message']?.toString() ?? 'Не удалось отправить код';
     } catch (_) {
+      _passwordResetSentToEmail = null;
       return 'Нет связи с сервером. Проверьте интернет.';
     }
   }
@@ -148,14 +155,18 @@ class _LoginState extends State<LoginPage> {
                           if (!dialogContext.mounted) return;
 
                           if (error == null) {
+                            final sentTo = _passwordResetSentToEmail ?? email;
                             Navigator.of(dialogContext).pop();
                             if (!mounted) return;
                             ScaffoldMessenger.of(this.context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Код отправлен на e-mail'),
+                              SnackBar(
+                                content: Text(
+                                  'Код отправлен на $sentTo. Проверьте входящие и спам.',
+                                ),
+                                duration: const Duration(seconds: 6),
                               ),
                             );
-                            await _showConfirmResetDialog(email);
+                            await _showConfirmResetDialog(sentTo);
                             return;
                           }
 

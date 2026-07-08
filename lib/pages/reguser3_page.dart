@@ -81,11 +81,8 @@ class creguser3name extends StatefulWidget {
 }
 
 void _launchURL() async {
-  const url =
-      '${Config.baseUrl}/api/agreement.html'; // Укажите здесь URL вашего пользовательского соглашения
-  if (await canLaunch(url)) {
-    await launch(url);
-  } else {
+  final url = Uri.parse('${Config.baseUrl}/api/agreement.html');
+  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
     throw 'Не могу открыть $url';
   }
 }
@@ -427,17 +424,14 @@ class _CregUser3NameState extends State<creguser3name> {
               margin: const EdgeInsets.only(top: 10.0),
               child: CheckboxListTile(
                 controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero, // Убираем отступ, если нужно
+                contentPadding: EdgeInsets.zero,
                 title: GestureDetector(
-                  onTap: () {
-                    _launchURL();
-                  },
+                  onTap: _launchURL,
                   child: const Text(
-                    "Принять пользовательское соглашение",
+                    'Принять пользовательское соглашение',
                     style: TextStyle(
-                      color: Colors.blue, // Цвет текста-ссылки
-                      decoration: TextDecoration
-                          .underline, // Подчеркивание как у ссылок
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
@@ -510,7 +504,7 @@ class _CregUser3NameState extends State<creguser3name> {
                       return;
                     } else if (_isChecked == false) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Примте пользовательское соглашение')));
+                          content: Text('Примите пользовательское соглашение')));
                       return;
                     }
 

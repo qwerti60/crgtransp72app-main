@@ -23,6 +23,14 @@ if ($bytes === null) {
     exit;
 }
 
+$maxWidth = (int) ($_GET['w'] ?? 0);
+if ($maxWidth > 0) {
+    if ($maxWidth > 1600) {
+        $maxWidth = 1600;
+    }
+    $bytes = crg_admin_ref_resize_image($bytes, $maxWidth);
+}
+
 header('Content-Type: ' . crg_admin_ref_image_mime($bytes));
 header('Cache-Control: private, max-age=300');
 echo $bytes;

@@ -103,7 +103,7 @@ tp_admin_web_layout_start((string) $cfg['label'], $navKey, $adminLogin !== '' ? 
                 <td><?= tp_admin_web_h($name) ?></td>
                 <?php if (!empty($cfg['has_image'])) { ?>
                     <td><?php if (!empty($r['has_image'])) { ?>
-                        <img class="thumb-preview" src="ref_image.php?type=<?= tp_admin_web_h($type) ?>&id=<?= $id ?>" alt="">
+                        <img class="thumb-preview" src="ref_image.php?type=<?= tp_admin_web_h($type) ?>&id=<?= $id ?>&w=120" alt="">
                     <?php } else { ?><span class="meta">нет</span><?php } ?></td>
                 <?php } ?>
                 <td class="num"><?= $usage > 0 ? (int) $usage : '<span class="meta">0</span>' ?></td>
