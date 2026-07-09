@@ -9,52 +9,117 @@ cd "$ROOT"
 RAW_DIR="$ROOT/store_assets/screenshots/_raw/iphone"
 mkdir -p "$RAW_DIR"
 
-pick_simulator() {
-  local preferred="${1:-}"
-  if [[ -n "$preferred" ]] && xcrun simctl list devices available | grep -q "$preferred"; then
-    echo "$preferred"
-    return
-  fi
-  # Предпочитаем Pro Max / Plus (большие экраны для стора)
-  local candidates=(
-    "iPhone 16 Pro Max"
-    "iPhone 15 Pro Max"
-    "iPhone 16 Plus"
-    "iPhone 16 Pro"
-    "iPhone 16"
-    "iPhone 15 Pro"
-    "iPhone 15"
-  )
-  for name in "${candidates[@]}"; do
-    if xcrun simctl list devices available | grep -q "$name"; then
-      echo "$name"
-      return
-    fi
-  done
-  # Любой доступный iPhone
-  xcrun simctl list devices available | sed -n 's/.*\(iPhone [^()]*(.*)\) (.*/\1/p' | head -1 | sed 's/ (.*//'
+echo "=== Available simulators ==="
+xcrun simctl list devices available || true
+echo "=== Flutter devices (before boot) ==="
+flutter devices || true
+
+# Выбираем UDID доступного iPhone (JSON от simctl — надёжнее имени).
+# Предпочитаем Pro Max / Plus, иначе любой iPhone.
+resolve_udid() {
+  python3 - <<'PY'
+import json, subprocess, sys
+
+preferred = [
+    "iPhone 16 Pro Max",
+    "iPhone 17 Pro Max",
+    "iPhone 15 Pro Max",
+    "iPhone 16 Plus",
+    "iPhone 16 Pro",
+    "iPhone 17 Pro",
+    "iPhone 16",
+    "iPhone 15 Pro",
+    "iPhone 15",
+]
+
+raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"], text=True)
+data = json.loads(raw)
+
+# name -> [(udid, runtime)]
+by_name = {}
+for runtime, devices in data.get("devices", {}).items():
+    if "iOS" not in runtime and "iphoneos" not in runtime.lower():
+        # всё равно берём — на CI runtime ключ вида com.apple.CoreSimulator.SimRuntime.iOS-18-3
+        pass
+    for d in devices:
+        if d.get("isAvailable") is False:
+            continue
+        name = d.get("name") or ""
+        udid = d.get("udid") or ""
+        if not name.startswith("iPhone") or not udid:
+            continue
+        by_name.setdefault(name, []).append(udid)
+
+# 1) точное совпадение из env
+env_name = __import__("os").environ.get("IOS_PHONE_DEVICE", "").strip()
+if env_name and env_name in by_name:
+    print(by_name[env_name][0])
+    print(env_name, file=sys.stderr)
+    sys.exit(0)
+
+# 2) предпочтительные имена
+for name in preferred:
+    if name in by_name:
+        print(by_name[name][0])
+        print(name, file=sys.stderr)
+        sys.exit(0)
+
+# 3) любой iPhone (сначала с Pro Max / Plus в имени)
+ranked = sorted(
+    by_name.items(),
+    key=lambda kv: (
+        0 if "Pro Max" in kv[0] else 1 if "Plus" in kv[0] else 2 if "Pro" in kv[0] else 3,
+        kv[0],
+    ),
+)
+if not ranked:
+    sys.exit(1)
+name, udids = ranked[0]
+print(udids[0])
+print(name, file=sys.stderr)
+PY
 }
 
-DEVICE="${IOS_PHONE_DEVICE:-}"
-if [[ -z "$DEVICE" ]]; then
-  DEVICE="$(pick_simulator)"
-fi
-if [[ -z "$DEVICE" ]]; then
-  echo "ERROR: no iPhone simulator available"
+set +e
+UDID_AND_ERR="$(resolve_udid 2>/tmp/sim_name.txt)"
+RC=$?
+set -e
+DEVICE_NAME="$(cat /tmp/sim_name.txt 2>/dev/null || true)"
+UDID="$(echo "$UDID_AND_ERR" | head -1 | tr -d '[:space:]')"
+
+if [[ $RC -ne 0 || -z "$UDID" ]]; then
+  echo "ERROR: no available iPhone simulator found"
   xcrun simctl list devices available || true
   exit 1
 fi
 
-echo "Using simulator: $DEVICE"
-xcrun simctl boot "$DEVICE" 2>/dev/null || true
-xcrun simctl bootstatus "$DEVICE" -b
+echo "Using simulator: ${DEVICE_NAME:-unknown} (UDID=$UDID)"
 
-# UDID для flutter -d
-UDID="$(xcrun simctl list devices booted | grep "$DEVICE" | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' | head -1)"
-if [[ -z "$UDID" ]]; then
-  UDID="$DEVICE"
+xcrun simctl boot "$UDID" 2>/dev/null || true
+xcrun simctl bootstatus "$UDID" -b
+# Flutter часто не видит симулятор, пока не открыт Simulator.app
+open -a Simulator || true
+sleep 3
+
+echo "=== Flutter devices (after boot) ==="
+flutter devices || true
+
+# Проверяем, что Flutter видит UDID
+if ! flutter devices 2>/dev/null | grep -qi "$UDID"; then
+  echo "WARNING: Flutter does not list UDID yet, waiting..."
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 2
+    if flutter devices 2>/dev/null | grep -qi "$UDID"; then
+      break
+    fi
+  done
 fi
-echo "Flutter device: $UDID"
+
+if ! flutter devices 2>/dev/null | grep -qi "$UDID"; then
+  echo "ERROR: Flutter still cannot see simulator $UDID"
+  flutter devices || true
+  exit 148
+fi
 
 flutter pub get
 (
@@ -63,12 +128,11 @@ flutter pub get
   pod install
 )
 
-echo "=== Capture screenshots via flutter drive ==="
+echo "=== Capture screenshots via flutter drive -d $UDID ==="
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/store_screenshots_test.dart \
-  -d "$UDID" \
-  --reporter expanded
+  -d "$UDID"
 
 # Fallback: если драйвер положил файлы в другое место
 if ! ls "$RAW_DIR"/*.png >/dev/null 2>&1; then

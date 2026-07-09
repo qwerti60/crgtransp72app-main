@@ -9,9 +9,7 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      vars:
-        # Переопределите при необходимости (должен быть доступен на билдере)
-        IOS_PHONE_DEVICE: iPhone 16 Pro Max
+      # IOS_PHONE_DEVICE опционален — скрипт сам найдёт доступный iPhone по UDID
     scripts:
       - name: Create GoogleService-Info.plist
         script: |
