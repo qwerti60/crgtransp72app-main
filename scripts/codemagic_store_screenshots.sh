@@ -102,24 +102,29 @@ open -a Simulator || true
 sleep 3
 
 echo "=== Flutter devices (after boot) ==="
-flutter devices || true
+# Важно: список устройств Flutter часто пишет в stderr — не глушим его.
+flutter devices 2>&1 | tee /tmp/flutter_devices.txt || true
 
-# Проверяем, что Flutter видит UDID
-if ! flutter devices 2>/dev/null | grep -qi "$UDID"; then
-  echo "WARNING: Flutter does not list UDID yet, waiting..."
-  for i in 1 2 3 4 5 6 7 8 9 10; do
+# Ждём появления UDID в выводе (stdout+stderr), без ложного fail.
+if ! grep -qi "$UDID" /tmp/flutter_devices.txt; then
+  echo "Waiting for Flutter to list simulator $UDID..."
+  for i in $(seq 1 15); do
     sleep 2
-    if flutter devices 2>/dev/null | grep -qi "$UDID"; then
+    flutter devices 2>&1 | tee /tmp/flutter_devices.txt || true
+    if grep -qi "$UDID" /tmp/flutter_devices.txt; then
+      echo "Simulator visible after ${i}x2s"
       break
     fi
   done
 fi
 
-if ! flutter devices 2>/dev/null | grep -qi "$UDID"; then
+if ! grep -qi "$UDID" /tmp/flutter_devices.txt; then
   echo "ERROR: Flutter still cannot see simulator $UDID"
-  flutter devices || true
+  cat /tmp/flutter_devices.txt || true
   exit 148
 fi
+
+echo "OK: Flutter sees $UDID — continuing"
 
 flutter pub get
 (
