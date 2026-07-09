@@ -1,10 +1,22 @@
 # Скриншоты для App Store и Google Play
 
-Автогенерация:
+## Codemagic (рекомендуется)
+
+1. В Codemagic → **Start new build** → workflow **Store Screenshots**
+2. После успеха скачайте артефакты:
+   - `store-screenshots.zip`
+   - или отдельные PNG из `ios/` и `google_play/`
+3. Загрузите в App Store Connect / Google Play Console
+
+Скрипт на CI: `scripts/codemagic_store_screenshots.sh`  
+(симулятор iPhone → `flutter drive` → ресайз под все размеры сторов)
+
+## Локально
 
 ```bash
 chmod +x scripts/generate_store_screenshots.sh
-./scripts/generate_store_screenshots.sh
+./scripts/generate_store_screenshots.sh --simulator   # живые экраны
+./scripts/generate_store_screenshots.sh --headless    # быстрый ImageMagick-рендер
 ```
 
 ## Структура после генерации

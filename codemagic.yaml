@@ -1,4 +1,47 @@
 workflows:
+  store-screenshots:
+    name: Store Screenshots
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - Secret
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        # Переопределите при необходимости (должен быть доступен на билдере)
+        IOS_PHONE_DEVICE: iPhone 16 Pro Max
+    scripts:
+      - name: Create GoogleService-Info.plist
+        script: |
+          if [ -f ios/Runner/GoogleService-Info.plist ]; then
+            echo "Using ios/Runner/GoogleService-Info.plist from repository"
+          elif [ -n "${GOOGLE_SERVICE_INFO_PLIST_BASE64:-}" ]; then
+            printf '%s' "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            plutil -lint ios/Runner/GoogleService-Info.plist
+          else
+            echo "WARNING: GoogleService-Info.plist missing — screenshots may still work for guest screens"
+          fi
+      - name: Capture and resize store screenshots
+        script: |
+          set -e
+          chmod +x scripts/codemagic_store_screenshots.sh scripts/generate_store_screenshots.sh
+          ./scripts/codemagic_store_screenshots.sh
+      - name: Package screenshot zip
+        script: |
+          set -e
+          cd store_assets/screenshots
+          zip -r "$CM_BUILD_DIR/store-screenshots.zip" ios google_play _raw README.md 2>/dev/null || \
+            zip -r "$CM_BUILD_DIR/store-screenshots.zip" ios google_play _raw
+          ls -lh "$CM_BUILD_DIR/store-screenshots.zip"
+          echo "PNG count: $(find . -name '*.png' | wc -l)"
+    artifacts:
+      - store-screenshots.zip
+      - store_assets/screenshots/ios/**/*.png
+      - store_assets/screenshots/google_play/**/*.png
+      - store_assets/screenshots/_raw/**/*.png
+
   ios-release:
     name: iOS Release
     max_build_duration: 120

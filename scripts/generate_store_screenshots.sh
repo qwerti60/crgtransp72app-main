@@ -3,8 +3,8 @@
 # Требования: macOS, Xcode Simulator, Flutter, sips (встроен в macOS).
 #
 # Использование:
-#   ./scripts/generate_store_screenshots.sh              # headless (рекомендуется)
-#   ./scripts/generate_store_screenshots.sh --simulator  # iOS Simulator (нужно ~5 ГБ на диске)
+#   ./scripts/generate_store_screenshots.sh              # iOS Simulator (по умолчанию)
+#   ./scripts/generate_store_screenshots.sh --headless   # без сборки iOS (быстрее, но без сети)
 #   ./scripts/generate_store_screenshots.sh --ios-only
 #   ./scripts/generate_store_screenshots.sh --resize-only
 #
@@ -125,12 +125,14 @@ run_on_simulator() {
 
 run_headless() {
   echo ""
-  echo "=== Headless widget test (без iOS-сборки) ==="
-  flutter test test/store_screenshots_test.dart --reporter expanded
+  echo "=== Headless render (ImageMagick) ==="
+  python3 "$ROOT/scripts/render_store_screenshots.py"
 }
 
 if [[ "$RESIZE_ONLY" == false ]]; then
   echo "flutter pub get..."
+  export TMPDIR="${TMPDIR:-$ROOT/android/.tmp}"
+  mkdir -p "$TMPDIR"
   flutter pub get
 
   if [[ "$USE_SIMULATOR" == true ]]; then

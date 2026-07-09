@@ -8,12 +8,24 @@
 
 ## 1. Быстрый старт
 
-На Mac с Xcode и Flutter:
+### Codemagic (рекомендуется)
+
+Workflow: **Store Screenshots** (`store-screenshots` в `codemagic.yaml`).
+
+1. Codemagic → Start new build → **Store Screenshots**
+2. Скачайте `store-screenshots.zip` из Artifacts
+3. Загрузите PNG в App Store Connect / Google Play
+
+На билдере: iOS Simulator → `flutter drive` → ресайз (`sips`) под все размеры.
+
+### Локально (Mac + Xcode)
 
 ```bash
 cd /path/to/crgtransp72app-main
-chmod +x scripts/generate_store_screenshots.sh
-./scripts/generate_store_screenshots.sh
+chmod +x scripts/generate_store_screenshots.sh scripts/codemagic_store_screenshots.sh
+./scripts/generate_store_screenshots.sh --simulator
+# или как на CI:
+./scripts/codemagic_store_screenshots.sh
 ```
 
 Результат: `store_assets/screenshots/` — все размеры для обеих площадок.
@@ -22,13 +34,15 @@ chmod +x scripts/generate_store_screenshots.sh
 
 | Флаг | Действие |
 |------|----------|
+| `--simulator` | съёмка на iOS Simulator |
+| `--headless` | ImageMagick-рендер без симулятора |
 | `--ios-only` | только iPhone (без iPad-симулятора) |
 | `--resize-only` | только ресайз из `_raw/` (без новой съёмки) |
 
 Переменные:
 
 ```bash
-IOS_PHONE_DEVICE="iPhone 16 Pro Max" ./scripts/generate_store_screenshots.sh
+IOS_PHONE_DEVICE="iPhone 16 Pro Max" ./scripts/generate_store_screenshots.sh --simulator
 ```
 
 ---

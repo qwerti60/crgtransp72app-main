@@ -1,13 +1,19 @@
 import 'package:crgtransp72app/design/app_theme.dart';
-import 'package:crgtransp72app/navigation/shell_bottom_nav_spec.dart';
 import 'package:crgtransp72app/pages/zakaz_screen1.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Автосъёмка экранов для App Store / Google Play.
-/// Запуск: scripts/generate_store_screenshots.sh
+/// Автосъёмка экранов для App Store / Google Play (без debug banner).
+///
+/// Локально:
+///   ./scripts/generate_store_screenshots.sh --simulator
+///
+/// Codemagic:
+///   ./scripts/codemagic_store_screenshots.sh
+///   (workflow `store-screenshots`)
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -16,42 +22,47 @@ void main() {
     await binding.takeScreenshot(name);
   }
 
-  Future<void> settle(WidgetTester tester, {int seconds = 12}) async {
-    await tester.pumpAndSettle(Duration(seconds: seconds));
+  Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
   }
 
-  group('Store screenshots — заказчик', () {
-    testWidgets('customer catalog and search', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: crgAppTheme(),
-          home: const MyApp(initialPage: 0),
-        ),
-      );
-      await settle(tester, seconds: 14);
-      await snap('01_customer_services');
+  Widget app(Widget home) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: crgAppTheme(),
+      home: home,
+    );
+  }
 
-      await tester.tap(find.text(CustomerShellNav.tabOrders));
-      await settle(tester, seconds: 10);
-      await snap('02_customer_search');
-    });
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
   });
 
-  group('Store screenshots — исполнитель', () {
-    testWidgets('performer listings and applications', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: crgAppTheme(),
-          home: const MyAppZakazScreen(initialPage: 0),
-        ),
-      );
-      await settle(tester, seconds: 14);
-      await snap('03_performer_listings');
+  group('Store screenshots', () {
+    testWidgets('01 customer services', (tester) async {
+      await tester.pumpWidget(app(const MyApp(initialPage: 0)));
+      await settle(tester);
+      await snap('01_customer_services');
+    });
 
-      await tester.tap(find.text(PerformerShellNav.tabApplications));
-      await settle(tester, seconds: 10);
+    testWidgets('02 customer search', (tester) async {
+      await tester.pumpWidget(app(const MyApp(initialPage: 1)));
+      await settle(tester);
+      await snap('02_customer_search');
+    });
+
+    testWidgets('03 performer listings', (tester) async {
+      await tester.pumpWidget(app(const MyAppZakazScreen(initialPage: 0)));
+      await settle(tester);
+      await snap('03_performer_listings');
+    });
+
+    testWidgets('04 performer search', (tester) async {
+      await tester.pumpWidget(app(const MyAppZakazScreen(initialPage: 1)));
+      await settle(tester);
       await snap('04_performer_search');
     });
   });
