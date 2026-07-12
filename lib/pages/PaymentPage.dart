@@ -90,27 +90,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
     debugPrint('STATUS CODE: ${response.statusCode}');
     debugPrint('BODY RESPONSE: ${response.body}');
 
-    if (response.statusCode == 200) {
-      try {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (e) {
-        debugPrint('JSON Error: $e');
+    // У шлюза Альфа-Банка HTTP 200 ≠ успех операции: смотрим JSON
+    // (success == true или errorCode == 0).
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
       }
+      return {
+        'errorCode': '1',
+        'errorMessage': 'Неожиданный формат ответа банка',
+      };
+    } catch (e) {
+      debugPrint('JSON Error: $e');
+      return {
+        'errorCode': '1',
+        'errorMessage':
+            'Ответ не JSON (HTTP ${response.statusCode}): ${response.body.length > 180 ? response.body.substring(0, 180) : response.body}',
+      };
     }
-
-    return {
-      'errorCode': response.statusCode.toString(),
-      'errorMessage': response.reasonPhrase ?? 'Unknown error',
-    };
   }
 
   void _handleStatusResponse(Map<String, dynamic> response) {
-    final int? orderStatus = response['OrderStatus'] as int?;
-    final String? errorCode = response['ErrorCode']?.toString();
-    final String? errorMessage = response['ErrorMessage']?.toString();
+    final orderStatusRaw =
+        response['orderStatus'] ?? response['OrderStatus'];
+    final int? orderStatus = orderStatusRaw is int
+        ? orderStatusRaw
+        : int.tryParse(orderStatusRaw?.toString() ?? '');
+    final String? errorCode = response['errorCode']?.toString() ??
+        response['ErrorCode']?.toString();
+    final String? errorMessage = response['errorMessage']?.toString() ??
+        response['ErrorMessage']?.toString();
+
+    if (!_isBankSuccess(response) && orderStatus == null) {
+      setState(() {
+        statusText =
+            '⚠️ Статус: Ошибка\nКод: ${errorCode ?? 'N/A'}\nСообщение: ${errorMessage ?? 'N/A'}';
+      });
+      return;
+    }
 
     String displayText;
-    if (orderStatus == 0) {
+    if (orderStatus == 0 || orderStatus == 1) {
       displayText = '⏳ Статус: В обработке\nКод: $orderStatus';
     } else if (orderStatus == 2) {
       displayText = '✅ Подписка успешно оплачена!';
@@ -212,38 +233,60 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
   }
 
+  bool _isBankSuccess(Map<String, dynamic> response) {
+    if (response['success'] == true || response['success'] == 'true') {
+      return true;
+    }
+    final code = response['errorCode']?.toString() ??
+        response['ErrorCode']?.toString();
+    // Успех: errorCode отсутствует или равен 0
+    return code == null || code == '0';
+  }
+
   void _handleRegisterResponse(Map<String, dynamic> response) {
-    if (response.containsKey('errorCode')) {
+    final errorCode = response['errorCode']?.toString() ??
+        response['ErrorCode']?.toString();
+    final errorMessage = response['errorMessage']?.toString() ??
+        response['ErrorMessage']?.toString() ??
+        'Ошибка банка';
+
+    if (!_isBankSuccess(response)) {
       setState(() {
-        statusText =
-            'Ошибка #${response['errorCode']}: ${response['errorMessage']}';
+        statusText = 'Ошибка #$errorCode: $errorMessage';
       });
       return;
     }
 
     final formUrl = response['formUrl'];
+    final registeredOrderId = response['orderId']?.toString();
+
+    if (formUrl == null || formUrl.toString().isEmpty) {
+      setState(() {
+        statusText =
+            'Банк не вернул ссылку на оплату (orderId: ${registeredOrderId ?? '—'})';
+      });
+      return;
+    }
 
     setState(() {
-      orderId = response['orderId']?.toString();
+      orderId = registeredOrderId;
       statusText = 'Перенаправление на оплату...';
     });
 
-    if (formUrl != null) {
-      Navigator.of(context)
-          .push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => PaymentWebViewScreen(paymentUrl: formUrl.toString()),
-        ),
-      )
-          .then((_) {
-        if (!mounted) return;
-        debugPrint(
-          '[DEBUG] Пользователь вернулся с экрана оплаты. Запускаем таймер.',
-        );
-        _startStatusTimer();
-        _fetchSubscriptionStatus();
-      });
-    }
+    Navigator.of(context)
+        .push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PaymentWebViewScreen(paymentUrl: formUrl.toString()),
+      ),
+    )
+        .then((_) {
+      if (!mounted) return;
+      debugPrint(
+        '[DEBUG] Пользователь вернулся с экрана оплаты. Запускаем таймер.',
+      );
+      _startStatusTimer();
+      _fetchSubscriptionStatus();
+    });
   }
 
   Future<void> _registerOrder() async {
@@ -290,10 +333,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final data = {'orderId': subscriptionPaymentOrderId!};
       final response = await _sendPostRequest('reverse.do', data);
 
-      final errorCode = response['errorCode']?.toString();
-      final errorMessage = response['errorMessage']?.toString() ?? 'Ошибка';
+      final errorCode = response['errorCode']?.toString() ??
+          response['ErrorCode']?.toString();
+      final errorMessage = response['errorMessage']?.toString() ??
+          response['ErrorMessage']?.toString() ??
+          'Ошибка';
 
-      if (errorCode == '0') {
+      if (_isBankSuccess(response)) {
         final bool dbUpdated = await _decreaseSubscriptionAfterCancel();
         if (!dbUpdated) {
           setState(() {

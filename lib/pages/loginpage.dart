@@ -578,7 +578,7 @@ class _LoginState extends State<LoginPage> {
                   foregroundColor: MaterialStateProperty.all(Colors.blueAccent),
                 ),
                 onPressed: () {
-                  launchUrlString("https://t.me/+bocT1PzkmNIyZmQy");
+                  launchUrlString("https://web.max.ru/-70801283711178");
                 },
               ),
             )
