@@ -19,6 +19,7 @@ $conn->set_charset("utf8mb4");
 
 $table = null;
 $condition = "";
+$bindName = false;
 
 $sqlCheckDdObGP = "SELECT 1 FROM add_ob_gp WHERE maxgruz = ? LIMIT 1";
 $stmt = $conn->prepare($sqlCheckDdObGP);
@@ -28,6 +29,7 @@ $resultDdObGP = $stmt->get_result();
 if ($resultDdObGP && $resultDdObGP->num_rows > 0) {
     $table = 'add_ob_gp';
     $condition = "AND a.maxgruz = ?";
+    $bindName = true;
 } else {
     $sqlCheckAddObVidt = "SELECT 1 FROM add_ob_vidt WHERE vidt = ? LIMIT 1";
     $stmt = $conn->prepare($sqlCheckAddObVidt);
@@ -38,12 +40,24 @@ if ($resultDdObGP && $resultDdObGP->num_rows > 0) {
     if ($resultAddObVidt && $resultAddObVidt->num_rows > 0) {
         $table = 'add_ob_vidt';
         $condition = "AND a.vidt = ?";
+        $bindName = true;
     } else {
-        $sqlCheckAddObGr = "SELECT 1 FROM add_ob_gr LIMIT 1";
-        $resultAddObGr = $conn->query($sqlCheckAddObGr);
-        if ($resultAddObGr && $resultAddObGr->num_rows > 0) {
+        // Справочники: не подменять любую категорию на «все грузчики»
+        require_once __DIR__ . '/include/search_services_core.php';
+        $resolved = search_resolve_category($conn, $nameImg);
+        $bdResolved = (int) ($resolved['bd'] ?? 0);
+        if ($bdResolved === 1) {
+            $table = 'add_ob_gp';
+            $condition = "AND a.maxgruz = ?";
+            $bindName = true;
+        } elseif ($bdResolved === 2) {
+            $table = 'add_ob_vidt';
+            $condition = "AND a.vidt = ?";
+            $bindName = true;
+        } elseif ($bdResolved === 3) {
             $table = 'add_ob_gr';
             $condition = "";
+            $bindName = false;
         }
     }
 }

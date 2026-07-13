@@ -41,9 +41,16 @@ if ($resultDdObGP && $resultDdObGP->num_rows > 0) {
         $table = 'add_ob_vidt';
         $condition = "AND a.vidt = ?";
     } else {
-        $sqlCheckAddObGr = "SELECT 1 FROM add_ob_gr LIMIT 1";
-        $resultAddObGr = $conn->query($sqlCheckAddObGr);
-        if ($resultAddObGr && $resultAddObGr->num_rows > 0) {
+        require_once __DIR__ . '/include/search_services_core.php';
+        $resolved = search_resolve_category($conn, $nameImg);
+        $bdResolved = (int) ($resolved['bd'] ?? 0);
+        if ($bdResolved === 1) {
+            $table = 'add_ob_gp';
+            $condition = "AND a.maxgruz = ?";
+        } elseif ($bdResolved === 2) {
+            $table = 'add_ob_vidt';
+            $condition = "AND a.vidt = ?";
+        } elseif ($bdResolved === 3) {
             $table = 'add_ob_gr';
             $condition = "";
         }

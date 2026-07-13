@@ -87,6 +87,7 @@ function search_resolve_supply_category(mysqli $conn, string $nameImg): ?array
         return null;
     }
 
+    // 1) По фактическим объявлениям (как в get_ads2_new).
     $stmt = $conn->prepare('SELECT 1 FROM add_ob_gp WHERE maxgruz = ? LIMIT 1');
     $stmt->bind_param('s', $nameImg);
     $stmt->execute();
@@ -101,17 +102,13 @@ function search_resolve_supply_category(mysqli $conn, string $nameImg): ?array
         return ['bd' => 2, 'demand' => 'orderst', 'supply' => 'add_ob_vidt', 'category_field' => 'vidt'];
     }
 
+    // 2) По справочникам vidg / vidt / gruzchik — даже если объявлений пока нет.
     $resolved = search_resolve_category($conn, $nameImg);
-    if ($resolved !== null && ($resolved['bd'] ?? 0) === 3) {
+    if ($resolved !== null) {
         return $resolved;
     }
 
-    $result = $conn->query('SELECT 1 FROM add_ob_gr LIMIT 1');
-    if ($result && $result->num_rows > 0) {
-        return ['bd' => 3, 'demand' => 'ordersg', 'supply' => 'add_ob_gr', 'category_field' => null];
-    }
-
-    return $resolved;
+    return null;
 }
 
 /**
@@ -571,9 +568,17 @@ function search_resolve_get_ads2_table(mysqli $conn, string $nameImg): ?array
         return ['table' => 'add_ob_vidt', 'bd' => 2, 'condition' => 'AND a.vidt = ?', 'bind_name' => true];
     }
 
-    $result = $conn->query('SELECT 1 FROM add_ob_gr LIMIT 1');
-    if ($result && $result->num_rows > 0) {
+    // Справочник / имя услуги «Грузчики» — без подмены любой неизвестной категории в add_ob_gr.
+    $resolved = search_resolve_category($conn, $nameImg);
+    if ($resolved !== null && (int) ($resolved['bd'] ?? 0) === 3) {
         return ['table' => 'add_ob_gr', 'bd' => 3, 'condition' => '', 'bind_name' => false];
+    }
+
+    if ($resolved !== null && (int) ($resolved['bd'] ?? 0) === 1) {
+        return ['table' => 'add_ob_gp', 'bd' => 1, 'condition' => 'AND a.maxgruz = ?', 'bind_name' => true];
+    }
+    if ($resolved !== null && (int) ($resolved['bd'] ?? 0) === 2) {
+        return ['table' => 'add_ob_vidt', 'bd' => 2, 'condition' => 'AND a.vidt = ?', 'bind_name' => true];
     }
 
     return null;
@@ -1349,14 +1354,15 @@ function search_supply_counts_by_city(mysqli $conn, string $useId): array
         $table = $resolved['supply'];
 
         $sql = "
-            SELECT a.city AS city_name, COUNT(DISTINCT a.id) AS cnt
+            SELECT TRIM(a.city) AS city_name, COUNT(DISTINCT a.id) AS cnt
             FROM {$table} AS a
-            LEFT JOIN users AS u ON u.idusers = a.iduser
+            INNER JOIN users AS u ON u.idusers = a.iduser
             WHERE a.iduser IS NOT NULL
               AND a.iduser != ?
               AND (a.flag IS NULL OR a.flag = 1)
+              AND TRIM(a.city) != ''
               " . search_sql_supply_deal_exclude($bd) . '
-            GROUP BY a.city
+            GROUP BY TRIM(a.city)
         ';
 
         $stmt = $conn->prepare($sql);
