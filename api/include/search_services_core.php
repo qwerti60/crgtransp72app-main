@@ -652,11 +652,12 @@ function search_fetch_supply_get_ads2(
         return [];
     }
 
+    // Порядок: likes.usersid, iduser!=, [city], [category], deal.user_idok
     if ($bindName) {
         if ($allCities) {
-            $stmt->bind_param('ssss', $useId, $useId, $useId, $nameImg);
+            $stmt->bind_param('ssss', $useId, $useId, $nameImg, $useId);
         } else {
-            $stmt->bind_param('sssss', $useId, $useId, $city, $useId, $nameImg);
+            $stmt->bind_param('sssss', $useId, $useId, $city, $nameImg, $useId);
         }
     } elseif ($allCities) {
         $stmt->bind_param('sss', $useId, $useId, $useId);
@@ -892,13 +893,9 @@ function search_services_query(mysqli $conn, array $params): array
     }
 
     $viewerId = crg_viewer_user_id_from_request($params);
-    if ($role === 'customer' || $role === 'performer') {
-        if ($viewerId <= 0) {
-            return [];
-        }
-        $params['useId'] = (string) $viewerId;
-        $params['usersid'] = (string) $viewerId;
-    }
+    // Гость (0): просмотр выдачи разрешён; исключение «своих» и активных сделок не срабатывает
+    $params['useId'] = (string) max(0, $viewerId);
+    $params['usersid'] = (string) max(0, $viewerId);
 
     if ($nameImg === '' && search_has_meaningful_query($rawQuery)) {
         $freeText = true;

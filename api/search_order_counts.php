@@ -26,11 +26,14 @@ if ($conn->connect_error) {
 $conn->set_charset('utf8mb4');
 
 $params = array_merge($_GET, $_POST);
-$useId = '';
+$useId = '0';
 if (isset($params['useId']) && (string) $params['useId'] !== '') {
     $useId = (string) $params['useId'];
 } elseif (isset($params['usersid']) && (string) $params['usersid'] !== '') {
     $useId = (string) $params['usersid'];
+}
+if ((int) $useId < 0) {
+    $useId = '0';
 }
 
 $city = isset($params['city']) ? trim((string) $params['city']) : '';
@@ -49,12 +52,6 @@ try {
         'cities' => [],
         'services' => [],
     ];
-
-    if ($useId === '') {
-        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-        $conn->close();
-        exit;
-    }
 
     if ($role === 'customer') {
         $payload['role'] = 'customer';

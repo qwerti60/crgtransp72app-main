@@ -43,7 +43,8 @@ class SearchCountsClient {
     String? city,
     bool breakdown = true,
   }) async {
-    if (userId <= 0) return null;
+    // useId=0 — гость; API отдаёт общие счётчики без исключения «своих»
+    if (userId < 0) return null;
 
     final params = <String, String>{
       'role': role == 'customer' ? 'customer' : 'performer',

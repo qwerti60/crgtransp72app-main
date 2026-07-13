@@ -7,6 +7,9 @@ $useId   = isset($_GET['usersid']) ? $_GET['usersid'] : '';
 if ($useId === '' && isset($_GET['useId'])) {
     $useId = $_GET['useId'];
 }
+if ($useId === '' || (int) $useId < 0) {
+    $useId = '0';
+}
 
 $conn = new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) {
@@ -104,7 +107,8 @@ $sql = "
 
 if ($condition !== "") {
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssss", $useId, $useId, $city, $useId, $nameImg);
+    // likes, iduser!=, city, maxgruz/vidt, deal.user_idok
+    $stmt->bind_param("sssss", $useId, $useId, $city, $nameImg, $useId);
 } else {
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssss", $useId, $useId, $city, $useId);

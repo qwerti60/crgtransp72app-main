@@ -145,7 +145,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   }
 
   Future<void> _fetchCounts({bool servicesOnly = false}) async {
-    if (!mounted || _userId <= 0) return;
+    if (!mounted) return;
     setState(() => _countsLoading = true);
 
     try {

@@ -5,12 +5,8 @@ require_once __DIR__ . '/include/viewer_user.php';
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $city    = isset($_GET['city']) ? $_GET['city'] : '';
 $viewerId = crg_viewer_user_id_from_request($_GET);
-if ($viewerId <= 0) {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-$useId = (string) $viewerId;
+// Гость может просматривать объявления; exclude-self и сделки работают при useId=0 безвредно
+$useId = (string) max(0, $viewerId);
 
 /** 1 — не фильтровать по полю города объявления (все исполнители по категории). */
 $allCities = isset($_GET['all_cities']) && $_GET['all_cities'] === '1';
@@ -111,12 +107,13 @@ $sql = "
     ORDER BY a.id DESC
 ";
 
+// Порядок плейсхолдеров в SQL: likes.usersid, iduser!=, [city], [maxgruz/vidt], deal.user_idok
 if ($condition !== "") {
     $stmt = $conn->prepare($sql);
     if ($allCities) {
-        $stmt->bind_param('ssss', $useId, $useId, $useId, $nameImg);
+        $stmt->bind_param('ssss', $useId, $useId, $nameImg, $useId);
     } else {
-        $stmt->bind_param('sssss', $useId, $useId, $city, $useId, $nameImg);
+        $stmt->bind_param('sssss', $useId, $useId, $city, $nameImg, $useId);
     }
 } else {
     $stmt = $conn->prepare($sql);

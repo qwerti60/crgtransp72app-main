@@ -6,16 +6,8 @@ include 'databd.php'; // $host, $username, $password, $dbname
 require_once __DIR__ . '/include/viewer_user.php';
 
 $viewerId = crg_viewer_user_id_from_request($_GET);
-if ($viewerId <= 0) {
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
-        'lookup_table' => '',
-        'main_table' => '',
-        'cities' => [['city' => 'В этом разделе ещё нет городов с объявлениями', 'cnt' => 0]],
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-$useId = (string) $viewerId;
+// Гость (0) может смотреть города; свои объявления исключаются только для залогиненных
+$useId = (string) max(0, $viewerId);
 
 $namex = $_GET['namex'] ?? '';
 if ($namex === '') {

@@ -520,7 +520,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(String city, String nameImg, int userId) async {
     final seq = ++_fetchSeq;
 
-    if (userId <= 0) {
+    if (userId < 0) {
       return [];
     }
 
