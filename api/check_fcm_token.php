@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);

@@ -415,7 +415,7 @@ class _creguser4_nameForm extends State<creguser4_name_> {
                       Future register() async {
                         final response = await http.post(
                           Uri.parse(Config.baseUrl)
-                              .replace(path: '/api/regul.php'),
+                              .replace(path: '${Config.apiPrefix}/regul.php'),
                           body: {
                             'rollNum': rollNum.toString(),
                             'statNum': statNum.toString(),

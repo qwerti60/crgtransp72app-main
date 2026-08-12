@@ -46,7 +46,7 @@ Future<OfferCheckResult> fetchOfferCheckState({
 }) async {
   final response = await http.get(
     Uri.parse(
-      '${Config.baseUrl}/api/check_offer.php?iduser=$performerUserId&truck=$orderId&bd=$bd',
+      '${Config.apiBase}/check_offer.php?iduser=$performerUserId&truck=$orderId&bd=$bd',
     ),
   );
 

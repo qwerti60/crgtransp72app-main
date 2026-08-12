@@ -80,7 +80,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
   /// Заказчик: [iduserp] — id заказчика, [listingId] — id объявления. Таблица **offer_dataf**.
   Future<void> _fetchOfferDataCustomer(String iduserp, String listingId) async {
     final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/fetch_offer_zakaz.php'),
+      Uri.parse('${Config.apiBase}/fetch_offer_zakaz.php'),
       body: {
         'iduserp': iduserp,
         'userId': listingId,
@@ -117,7 +117,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
   Future<void> _fetchOfferDataPerformer(
       int iduserp, String listingId, int bdVal) async {
     final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/fetch_offer.php'),
+      Uri.parse('${Config.apiBase}/fetch_offer.php'),
       body: {
         'iduserp': iduserp.toString(),
         'userId': listingId,
@@ -160,7 +160,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -215,7 +215,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
   }
 
   Future<bool> _uploadCustomerOffer() async {
-    final uri = Uri.parse('${Config.baseUrl}/api/add_offerzakaz.php');
+    final uri = Uri.parse('${Config.apiBase}/add_offerzakaz.php');
     var request = http.MultipartRequest('POST', uri)
       ..fields['cena'] = _cenakmController.text
       ..fields['about'] = _aboutController.text
@@ -232,7 +232,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
   }
 
   Future<bool> _uploadPerformerOffer() async {
-    final uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
+    final uri = Uri.parse('${Config.apiBase}/add_offer.php');
     var request = http.MultipartRequest('POST', uri)
       ..fields['cena'] = _cenakmController.text
       ..fields['about'] = _aboutController.text
@@ -253,7 +253,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
         ? 'check_offer_zakaz.php'
         : 'check_offer.php';
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/$path?iduser=$userId&truck=$truckId&bd=$bdVal'));
+        '${Config.apiBase}/$path?iduser=$userId&truck=$truckId&bd=$bdVal'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -388,7 +388,7 @@ class _OfferscreenForm extends State<OfferScreen2> {
                       // Уведомление заказчику (id заказчика — widget.useridobj)
                       try {
                         final response1 = await http.post(
-                          Uri.parse('${Config.baseUrl}/api/notification.php'),
+                          Uri.parse('${Config.apiBase}/notification.php'),
                           body: {'iduserp': widget.useridobj.toString()},
                           headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'

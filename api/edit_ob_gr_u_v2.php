@@ -1,5 +1,5 @@
 <?php
-include 'databd.php'; // Подключаемся к файлу конфигурации базы данных
+require __DIR__ . '/load_databd.php'; // Подключаемся к файлу конфигурации базы данных
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0; // ID объявления
 $idusers = isset($_GET['idusers']) ? (int)$_GET['idusers'] : 0; // ID пользователя

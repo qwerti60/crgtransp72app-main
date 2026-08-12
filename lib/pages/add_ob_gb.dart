@@ -107,7 +107,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
     final encodedToken = Uri.encodeComponent(
         token); // Экранирование потенциально опасных символов
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$encodedToken'));
+        Uri.parse('${Config.apiBase}/getuserinfo.php?token=$encodedToken'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -257,7 +257,7 @@ class add_ob_vidtForm extends State<add_ob_gp> {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-    var uri = Uri.parse('${Config.baseUrl}/api/add_ob_gp.php');
+    var uri = Uri.parse('${Config.apiBase}/add_ob_gp.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

@@ -8,19 +8,27 @@ class SupportCreateScreen extends StatefulWidget {
     super.key,
     this.showBottomNav = false,
     this.isPerformer = false,
+    this.initialCategory,
+    this.initialSubject,
+    this.contextJson,
+    this.lockCategory = false,
   });
 
   final bool showBottomNav;
   final bool isPerformer;
+  final String? initialCategory;
+  final String? initialSubject;
+  final Map<String, dynamic>? contextJson;
+  final bool lockCategory;
 
   @override
   State<SupportCreateScreen> createState() => _SupportCreateScreenState();
 }
 
 class _SupportCreateScreenState extends State<SupportCreateScreen> {
-  final _subjectController = TextEditingController();
+  late final TextEditingController _subjectController;
   final _bodyController = TextEditingController();
-  String _category = 'other';
+  late String _category;
   bool _sending = false;
 
   static const _categories = <String, String>{
@@ -31,6 +39,18 @@ class _SupportCreateScreenState extends State<SupportCreateScreen> {
     'bug': 'Ошибка приложения',
     'other': 'Другое',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialCategory;
+    _category = (initial != null && _categories.containsKey(initial))
+        ? initial
+        : 'other';
+    _subjectController = TextEditingController(
+      text: widget.initialSubject ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -55,6 +75,7 @@ class _SupportCreateScreenState extends State<SupportCreateScreen> {
         subject: _subjectController.text.trim(),
         category: _category,
         body: body,
+        contextJson: widget.contextJson,
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -77,11 +98,12 @@ class _SupportCreateScreenState extends State<SupportCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isReport = widget.contextJson != null && widget.contextJson!.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Поддержка',
-          style: TextStyle(color: whiteprColor),
+        title: Text(
+          isReport ? 'Пожаловаться' : 'Поддержка',
+          style: const TextStyle(color: whiteprColor),
         ),
         backgroundColor: blueaccentColor,
         iconTheme: const IconThemeData(color: whiteprColor),
@@ -89,9 +111,11 @@ class _SupportCreateScreenState extends State<SupportCreateScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Опишите проблему — оператор ответит в этом диалоге.',
-            style: TextStyle(color: Colors.black54),
+          Text(
+            isReport
+                ? 'Опишите нарушение — оператор проверит контекст и переписку.'
+                : 'Опишите проблему — оператор ответит в этом диалоге.',
+            style: const TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
@@ -108,7 +132,7 @@ class _SupportCreateScreenState extends State<SupportCreateScreen> {
                   ),
                 )
                 .toList(),
-            onChanged: _sending
+            onChanged: (_sending || widget.lockCategory)
                 ? null
                 : (v) {
                     if (v != null) setState(() => _category = v);

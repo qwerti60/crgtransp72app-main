@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/pages/ad_template_picker_screen.dart';
 import 'package:crgtransp72app/pages/add_ob_gp1.dart';
 import 'package:crgtransp72app/pages/add_ob_vidt.dart';
 import 'package:crgtransp72app/pages/changerol_page.dart';
@@ -147,7 +148,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -177,7 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/zak_get_ads.php',
+        path: '${Config.apiPrefix}/zak_get_ads.php',
         queryParameters: {
           'idusers': idusers.toString(),
           'bd': bd.toString(),
@@ -290,6 +291,25 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         backgroundColor: blueaccentColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy, color: whiteprColor),
+            tooltip: 'Создать как прошлую',
+            onPressed: () async {
+              final ok = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AdTemplatePickerScreen(),
+                ),
+              );
+              if (ok == true && mounted && bd != null) {
+                setState(() {
+                  _adsFuture = fetchAds(bd!);
+                });
+              }
+            },
+          ),
+        ],
       ),
       // Добавление FloatingActionButton
       /*     floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
@@ -836,7 +856,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> deleteTruck(int truckId, int bd) async {
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_zakaz.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_zakaz.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),
@@ -887,7 +907,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(truckId.toString()); // Url к
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_zakaz.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_zakaz.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),

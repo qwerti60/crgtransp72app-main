@@ -3,10 +3,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-$host = 'localhost';
-$username = 'u2395188_apps72';
-$password = 'kR3iV2aA6gjU8nC9';
-$dbname = 'u2395188_apps';
+require __DIR__ . '/load_databd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);

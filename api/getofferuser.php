@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 $useId = isset($_GET['useId']) ? $_GET['useId'] : '';
 
 // Создаем подключение

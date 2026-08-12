@@ -135,7 +135,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -164,7 +164,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -197,7 +197,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_predloj_na_zayavki_new.php',
+        path: '${Config.apiPrefix}/list_predloj_na_zayavki_new.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
@@ -244,7 +244,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 // 1. Обновлённая сигнатура
   Future<void> uploadData(int bd, String nameImg, int userID) async {
-    final uri = Uri.parse('${Config.baseUrl}/api/updatePriemZak.php');
+    final uri = Uri.parse('${Config.apiBase}/updatePriemZak.php');
 
     try {
       final response = await http.post(uri,
@@ -271,7 +271,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> updateOffer(int bd, String nameImg, int userID, iduserp,
       {required bool accept}) async {
-    final uri = Uri.parse('${Config.baseUrl}/api/updatePriemZak.php');
+    final uri = Uri.parse('${Config.apiBase}/updatePriemZak.php');
 
     try {
       final response = await http.post(uri, body: {
@@ -311,7 +311,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkIsp(String idUser, int bd, int idUserP) async {
     final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/check_isp.php'),
+      Uri.parse('${Config.apiBase}/check_isp.php'),
       body: {
         'idusers': idUser.toString(),
         'bd': bd.toString(),
@@ -849,7 +849,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   final response =
                                                       await http.post(
                                                     Uri.parse(
-                                                        '${Config.baseUrl}/api/notification.php'),
+                                                        '${Config.apiBase}/notification.php'),
                                                     body: {
                                                       'iduserp':
                                                           truck['iduserp']
@@ -914,7 +914,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   final response =
                                                       await http.post(
                                                     Uri.parse(
-                                                        '${Config.baseUrl}/api/notification.php'),
+                                                        '${Config.apiBase}/notification.php'),
                                                     body: {
                                                       'iduserp':
                                                           truck['iduserp']
@@ -1027,7 +1027,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                       final response =
                                                           await http.post(
                                                         Uri.parse(
-                                                            '${Config.baseUrl}/api/notification.php'),
+                                                            '${Config.apiBase}/notification.php'),
                                                         body: {
                                                           'iduserp':
                                                               truck['iduserp']
@@ -1244,7 +1244,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(widget.bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': widget.bd.toString(),

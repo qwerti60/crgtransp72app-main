@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/outputob.dart';
 import 'package:crgtransp72app/search/search_counts_client.dart';
 import 'package:crgtransp72app/search/search_counts_helpers.dart';
+import 'package:crgtransp72app/services/location_service.dart';
 import 'package:crgtransp72app/widgets/search_form_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -58,6 +59,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   String? selectedServiceName;
   String? selectedCityName;
   String _sort = 'relevance';
+  bool _nearMe = false;
+  bool _nearMeLoading = false;
+  double? _lat;
+  double? _lng;
+  int _radiusKm = 30;
+  String? _nearMeStatus;
 
   @override
   void initState() {
@@ -91,7 +98,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       await _loadUserId();
 
       final responseServices = await http
-          .get(Uri.parse('${Config.baseUrl}/api/getsearsh.php'))
+          .get(Uri.parse('${Config.apiBase}/getsearsh.php'))
           .timeout(kApiTimeout);
       if (responseServices.statusCode != 200) {
         throw Exception('Failed to load services.');
@@ -99,7 +106,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       final decodedServices = json.decode(responseServices.body);
 
       final responseCities = await http
-          .get(Uri.parse('${Config.baseUrl}/api/cities.php'))
+          .get(Uri.parse('${Config.apiBase}/cities.php'))
           .timeout(kApiTimeout);
       if (responseCities.statusCode != 200) {
         throw Exception('Failed to load cities.');
@@ -131,7 +138,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       if (token == null || token.isEmpty) return;
 
       final response = await http
-          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+          .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'))
           .timeout(kApiTimeout);
       if (response.statusCode != 200) return;
 
@@ -213,21 +220,82 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
     }
   }
 
+  Future<void> _onNearMeChanged(bool enabled) async {
+    if (!enabled) {
+      setState(() {
+        _nearMe = false;
+        _lat = null;
+        _lng = null;
+        _nearMeStatus = null;
+        if (_sort == 'distance') {
+          _sort = 'relevance';
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      _nearMeLoading = true;
+      _nearMeStatus = 'Определяем местоположение…';
+    });
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _nearMe = true;
+        _lat = pos.latitude;
+        _lng = pos.longitude;
+        _sort = 'distance';
+        _nearMeStatus =
+            'Местоположение получено (±${_radiusKm} км)';
+        _nearMeLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nearMe = false;
+        _lat = null;
+        _lng = null;
+        _nearMeLoading = false;
+        _nearMeStatus = null;
+      });
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Геолокация'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   void _submitSearch() {
     final query = _queryController.text.trim();
     final hasQuery = query.length >= 3;
     final hasCity = selectedCityName != null && selectedCityName!.isNotEmpty;
     final hasService =
         selectedServiceName != null && selectedServiceName!.isNotEmpty;
+    final hasNearMe = _nearMe && _lat != null && _lng != null;
+    final canSearch = hasQuery ||
+        (hasCity && hasService) ||
+        (hasNearMe && hasService);
 
-    if (!hasQuery && !(hasCity && hasService)) {
+    if (!canSearch) {
       showDialog(
         context: context,
-        builder: (_) => const AlertDialog(
-          title: Text('Ошибка'),
+        builder: (_) => AlertDialog(
+          title: const Text('Ошибка'),
           content: Text(
-            'Введите запрос (от 3 символов), например «экскаватор в Тюмени», '
-            'или выберите город и услугу.',
+            hasNearMe
+                ? 'Выберите услугу или введите запрос (от 3 символов).'
+                : 'Введите запрос (от 3 символов), например «экскаватор в Тюмени», '
+                    'или выберите город и услугу, либо включите «Рядом со мной».',
           ),
         ),
       );
@@ -239,19 +307,25 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       cityTo: _cityToController.text,
       priceMax: _priceController.text,
       sort: _sort,
-      freeText: hasQuery && !(hasCity && hasService),
+      freeText: hasQuery && !((hasCity || hasNearMe) && hasService),
+      nearMe: hasNearMe,
+      lat: _lat,
+      lng: _lng,
+      radiusKm: _radiusKm,
     );
 
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => outputob(
           nameImg: selectedServiceName ?? '',
-          city: selectedCityName ?? '',
+          city: hasNearMe ? '' : (selectedCityName ?? ''),
           showBottomNav: _showNavOnResults,
           customerBottomNavIndex: 1,
           useCustomerNavigation: true,
           searchParams: params,
-          searchTitle: hasQuery ? query : null,
+          searchTitle: hasQuery
+              ? query
+              : (hasNearMe ? 'Рядом · ${_radiusKm} км' : null),
         ),
       ),
     );
@@ -341,6 +415,19 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     },
                   )
                   .toList(),
+            ),
+            SearchNearMePanel(
+              enabled: _nearMe,
+              radiusKm: _radiusKm,
+              loading: _nearMeLoading,
+              statusText: _nearMeStatus,
+              onEnabledChanged: _onNearMeChanged,
+              onRadiusChanged: (km) => setState(() {
+                _radiusKm = km;
+                if (_nearMe) {
+                  _nearMeStatus = 'Местоположение получено (±$km км)';
+                }
+              }),
             ),
             SearchSortChips(
               selected: _sort,

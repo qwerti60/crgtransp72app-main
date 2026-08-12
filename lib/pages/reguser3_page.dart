@@ -81,7 +81,7 @@ class creguser3name extends StatefulWidget {
 }
 
 void _launchURL() async {
-  final url = Uri.parse('${Config.baseUrl}/api/agreement.html');
+  final url = Uri.parse('${Config.apiBase}/agreement.html');
   if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
     throw 'Не могу открыть $url';
   }
@@ -117,7 +117,7 @@ class _CregUser3NameState extends State<creguser3name> {
     Map<String, String> body,
   ) async {
     final response = await http.post(
-      Uri.parse(Config.baseUrl).replace(path: path),
+      Config.apiUri(path),
       body: body,
     );
     try {
@@ -519,7 +519,7 @@ class _CregUser3NameState extends State<creguser3name> {
                         (widget.rollNum == 4 && widget.statNum == 2)) {
                       final response = await http.post(
                         Uri.parse(Config.baseUrl)
-                            .replace(path: '/api/regtest.php'),
+                            .replace(path: '${Config.apiPrefix}/regtest.php'),
                         body: json.encode({
                           'email': emailController.text,
                           'password': passwordController.text,

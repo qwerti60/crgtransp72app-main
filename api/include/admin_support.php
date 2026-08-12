@@ -23,8 +23,13 @@ function crg_admin_support_new_count(PDO $pdo): int
 /**
  * @return list<array<string, mixed>>
  */
-function crg_admin_support_queue(PDO $pdo, string $statusFilter, int $limit, int $offset): array
-{
+function crg_admin_support_queue(
+    PDO $pdo,
+    string $statusFilter,
+    int $limit,
+    int $offset,
+    string $categoryFilter = ''
+): array {
     if (!crg_admin_support_tables_ready($pdo)) {
         return [];
     }
@@ -33,6 +38,12 @@ function crg_admin_support_queue(PDO $pdo, string $statusFilter, int $limit, int
     if ($statusFilter !== '' && $statusFilter !== 'all') {
         $where .= ' AND tk.status = ?';
         $params[] = $statusFilter;
+    }
+    if ($categoryFilter === 'reports') {
+        $where .= " AND tk.category IN ('deal_dispute','ad_moderation')";
+    } elseif ($categoryFilter !== '' && $categoryFilter !== 'all') {
+        $where .= ' AND tk.category = ?';
+        $params[] = $categoryFilter;
     }
     $limit = max(1, min(100, $limit));
     $offset = max(0, $offset);
@@ -52,20 +63,119 @@ function crg_admin_support_queue(PDO $pdo, string $statusFilter, int $limit, int
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function crg_admin_support_queue_total(PDO $pdo, string $statusFilter): int
-{
+function crg_admin_support_queue_total(
+    PDO $pdo,
+    string $statusFilter,
+    string $categoryFilter = ''
+): int {
     if (!crg_admin_support_tables_ready($pdo)) {
         return 0;
     }
-    if ($statusFilter === '' || $statusFilter === 'all') {
-        $st = $pdo->query('SELECT COUNT(*) FROM support_tickets');
-
-        return (int) $st->fetchColumn();
+    $where = '1=1';
+    $params = [];
+    if ($statusFilter !== '' && $statusFilter !== 'all') {
+        $where .= ' AND status = ?';
+        $params[] = $statusFilter;
     }
-    $st = $pdo->prepare('SELECT COUNT(*) FROM support_tickets WHERE status = ?');
-    $st->execute([$statusFilter]);
+    if ($categoryFilter === 'reports') {
+        $where .= " AND category IN ('deal_dispute','ad_moderation')";
+    } elseif ($categoryFilter !== '' && $categoryFilter !== 'all') {
+        $where .= ' AND category = ?';
+        $params[] = $categoryFilter;
+    }
+    $st = $pdo->prepare('SELECT COUNT(*) FROM support_tickets WHERE ' . $where);
+    $st->execute($params);
 
     return (int) $st->fetchColumn();
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function crg_admin_parse_ticket_context(?string $contextJson): ?array
+{
+    if ($contextJson === null || trim($contextJson) === '') {
+        return null;
+    }
+    $decoded = json_decode($contextJson, true);
+
+    return is_array($decoded) ? $decoded : null;
+}
+
+/**
+ * Найти deal-thread по context_json обращения.
+ */
+function crg_admin_resolve_deal_thread_id(PDO $pdo, ?array $context): int
+{
+    if ($context === null) {
+        return 0;
+    }
+    $threadId = (int) ($context['thread_id'] ?? 0);
+    if ($threadId > 0) {
+        $st = $pdo->prepare(
+            "SELECT id FROM chat_threads WHERE id = ? AND type = 'deal' LIMIT 1"
+        );
+        $st->execute([$threadId]);
+        if ($st->fetchColumn() !== false) {
+            return $threadId;
+        }
+    }
+
+    $orderGlobalId = (int) ($context['order_global_id'] ?? 0);
+    if ($orderGlobalId > 0) {
+        $st = $pdo->prepare(
+            "SELECT id FROM chat_threads WHERE type = 'deal' AND order_global_id = ? ORDER BY id DESC LIMIT 1"
+        );
+        $st->execute([$orderGlobalId]);
+        $id = (int) $st->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    $offerDataId = (int) ($context['offer_data_id'] ?? 0);
+    if ($offerDataId > 0) {
+        $st = $pdo->prepare(
+            "SELECT id FROM chat_threads WHERE type = 'deal' AND offer_data_id = ? ORDER BY id DESC LIMIT 1"
+        );
+        $st->execute([$offerDataId]);
+        $id = (int) $st->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    $bd = (int) ($context['bd'] ?? 0);
+    $adId = (int) ($context['ad_id'] ?? 0);
+    if ($bd > 0 && $adId > 0) {
+        $st = $pdo->prepare(
+            "SELECT id FROM chat_threads WHERE type = 'deal' AND bd = ? AND ad_id = ? ORDER BY id DESC LIMIT 1"
+        );
+        $st->execute([$bd, $adId]);
+        $id = (int) $st->fetchColumn();
+        if ($id > 0) {
+            return $id;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function crg_admin_deal_thread(PDO $pdo, int $threadId): ?array
+{
+    if ($threadId <= 0 || !crg_admin_support_tables_ready($pdo)) {
+        return null;
+    }
+    $st = $pdo->prepare(
+        "SELECT * FROM chat_threads WHERE id = ? AND type = 'deal' LIMIT 1"
+    );
+    $st->execute([$threadId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $row !== false ? $row : null;
 }
 
 /**

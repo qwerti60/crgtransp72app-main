@@ -2,7 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 // Подключаемся к базе данных
-require_once 'databd.php'; // Предположительно файл databd.php содержит конфигурационные данные для подключения к БД
+require __DIR__ . '/load_databd.php'; // Предположительно файл databd.php содержит конфигурационные данные для подключения к БД
 
 // Параметры, которые приходят извне (поддержка обоих ключей)
 $useId = isset($_GET['idusers']) ? (int)$_GET['idusers'] : 0;

@@ -5,6 +5,7 @@ import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/models/chat_message.dart';
 import 'package:crgtransp72app/pages/chat_list_screen.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
+import 'package:crgtransp72app/pages/support_create_screen.dart';
 import 'package:crgtransp72app/services/chat_api.dart';
 import 'package:crgtransp72app/widgets/chat_auth_guard.dart';
 import 'package:crgtransp72app/widgets/chat_message_content.dart';
@@ -28,6 +29,10 @@ class ChatThreadScreen extends StatefulWidget {
     this.isPerformer = false,
     this.promptSupportRating = false,
     this.supportTicketId,
+    this.bd,
+    this.adId,
+    this.offerDataId,
+    this.orderGlobalId,
   });
 
   final int threadId;
@@ -39,6 +44,10 @@ class ChatThreadScreen extends StatefulWidget {
   final bool isPerformer;
   final bool promptSupportRating;
   final int? supportTicketId;
+  final int? bd;
+  final int? adId;
+  final int? offerDataId;
+  final int? orderGlobalId;
 
   /// Открыть или создать диалог по объявлению, затем показать переписку.
   static Future<void> openDeal({
@@ -113,6 +122,8 @@ class ChatThreadScreen extends StatefulWidget {
           subtitle: 'Объявление #$adId',
           showBottomNav: showBottomNav,
           isPerformer: isPerformer,
+          bd: bd,
+          adId: adId,
         ),
       ),
     );
@@ -142,6 +153,32 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     });
     _loadInitial();
     _pollTimer = Timer.periodic(const Duration(seconds: 7), (_) => _poll());
+  }
+
+  Future<void> _openReport() async {
+    if (!await ensureChatAuthorized(context)) return;
+    if (!mounted) return;
+    final contextJson = <String, dynamic>{
+      'thread_id': widget.threadId,
+      if (widget.bd != null && widget.bd! > 0) 'bd': widget.bd,
+      if (widget.adId != null && widget.adId! > 0) 'ad_id': widget.adId,
+      if (widget.offerDataId != null && widget.offerDataId! > 0)
+        'offer_data_id': widget.offerDataId,
+      if (widget.orderGlobalId != null && widget.orderGlobalId! > 0)
+        'order_global_id': widget.orderGlobalId,
+    };
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SupportCreateScreen(
+          showBottomNav: false,
+          isPerformer: widget.isPerformer,
+          initialCategory: 'deal_dispute',
+          initialSubject: 'Жалоба по чату #${widget.threadId}',
+          lockCategory: true,
+          contextJson: contextJson,
+        ),
+      ),
+    );
   }
 
   Future<void> _maybePromptSupportRating() async {
@@ -460,6 +497,12 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
           ],
         ),
         actions: [
+          if (!widget.isSupport)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, color: whiteprColor),
+              tooltip: 'Пожаловаться',
+              onPressed: _openReport,
+            ),
           if (widget.isSupport)
             IconButton(
               icon: const Icon(Icons.list_alt, color: whiteprColor),

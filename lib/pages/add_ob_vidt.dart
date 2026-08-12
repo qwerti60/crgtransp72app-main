@@ -76,7 +76,7 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -85,13 +85,13 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
       } else {
         // Обновляем поля класса и UI
         setState(() {
-          userId = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city1 = data['city'];
-          phone = data['phone'];
-          email = data['email'];
+          userId = int.tryParse(data['idusers']?.toString() ?? '') ?? 0;
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city1 = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
         });
         print('вывод id: $userId');
         // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
@@ -284,7 +284,20 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-    var uri = Uri.parse('${Config.baseUrl}/api/add_ob_vidt.php');
+    if (userId <= 0) {
+      await getUserData();
+    }
+    if (userId <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось определить пользователя. Войдите снова.'),
+          ),
+        );
+      }
+      return;
+    }
+    var uri = Uri.parse('${Config.apiBase}/add_ob_vidt.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
@@ -318,9 +331,12 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
       }
     }
     var response = await request.send();
+    final body = await response.stream.bytesToString();
+    final ok = response.statusCode == 200 &&
+        body.contains('New record created successfully');
 
-    if (response.statusCode == 200) {
-      print('Uploaded!');
+    if (ok) {
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -329,7 +345,16 @@ class add_ob_vidtForm extends State<add_ob_vidt> {
         ),
       );
     } else {
-      print('Failed!');
+      if (mounted) {
+        final snippet = body.length > 160 ? body.substring(0, 160) : body;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Не удалось сохранить объявление (HTTP ${response.statusCode}): $snippet',
+            ),
+          ),
+        );
+      }
     }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

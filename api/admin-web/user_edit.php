@@ -133,6 +133,17 @@ tp_admin_web_layout_start($pageTitle, 'users', $adminLogin !== '' ? $adminLogin 
         <input type="hidden" name="flag" value="1">
     </div>
 
+    <?php if (!$isNew && crg_admin_user_is_performer((int) ($row['rollNum'] ?? 0))) { ?>
+    <div class="card">
+        <p class="meta"><strong>Верификация исполнителя (P2)</strong></p>
+        <input type="hidden" name="is_verified" value="0">
+        <label class="meta">
+            <input type="checkbox" name="is_verified" value="1" <?= ((int) ($row['is_verified'] ?? 0) === 1) ? 'checked' : '' ?>>
+            Проверен — показывать галочку в приложении
+        </label>
+    </div>
+    <?php } ?>
+
     <div class="card">
         <label class="b" for="lastName">Фамилия</label>
         <input class="in" type="text" name="lastName" id="lastName" value="<?= tp_admin_web_h((string) ($row['lastName'] ?? '')) ?>">

@@ -1,5 +1,5 @@
 <?php
-require_once 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $nameImg = filter_input(INPUT_GET, 'nameImg', FILTER_VALIDATE_INT);
 $bd = filter_input(INPUT_GET, 'bd', FILTER_VALIDATE_INT);

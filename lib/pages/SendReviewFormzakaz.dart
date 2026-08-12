@@ -87,7 +87,7 @@ class _SendReviewFormState extends State<SendReviewFormzakaz> {
 
     try {
       final response = await Dio().post(
-        '${Config.baseUrl}/api/save_reviewzaka.php',
+        '${Config.apiBase}/save_reviewzaka.php',
         data: data,
         options: Options(
           headers: {'Content-Type': 'application/json'},

@@ -7,6 +7,7 @@ import 'package:crgtransp72app/pages/change_user.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/zakaz_screen2.dart';
 import 'package:crgtransp72app/services/review_pair_api.dart';
+import 'package:crgtransp72app/services/location_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -45,6 +46,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
   Duration elapsedDuration = Duration.zero;
   Timer? timer;
   String? orderStatus; // Переменная для хранения текущего статуса заказа
+  String? _etaAt;
   String? formattedDuration;
   bool _hasExistingReview = false;
 
@@ -95,7 +97,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
     }
 
     try {
-      final infoUri = Uri.parse('${Config.baseUrl}/api/get_order_global_info.php')
+      final infoUri = Uri.parse('${Config.apiBase}/get_order_global_info.php')
           .replace(queryParameters: {
         'performer_id': performerId,
         'order_id': orderId,
@@ -119,7 +121,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
     try {
       final statusUri = Uri.parse(
-          '${Config.baseUrl}/api/check_order_status1.php?userIdok=$performerId');
+          '${Config.apiBase}/check_order_status1.php?userIdok=$performerId');
       final statusResp =
           await http.get(statusUri).timeout(const Duration(seconds: 10));
       debugPrint('[ISP] check_order_status1 ${statusResp.statusCode}: ${statusResp.body}');
@@ -151,7 +153,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -201,6 +203,64 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
   String? formattedCancelTime;
 
+  Future<void> _setInTransit() async {
+    DateTime? eta = DateTime.now().add(const Duration(hours: 1));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: eta,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3)),
+    );
+    if (picked == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(eta),
+    );
+    if (time == null || !mounted) return;
+    eta = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+
+    double? lat;
+    double? lng;
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      lat = pos.latitude;
+      lng = pos.longitude;
+    } catch (_) {}
+
+    final customerId = await _resolveCustomerId();
+    final payload = <String, dynamic>{
+      'user_id': widget.userId,
+      'order_id': widget.orderId,
+      'eta_at': eta.toIso8601String(),
+      if (customerId.isNotEmpty) 'user_idok': customerId,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+    };
+
+    try {
+      final dio = Dio();
+      final response = await dio.post(
+        '${Config.apiBase}/update_order_transit.php',
+        data: jsonEncode(payload),
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+      if (response.statusCode == 200 && mounted) {
+        setState(() {
+          orderStatus = 'В пути';
+          _etaAt = eta!.toIso8601String();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Статус «в пути» отправлен заказчику')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось обновить статус: $e')),
+      );
+    }
+  }
+
   Future<void> updateOrderStatus(String newStatus) async {
     final now = DateTime.now();
     final customerId = await _resolveCustomerId();
@@ -218,7 +278,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       }
 
       final response = await dio.put(
-        '${Config.baseUrl}/api/update_order_status.php',
+        '${Config.apiBase}/update_order_status.php',
         data: payload,
       );
 
@@ -394,7 +454,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
     }
 
     try {
-      final infoUri = Uri.parse('${Config.baseUrl}/api/get_order_global_info.php')
+      final infoUri = Uri.parse('${Config.apiBase}/get_order_global_info.php')
           .replace(queryParameters: {
         'performer_id': performerId,
         'order_id': orderId,
@@ -417,7 +477,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
       final loggedInId =
           userIdok.isNotEmpty ? userIdok : performerId;
       final statusUri = Uri.parse(
-          '${Config.baseUrl}/api/check_order_status1.php?userIdok=$loggedInId');
+          '${Config.apiBase}/check_order_status1.php?userIdok=$loggedInId');
       final statusResp =
           await http.get(statusUri).timeout(const Duration(seconds: 10));
       if (statusResp.statusCode == 200) {
@@ -459,7 +519,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
 
       final response = await http
           .post(
-            Uri.parse('${Config.baseUrl}/api/check_order_status.php'),
+            Uri.parse('${Config.apiBase}/check_order_status.php'),
             body: fields,
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
@@ -672,6 +732,14 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  if (orderStatus == 'В пути' && _etaAt != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'ETA: ${_etaAt!.substring(0, 16).replaceFirst('T', ' ')}',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
                   if (orderStatus == 'Продолжается выполнение' ||
                       (elapsedDuration > Duration.zero &&
                           orderStatus != 'выполнен' &&
@@ -732,6 +800,22 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreen> {
                             label: const Text('Чат по заказу',
                                 style: TextStyle(color: whiteprColor)),
                             onPressed: _openOrderChat,
+                          ),
+                          const Divider(thickness: 1, height: 16),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              fixedSize: const Size(double.infinity, 50),
+                              foregroundColor: whiteprColor,
+                              backgroundColor: blueaccentColor,
+                              shape: const BeveledRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(3))),
+                            ),
+                            icon: const Icon(Icons.local_shipping_outlined,
+                                color: whiteprColor),
+                            label: const Text('В пути + ETA',
+                                style: TextStyle(color: whiteprColor)),
+                            onPressed: _setInTransit,
                           ),
                           const Divider(thickness: 1, height: 16),
                           TextButton.icon(

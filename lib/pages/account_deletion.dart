@@ -45,7 +45,7 @@ Future<void> showDeleteAccountDialog(BuildContext context) async {
 
   try {
     final response = await http.post(
-      Uri.parse(Config.baseUrl).replace(path: '/api/delete_account.php'),
+      Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_account.php'),
       body: {'fcm_token': authToken},
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );

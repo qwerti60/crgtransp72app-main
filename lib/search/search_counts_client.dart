@@ -57,7 +57,7 @@ class SearchCountsClient {
       params['breakdown'] = '1';
     }
 
-    final uri = Uri.parse('${Config.baseUrl}/api/search_order_counts.php')
+    final uri = Uri.parse('${Config.apiBase}/search_order_counts.php')
         .replace(queryParameters: params);
 
     http.Response response;

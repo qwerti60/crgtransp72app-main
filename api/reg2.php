@@ -8,10 +8,8 @@ header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 // Подключение к базе данных
 $connection = null;
-$host = "localhost";
-$username = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
-$db_name = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
+$db_name = $dbname;
 
 try {
 $connection = new PDO("mysql:host=" . $host . ";dbname=" . $db_name, $username, $password);

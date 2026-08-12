@@ -241,6 +241,7 @@ function search_fetch_demand_getads3(
                u.city AS userCity,
                u.phone,
                u.email,
+               COALESCE(u.is_verified, 0) AS is_verified,
                COUNT(r.id) AS reviewsCount,
                COUNT(r.id) AS review_count,
                COALESCE(AVG(r.rating), 0) AS avg_rating,
@@ -378,6 +379,107 @@ function search_load_city_names(mysqli $conn): array
     }
     $cache = $names;
     return $names;
+}
+
+/**
+ * Карта «нормализованное имя города» → [lat, lng].
+ *
+ * @return array<string, array{0: float, 1: float}>
+ */
+function search_load_city_coords(mysqli $conn): array
+{
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $map = [];
+    $result = @$conn->query('SELECT name, lat, lng FROM cities WHERE lat IS NOT NULL AND lng IS NOT NULL');
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $name = search_normalize_text((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $map[$name] = [(float) $row['lat'], (float) $row['lng']];
+        }
+    }
+    // Колонки lat/lng могут отсутствовать до миграции — тогда map пустой.
+    $cache = $map;
+    return $map;
+}
+
+function search_haversine_km(float $lat1, float $lng1, float $lat2, float $lng2): float
+{
+    $earthKm = 6371.0;
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLng = deg2rad($lng2 - $lng1);
+    $a = sin($dLat / 2) ** 2
+        + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+    return $earthKm * 2 * atan2(sqrt($a), sqrt(1 - $a));
+}
+
+/**
+ * @return array{0: ?float, 1: ?float, 2: int}|null null если георежим не запрошен
+ */
+function search_parse_geo_params(array $params): ?array
+{
+    if (!isset($params['lat']) || !isset($params['lng'])) {
+        return null;
+    }
+    $latRaw = trim((string) $params['lat']);
+    $lngRaw = trim((string) $params['lng']);
+    if ($latRaw === '' || $lngRaw === '' || !is_numeric($latRaw) || !is_numeric($lngRaw)) {
+        return null;
+    }
+    $lat = (float) $latRaw;
+    $lng = (float) $lngRaw;
+    if ($lat < -90.0 || $lat > 90.0 || $lng < -180.0 || $lng > 180.0) {
+        return null;
+    }
+
+    $allowedRadius = [10, 30, 50, 100];
+    $radius = isset($params['radius_km']) ? (int) $params['radius_km'] : 30;
+    if (!in_array($radius, $allowedRadius, true)) {
+        $radius = 30;
+    }
+
+    return [$lat, $lng, $radius];
+}
+
+/**
+ * @param list<array<string, mixed>> $rows
+ * @return list<array<string, mixed>>
+ */
+function search_apply_geo_filter(
+    mysqli $conn,
+    array $rows,
+    float $lat,
+    float $lng,
+    int $radiusKm
+): array {
+    $coords = search_load_city_coords($conn);
+    if ($coords === []) {
+        return $rows;
+    }
+
+    $out = [];
+    foreach ($rows as $row) {
+        $cityName = search_normalize_text((string) ($row['city'] ?? ''));
+        if ($cityName === '' || !isset($coords[$cityName])) {
+            continue;
+        }
+        [$cLat, $cLng] = $coords[$cityName];
+        $distance = search_haversine_km($lat, $lng, $cLat, $cLng);
+        if ($distance > $radiusKm) {
+            continue;
+        }
+        $row['distance_km'] = round($distance, 1);
+        $out[] = $row;
+    }
+
+    return $out;
 }
 
 function search_match_city_from_query(mysqli $conn, string $query): ?string
@@ -627,6 +729,7 @@ function search_fetch_supply_get_ads2(
                u.city AS userCity,
                u.phone,
                u.email,
+               COALESCE(u.is_verified, 0) AS is_verified,
                COUNT(r.user_id) AS reviewsCount,
                COUNT(r.user_id) AS review_count,
                COALESCE(AVG(r.rating), 0) AS avg_rating,
@@ -776,6 +879,7 @@ function search_fetch_rows_for_config(
                u.city AS userCity,
                u.phone,
                u.email,
+               COALESCE(u.is_verified, 0) AS is_verified,
                {$reviewCountExpr} AS reviewsCount,
                {$reviewCountExpr} AS review_count,
                COALESCE(AVG(r.rating), 0) AS avg_rating,
@@ -892,6 +996,16 @@ function search_services_query(mysqli $conn, array $params): array
 
     $allCities = isset($params['all_cities']) && $params['all_cities'] === '1';
     $freeText = isset($params['free_text']) && $params['free_text'] === '1';
+    $geo = search_parse_geo_params($params);
+    if ($geo !== null) {
+        $allCities = true;
+        if ($sort === 'relevance' || $sort === '') {
+            $sort = 'distance';
+        }
+    }
+    if ($sort === 'distance' && $geo === null) {
+        $sort = 'relevance';
+    }
 
     if ($role !== 'customer' && $role !== 'performer') {
         return [];
@@ -1026,8 +1140,42 @@ function search_services_query(mysqli $conn, array $params): array
         }
     }
 
+    if ($geo !== null) {
+        [$geoLat, $geoLng, $radiusKm] = $geo;
+        $rows = search_apply_geo_filter($conn, $rows, $geoLat, $geoLng, $radiusKm);
+    }
+
+    if (is_readable(__DIR__ . '/ad_boost.php')) {
+        require_once __DIR__ . '/ad_boost.php';
+        $bdForBoost = 0;
+        if ($role === 'customer' && $nameImg !== '') {
+            $resolvedBoost = search_resolve_supply_category($conn, $nameImg);
+            if ($resolvedBoost !== null) {
+                $bdForBoost = (int) $resolvedBoost['bd'];
+            }
+        }
+        if ($bdForBoost > 0) {
+            $rows = crg_boost_enrich_supply_rows($conn, $rows, $bdForBoost);
+        }
+    }
+
     usort($rows, static function (array $a, array $b) use ($sort): int {
+        if (is_readable(__DIR__ . '/ad_boost.php')) {
+            require_once __DIR__ . '/ad_boost.php';
+            $ba = crg_boost_row_is_active($a);
+            $bb = crg_boost_row_is_active($b);
+            if ($ba !== $bb) {
+                return $bb <=> $ba;
+            }
+        }
         switch ($sort) {
+            case 'distance':
+                $da = (float) ($a['distance_km'] ?? PHP_FLOAT_MAX);
+                $db = (float) ($b['distance_km'] ?? PHP_FLOAT_MAX);
+                if ($da !== $db) {
+                    return $da <=> $db;
+                }
+                return ((int) ($b['id'] ?? 0)) <=> ((int) ($a['id'] ?? 0));
             case 'rating':
                 $ra = (float) ($a['avg_rating'] ?? 0);
                 $rb = (float) ($b['avg_rating'] ?? 0);

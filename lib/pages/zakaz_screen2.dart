@@ -79,7 +79,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
       }
 
       final response = await http
-          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+          .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'))
           .timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
@@ -125,7 +125,7 @@ class _MyCustomScreenState extends State<MyCustomScreen> {
 
   Future<Map<String, dynamic>> checkOrderStatus(String performerId) async {
     final uri = Uri.parse(
-        '${Config.baseUrl}/api/check_order_status1.php?userIdok=$performerId');
+        '${Config.apiBase}/check_order_status1.php?userIdok=$performerId');
     final response =
         await http.get(uri).timeout(const Duration(seconds: 8));
 

@@ -30,4 +30,11 @@ import UserNotifications
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
     NSLog("APNs registration failed: %@", error.localizedDescription)
   }
+
+  /// Красный кружок на иконке ставит FCM (`aps.badge`), а в приложении нет
+  /// отдельного «центра уведомлений» — сбрасываем бейдж при каждом открытии.
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    application.applicationIconBadgeNumber = 0
+    super.applicationDidBecomeActive(application)
+  }
 }

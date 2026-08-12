@@ -34,7 +34,7 @@ Future<PerformerActiveOrder?> fetchPerformerActiveOrder() async {
     if (token == null || token.isEmpty) return null;
 
     final userResp = await http.get(
-      Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
+      Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'),
     );
     if (userResp.statusCode != 200) return null;
 
@@ -44,7 +44,7 @@ Future<PerformerActiveOrder?> fetchPerformerActiveOrder() async {
 
     final statusResp = await http.get(
       Uri.parse(
-          '${Config.baseUrl}/api/check_order_status1.php?userIdok=$performerId'),
+          '${Config.apiBase}/check_order_status1.php?userIdok=$performerId'),
     );
     if (statusResp.statusCode != 200) return null;
 

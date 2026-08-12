@@ -61,7 +61,7 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
       }
 
       final userResponse = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
+        Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'),
       );
       if (userResponse.statusCode != 200) return;
 
@@ -89,7 +89,7 @@ class _CustomerBottomNavState extends State<CustomerBottomNav> {
 
       final statusResponse = await http.get(
         Uri.parse(
-            '${Config.baseUrl}/api/check_order_statusisp.php?userIdok=$userId'),
+            '${Config.apiBase}/check_order_statusisp.php?userIdok=$userId'),
       );
       if (statusResponse.statusCode != 200) return;
 

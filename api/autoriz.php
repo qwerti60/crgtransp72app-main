@@ -3,7 +3,7 @@
 // здесь просто иллюстрация API.
 
 header("Content-Type: application/json");
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 // Create a new MySQLi connection
 $conn = new mysqli($host, $username, $password, $dbname);

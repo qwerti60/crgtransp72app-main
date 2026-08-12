@@ -62,7 +62,7 @@ class ServiceImagesBundle {
 
 class ServiceImagesApi {
   static Future<List<ServiceImageItem>> fetch(String table) async {
-    final uri = Uri.parse('${Config.baseUrl}/api/getimage.php').replace(
+    final uri = Uri.parse('${Config.apiBase}/getimage.php').replace(
       queryParameters: {
         'bd': table,
         'w': '480',
@@ -86,7 +86,7 @@ class ServiceImagesApi {
 
   /// Один запрос: спецтехника (vidt), перевозки (vidg), грузчики (gruzchik).
   static Future<ServiceImagesBundle> fetchAll() async {
-    final uri = Uri.parse('${Config.baseUrl}/api/getimage.php').replace(
+    final uri = Uri.parse('${Config.apiBase}/getimage.php').replace(
       queryParameters: {
         'bd': 'all',
         'w': '480',

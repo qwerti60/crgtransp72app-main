@@ -71,6 +71,21 @@ if ($exists) {
     } catch (Throwable $e) {
         // ignore chat hook errors
     }
+    try {
+        require_once __DIR__ . '/include/deal_push.php';
+        require_once __DIR__ . '/include/offer_validation.php';
+        $adOwner = crg_performer_ad_owner_id($pdo, (int) $iduser, (int) $bd);
+        if ($adOwner !== null && $adOwner > 0) {
+            crg_push_deal_event_safe($pdo, $adOwner, 'offer_received', [
+                'offer_id' => $offerId,
+                'bd' => (int) $bd,
+                'ad_id' => (int) $iduser,
+                'from_user_id' => (int) $iduserp,
+            ]);
+        }
+    } catch (Throwable $e) {
+        // ignore push errors
+    }
 
     echo json_encode(['status' => 'success', 'message' => 'Data added successfully']);
 }

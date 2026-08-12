@@ -1,7 +1,7 @@
 <?
 header('Content-Type: application/json; charset=UTF-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);

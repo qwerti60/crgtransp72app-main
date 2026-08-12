@@ -68,7 +68,7 @@ class zprofil_nameForm extends State<zprofil_name2> {
       return;
     }
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo_order.php?token=$token'));
+        Uri.parse('${Config.apiBase}/getuserinfo_order.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -403,7 +403,7 @@ class _showExitConfirmationDialog {
                   try {
                     final response = await http.post(
                       Uri.parse(Config.baseUrl).replace(
-                          path: '/api/clear_fcm_token.php'), // URL нашего API
+                          path: '${Config.apiPrefix}/clear_fcm_token.php'), // URL нашего API
                       body: {
                         'fcm_token': pushToken,
                       },

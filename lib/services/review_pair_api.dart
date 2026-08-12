@@ -25,7 +25,7 @@ Future<ExistingReview?> fetchReviewBetween({
       ? 'reviews'
       : 'reviewsisp';
 
-  final uri = Uri.parse('${Config.baseUrl}/api/get_review_between.php').replace(
+  final uri = Uri.parse('${Config.apiBase}/get_review_between.php').replace(
     queryParameters: {
       'table': tableName,
       'user_id': performerId.toString(),

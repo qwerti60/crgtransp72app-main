@@ -6,7 +6,7 @@ include 'databd<?php
 header("Content-Type: application/json");
 
 // Параметры подключения к базе данных
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 try {
     // Подключение к базе данных

@@ -1,6 +1,6 @@
 <?php
 /** @deprecated Используйте get_ads2_new.php */
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $city = isset($_GET['city']) ? $_GET['city'] : '';
 $useId = isset($_GET['useId']) ? $_GET['useId'] : '';

@@ -361,6 +361,8 @@ function crg_chat_list_threads(PDO $pdo, int $userId, ?string $type, int $limit,
             'last_message_at' => $row['last_message_at'] ?? $row['created_at'],
             'bd' => isset($row['bd']) ? (int) $row['bd'] : null,
             'ad_id' => isset($row['ad_id']) ? (int) $row['ad_id'] : null,
+            'offer_data_id' => isset($row['offer_data_id']) ? (int) $row['offer_data_id'] : null,
+            'order_global_id' => isset($row['order_global_id']) ? (int) $row['order_global_id'] : null,
             'support_ticket_id' => isset($row['support_ticket_id']) ? (int) $row['support_ticket_id'] : null,
             'ticket_status' => $row['ticket_status'] ?? null,
             'needs_rating' => $threadType === 'support'
@@ -903,6 +905,19 @@ function crg_chat_on_ordersglobal_created(PDO $pdo, int $orderGlobalId): void
         $threadId,
         'deal'
     );
+    try {
+        require_once __DIR__ . '/deal_push.php';
+        $extra = [
+            'thread_id' => $threadId,
+            'order_global_id' => $orderGlobalId,
+            'bd' => (int) $ctx['bd'],
+            'ad_id' => (int) $ctx['ad_id'],
+        ];
+        crg_push_deal_event_safe($pdo, (int) $ctx['customer_id'], 'deal_started', $extra);
+        crg_push_deal_event_safe($pdo, (int) $ctx['performer_id'], 'deal_started', $extra);
+    } catch (Throwable $e) {
+        // ignore
+    }
 }
 
 function crg_chat_on_ordersglobal_status(PDO $pdo, int $orderGlobalId, string $newStatus): void
@@ -961,6 +976,20 @@ function crg_chat_on_ordersglobal_status(PDO $pdo, int $orderGlobalId, string $n
 
     crg_chat_push_user($pdo, (int) $ctx['customer_id'], 'Обновление по заказу', $msg, $threadId, 'deal');
     crg_chat_push_user($pdo, (int) $ctx['performer_id'], 'Обновление по заказу', $msg, $threadId, 'deal');
+    try {
+        require_once __DIR__ . '/deal_push.php';
+        $event = $newStatus === 'выполнен' ? 'deal_completed' : 'deal_cancelled';
+        $extra = [
+            'thread_id' => $threadId,
+            'order_global_id' => $orderGlobalId,
+            'bd' => (int) $ctx['bd'],
+            'ad_id' => (int) $ctx['ad_id'],
+        ];
+        crg_push_deal_event_safe($pdo, (int) $ctx['customer_id'], $event, $extra);
+        crg_push_deal_event_safe($pdo, (int) $ctx['performer_id'], $event, $extra);
+    } catch (Throwable $e) {
+        // ignore
+    }
 }
 
 function crg_chat_rate_support_ticket(PDO $pdo, int $userId, int $ticketId, int $rating, string $comment): array

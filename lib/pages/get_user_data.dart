@@ -48,7 +48,7 @@ class _MyAppState extends State {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -85,7 +85,7 @@ class _MyAppState extends State {
 
   Future fetchUsers(String name) async {
     var response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/getuserdata_ispolnit.php?name=$name&city=$city'));
+        '${Config.apiBase}/getuserdata_ispolnit.php?name=$name&city=$city'));
 
     print('city: $city');
     print('name: $name');

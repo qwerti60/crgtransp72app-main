@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $truckId = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 $bd = isset($_POST['bd']) ? (int) $_POST['bd'] : 0;

@@ -150,7 +150,7 @@ class AvatarImageUpload {
   static Future<bool> uploadAvatar(Uint8List imageBytes, String email) async {
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/upload.php'),
+        Uri.parse('${Config.apiBase}/upload.php'),
         body: {
           'image': base64Encode(imageBytes),
           'email': email,

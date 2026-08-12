@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $idusers = $_GET['idusers'] ?? '';
 $bd      = $_GET['bd']      ?? '';

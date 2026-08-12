@@ -16,8 +16,11 @@ if ($row === null) {
     exit;
 }
 
+$hasGeo = crg_admin_cities_has_geo($pdo);
 $oldName = (string) ($row['name'] ?? '');
 $name = $oldName;
+$lat = $hasGeo && isset($row['lat']) && $row['lat'] !== null ? (string) $row['lat'] : '';
+$lng = $hasGeo && isset($row['lng']) && $row['lng'] !== null ? (string) $row['lng'] : '';
 $flashErr = '';
 $flashOk = '';
 
@@ -33,8 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_city'])) {
         $flashErr = 'CSRF: обновите страницу и повторите.';
     } else {
         $name = (string) ($_POST['name'] ?? '');
+        $lat = (string) ($_POST['lat'] ?? '');
+        $lng = (string) ($_POST['lng'] ?? '');
         $renameRefs = isset($_POST['rename_references']) && (string) $_POST['rename_references'] === '1';
-        $res = crg_admin_city_update($pdo, $id, $name, $renameRefs);
+        $res = crg_admin_city_update($pdo, $id, $name, $renameRefs, $lat, $lng);
         if ($res === true) {
             header('Location: city_edit.php?id=' . $id . '&saved=1', true, 303);
             exit;
@@ -49,6 +54,8 @@ if (isset($_GET['saved']) && (string) $_GET['saved'] === '1') {
     if ($row !== null) {
         $oldName = (string) ($row['name'] ?? '');
         $name = $oldName;
+        $lat = $hasGeo && isset($row['lat']) && $row['lat'] !== null ? (string) $row['lat'] : '';
+        $lng = $hasGeo && isset($row['lng']) && $row['lng'] !== null ? (string) $row['lng'] : '';
         $usageBreakdown = crg_admin_city_usage_breakdown($pdo, $oldName);
         $usageTotal = array_sum($usageBreakdown);
     }
@@ -59,6 +66,9 @@ tp_admin_web_layout_start('Редактирование города', 'cities',
 <p><a class="btn secondary small" href="cities.php">← К списку</a></p>
 <?php if ($flashOk !== '') { ?><p class="ok"><?= tp_admin_web_h($flashOk) ?></p><?php } ?>
 <?php if ($flashErr !== '') { ?><p class="err"><?= tp_admin_web_h($flashErr) ?></p><?php } ?>
+<?php if (!$hasGeo) { ?>
+    <p class="warn">Колонки lat/lng отсутствуют. Выполните миграцию <code>sql/migrate_city_geo.sql</code>.</p>
+<?php } ?>
 <div class="card">
     <p class="meta">ID: <strong><?= (int) $id ?></strong></p>
     <?php if ($usageTotal > 0) { ?>
@@ -77,6 +87,13 @@ tp_admin_web_layout_start('Редактирование города', 'cities',
     <input type="hidden" name="csrf" value="<?= tp_admin_web_h(tp_admin_web_csrf_token()) ?>">
     <label class="b" for="name">Название</label>
     <input class="in" type="text" name="name" id="name" required maxlength="255" value="<?= tp_admin_web_h($name) ?>">
+    <?php if ($hasGeo) { ?>
+        <label class="b" for="lat" style="margin-top:1rem">Широта (lat)</label>
+        <input class="in" type="text" name="lat" id="lat" inputmode="decimal" placeholder="57.152200" value="<?= tp_admin_web_h($lat) ?>">
+        <label class="b" for="lng" style="margin-top:1rem">Долгота (lng)</label>
+        <input class="in" type="text" name="lng" id="lng" inputmode="decimal" placeholder="65.527200" value="<?= tp_admin_web_h($lng) ?>">
+        <p class="meta">Нужны для поиска «рядом со мной». Можно оставить пустыми.</p>
+    <?php } ?>
     <?php if ($usageTotal > 0 && $name !== $oldName) { ?>
         <p class="warn">При смене названия отметьте галочку ниже, чтобы обновить имя во всех связанных таблицах.</p>
     <?php } ?>

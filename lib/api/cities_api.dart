@@ -17,7 +17,7 @@ class CitiesApi {
   static Future<CitiesFetchResult> fetchAll() async {
     try {
       final response = await http
-          .get(Uri.parse('${Config.baseUrl}/api/cities.php'))
+          .get(Uri.parse('${Config.apiBase}/cities.php'))
           .timeout(kApiTimeout);
 
       if (response.statusCode == 200) {

@@ -1,77 +1,98 @@
-<?
-$host = "localhost";
-$user = "u2395188_apps72";
-$pass = "kR3iV2aA6gjU8nC9";
-$db = "u2395188_apps";
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/load_databd.php';
+$user = $username;
+$pass = $password;
+$db = $dbname;
+
+header('Content-Type: text/plain; charset=utf-8');
 
 $conn = new mysqli($host, $user, $pass, $db);
-
 if ($conn->connect_error) {
-die('Connection failed: ' . $conn->connect_error);
+    http_response_code(500);
+    echo 'Connection failed: ' . $conn->connect_error;
+    exit;
 }
-$conn->set_charset("utf8");
-$iduser = $_POST['iduser'];
-$city = $_POST['city'];
-$cenahaurs = $_POST['cenahaurs'];
-$cenasmena = $_POST['cenasmena'];
-$cenakm = $_POST['cenakm'];
+$conn->set_charset('utf8mb4');
 
-// Примерное считывание и обработка изображений
-$img1 = $_FILES['img1']['tmp_name'] ? file_get_contents($_FILES['img1']['tmp_name']) : NULL;
-$img2 = $_FILES['img2']['tmp_name'] ? file_get_contents($_FILES['img2']['tmp_name']) : NULL;
-$img3 = $_FILES['img3']['tmp_name'] ? file_get_contents($_FILES['img3']['tmp_name']) : NULL;
-$img4 = $_FILES['img4']['tmp_name'] ? file_get_contents($_FILES['img4']['tmp_name']) : NULL;
-
-$imgDoc1 = $_FILES['imgDoc1']['tmp_name'] ? file_get_contents($_FILES['imgDoc1']['tmp_name']) : NULL;
-$imgDoc2 = $_FILES['imgDoc2']['tmp_name'] ? file_get_contents($_FILES['imgDoc2']['tmp_name']) : NULL;
-$imgDoc3 = $_FILES['imgDoc3']['tmp_name'] ? file_get_contents($_FILES['imgDoc3']['tmp_name']) : NULL;
-$imgDoc4 = $_FILES['imgDoc4']['tmp_name'] ? file_get_contents($_FILES['imgDoc4']['tmp_name']) : NULL;
-
-// Загрузка изображений документов в уникальные файлы
-// Предполагая, что $conn - это ваш объект подключения к базе данных.
-/*$target_dir = "uploads/";
-
-// Функция для обработки загруженных изображений
-function processImageUpload($fieldName) {
-    global $target_dir; // Используем глобальную переменную в функции
-    if (isset($_FILES[$fieldName]) && $_FILES[$fieldName]['error'] == UPLOAD_ERR_OK) {
-        // Проверяем, был ли файл успешно загружен без ошибок
-        return $target_dir . uniqid() . basename($_FILES[$fieldName]["name"]);
-    } else {
-        // Если файл не был загружен или произошла ошибка, возвращаем NULL
-        return NULL;
+function crg_upload_blob_gr(string $field): ?string
+{
+    if (!isset($_FILES[$field]) || !is_array($_FILES[$field])) {
+        return null;
     }
+    $err = (int) ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($err !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    $tmp = (string) ($_FILES[$field]['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        return null;
+    }
+    $data = file_get_contents($tmp);
+
+    return $data === false ? null : $data;
 }
 
-// Обрабатываем каждый файл
-$imgdoc1 = processImageUpload("imgdoc1");
-if ($imgdoc1) {
-    move_uploaded_file($_FILES["imgdoc1"]["tmp_name"], $imgdoc1);
+$iduser = (int) ($_POST['iduser'] ?? 0);
+if ($iduser <= 0) {
+    http_response_code(400);
+    echo 'Error: iduser is required';
+    exit;
 }
 
-$imgdoc2 = processImageUpload("imgdoc2");
-if ($imgdoc2) {
-    move_uploaded_file($_FILES["imgdoc2"]["tmp_name"], $imgdoc2);
+$city = (string) ($_POST['city'] ?? '');
+$cenahaurs = (string) ($_POST['cenahaurs'] ?? '');
+$cenasmena = (string) ($_POST['cenasmena'] ?? '');
+$cenakm = (string) ($_POST['cenakm'] ?? '');
+
+$img1 = crg_upload_blob_gr('img1');
+$img2 = crg_upload_blob_gr('img2');
+$img3 = crg_upload_blob_gr('img3');
+$img4 = crg_upload_blob_gr('img4');
+$imgDoc1 = crg_upload_blob_gr('imgDoc1');
+$imgDoc2 = crg_upload_blob_gr('imgDoc2');
+$imgDoc3 = crg_upload_blob_gr('imgDoc3');
+$imgDoc4 = crg_upload_blob_gr('imgDoc4');
+
+$stmt = $conn->prepare(
+    'INSERT INTO add_ob_gr (iduser, city, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4, flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)'
+);
+if (!$stmt) {
+    http_response_code(500);
+    echo 'Error: ' . $conn->error;
+    $conn->close();
+    exit;
 }
 
-$imgdoc3 = processImageUpload("imgdoc3");
-if ($imgdoc3) {
-    move_uploaded_file($_FILES["imgdoc3"]["tmp_name"], $imgdoc3);
-}
-
-$imgdoc4 = processImageUpload("imgdoc4");
-if ($imgdoc4) {
-    move_uploaded_file($_FILES["imgdoc4"]["tmp_name"], $imgdoc4);
-}
-*/
-$stmt = $conn->prepare("INSERT INTO add_ob_gr (iduser, city, cenahaurs, cenasmena, cenakm, img1, img2, img3, img4, imgdoc1, imgdoc2, imgdoc3, imgdoc4, flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)");
-$stmt->bind_param("issssssssssss", $iduser, $city, $cenahaurs, $cenasmena, $cenakm, $img1, $img2, $img3, $img4, $imgDoc1, $imgDoc2, $imgDoc3, $imgDoc4);
+$stmt->bind_param(
+    'issssssssssss',
+    $iduser,
+    $city,
+    $cenahaurs,
+    $cenasmena,
+    $cenakm,
+    $img1,
+    $img2,
+    $img3,
+    $img4,
+    $imgDoc1,
+    $imgDoc2,
+    $imgDoc3,
+    $imgDoc4
+);
 
 if ($stmt->execute()) {
-echo "New record created successfully";
+    $adId = (int) $conn->insert_id;
+    require_once __DIR__ . '/include/ad_auto_moderation.php';
+    crg_ad_auto_moderate_hook('gr', $adId, $iduser, [
+        'city' => $city,
+    ], [$img1, $img2, $img3, $img4]);
+    echo 'New record created successfully';
 } else {
-echo "Error: " . $stmt->error;
+    http_response_code(500);
+    echo 'Error: ' . $stmt->error;
 }
 
+$stmt->close();
 $conn->close();
-?>

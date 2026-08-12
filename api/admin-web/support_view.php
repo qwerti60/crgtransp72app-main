@@ -104,8 +104,28 @@ tp_admin_web_layout_start('Обращение #' . $ticketId, 'support', $adminL
                 </form>
             <?php } ?>
         </p>
-        <?php if (!empty($ticket['context_json'])) { ?>
+        <?php
+        $context = crg_admin_parse_ticket_context(
+            isset($ticket['context_json']) ? (string) $ticket['context_json'] : null
+        );
+        $dealThreadId = crg_admin_resolve_deal_thread_id($pdo, $context);
+        ?>
+        <?php if ($context !== null) { ?>
+            <p class="meta"><strong>Контекст:</strong></p>
+            <ul class="meta">
+                <?php foreach ($context as $ck => $cv) { ?>
+                    <li><?= tp_admin_web_h((string) $ck) ?>: <?= tp_admin_web_h(is_scalar($cv) ? (string) $cv : json_encode($cv, JSON_UNESCAPED_UNICODE)) ?></li>
+                <?php } ?>
+            </ul>
+        <?php } elseif (!empty($ticket['context_json'])) { ?>
             <p class="meta"><strong>Контекст:</strong> <?= tp_admin_web_h((string) $ticket['context_json']) ?></p>
+        <?php } ?>
+        <?php if ($dealThreadId > 0) { ?>
+            <p class="row-actions">
+                <a class="btn small" href="deal_chat_view.php?thread_id=<?= $dealThreadId ?>&amp;ticket_id=<?= (int) $ticketId ?>">
+                    Открыть deal-чат
+                </a>
+            </p>
         <?php } ?>
     </div>
 

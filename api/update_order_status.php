@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 function crg_to_mysql_datetime(?string $raw): string
 {
@@ -37,7 +37,7 @@ function crg_find_ordersglobal_for_update(
 
     $sqlActive = "SELECT * FROM ordersglobal
                   WHERE user_id = :user_id AND order_id = :order_id
-                    AND status = 'выполняется'{$customerFilter}
+                    AND status IN ('выполняется', 'в_пути'){$customerFilter}
                   ORDER BY id DESC
                   LIMIT 1";
     $stmt = $pdo->prepare($sqlActive);
@@ -80,7 +80,7 @@ try {
         if ($customer_id === '' || $customer_id === '0') {
             $stmt = $pdo->prepare(
                 "SELECT * FROM ordersglobal
-                 WHERE user_id = :user_id AND order_id = :order_id AND status = 'выполняется'
+                 WHERE user_id = :user_id AND order_id = :order_id AND status IN ('выполняется', 'в_пути')
                  ORDER BY id DESC
                  LIMIT 1"
             );
@@ -103,7 +103,7 @@ try {
         $stmt = $pdo->prepare(
             "UPDATE ordersglobal
              SET status = 'выполнен', end_time = :end_time
-             WHERE id = :id AND status = 'выполняется'"
+             WHERE id = :id AND status IN ('выполняется', 'в_пути')"
         );
         $stmt->bindValue(':end_time', $endTime, PDO::PARAM_STR);
         $stmt->bindValue(':id', $orderGlobalId, PDO::PARAM_INT);
@@ -112,14 +112,14 @@ try {
         $stmt = $pdo->prepare(
             "UPDATE ordersglobal
              SET status = 'отменен', cancel_time = :cancel_time
-             WHERE id = :id AND status = 'выполняется'"
+             WHERE id = :id AND status IN ('выполняется', 'в_пути')"
         );
         $stmt->bindValue(':cancel_time', $cancelTime, PDO::PARAM_STR);
         $stmt->bindValue(':id', $orderGlobalId, PDO::PARAM_INT);
         $stmt->execute();
     } else {
         $stmt = $pdo->prepare(
-            "UPDATE ordersglobal SET status = :status WHERE id = :id AND status = 'выполняется'"
+            "UPDATE ordersglobal SET status = :status WHERE id = :id AND status IN ('выполняется', 'в_пути')"
         );
         $stmt->bindValue(':status', $new_status, PDO::PARAM_STR);
         $stmt->bindValue(':id', $orderGlobalId, PDO::PARAM_INT);

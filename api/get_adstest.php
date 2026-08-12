@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 // Получаем id пользователя
 $idusers = isset($_GET['idusers']) && is_numeric($_GET['idusers']) ? intval($_GET['idusers']) : 0;

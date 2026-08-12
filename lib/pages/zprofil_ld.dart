@@ -83,7 +83,7 @@ class zprofil_ldForm extends State<zprofil_ld> {
 
     // Создаем запрос на сервер
     Uri uri =
-        Uri.parse("${Config.baseUrl}/api/upload.php"); // Измените на ваш URL
+        Uri.parse("${Config.apiBase}/upload.php"); // Измените на ваш URL
     var request = http.MultipartRequest("POST", uri)
       ..fields['email'] = email // Замените на соответствующий ID пользователя
       ..files.add(http.MultipartFile.fromBytes(
@@ -113,10 +113,10 @@ class zprofil_ldForm extends State<zprofil_ld> {
       return;
     }
     final apiPath = widget.isPerformerProfile
-        ? '/api/getuserinfo_order.php'
-        : '/api/getuserinfo.php';
+        ? 'getuserinfo_order.php'
+        : 'getuserinfo.php';
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}$apiPath?token=$token'));
+        .get(Config.apiUri(apiPath, query: {'token': token}));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

@@ -116,6 +116,20 @@ try {
         }
     }
 
+    try {
+        require_once __DIR__ . '/include/deal_push.php';
+        $event = $action === 'refuse' ? 'offer_rejected' : 'offer_accepted';
+        // counterpartyId — кому уходит уведомление (вторая сторона сделки)
+        crg_push_deal_event_safe($conn, $counterpartyId, $event, [
+            'bd' => $bd,
+            'ad_id' => $adId,
+            'source' => $source,
+            'action' => $action,
+        ]);
+    } catch (Throwable $e) {
+        // ignore push errors
+    }
+
     echo json_encode(['message' => 'Данные успешно обновлены'], JSON_UNESCAPED_UNICODE);
 } catch (PDOException | Exception $e) {
     http_response_code(400);

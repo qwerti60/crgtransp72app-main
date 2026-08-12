@@ -14,7 +14,7 @@ Future<bool> customerShouldOpenOrdersTimer() async {
     if (token == null || token.isEmpty) return false;
 
     final userResp = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'))
         .timeout(const Duration(seconds: 8));
     if (userResp.statusCode != 200) return false;
 
@@ -26,7 +26,7 @@ Future<bool> customerShouldOpenOrdersTimer() async {
 
     final statusResp = await http
         .get(Uri.parse(
-            '${Config.baseUrl}/api/check_order_statusisp.php?userIdok=$userId'))
+            '${Config.apiBase}/check_order_statusisp.php?userIdok=$userId'))
         .timeout(const Duration(seconds: 8));
     if (statusResp.statusCode != 200) return false;
 

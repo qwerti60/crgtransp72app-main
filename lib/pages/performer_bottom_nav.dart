@@ -54,7 +54,7 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
       // Тот же источник, что и MyCustomScreen (zakaz_screen2) — иначе после «Услуги» → CityScreen
       // нижнее меню без «Профиля», хотя пользователь уже вошёл.
       final userResponse = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
+        Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'),
       );
       if (userResponse.statusCode != 200) return;
 
@@ -78,7 +78,7 @@ class _PerformerBottomNavState extends State<PerformerBottomNav> {
 
       final statusResponse = await http.get(
         Uri.parse(
-            '${Config.baseUrl}/api/check_order_status1.php?userIdok=$userId'),
+            '${Config.apiBase}/check_order_status1.php?userIdok=$userId'),
       );
       if (statusResponse.statusCode != 200) return;
 

@@ -25,6 +25,7 @@ import 'customer_search_screen.dart';
 import 'like_helper.dart';
 import 'loginpage.dart';
 import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/pages/support_create_screen.dart';
 import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 
 class outputob extends StatelessWidget {
@@ -278,7 +279,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -300,7 +301,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -488,7 +489,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/delete_offer_zakaz.php'),
+        Uri.parse('${Config.apiBase}/delete_offer_zakaz.php'),
         body: {
           'iduserp': userId.toString(),
           'iduser': listingId.toString(),
@@ -548,7 +549,9 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       if (ads != null &&
           nameImg.isNotEmpty &&
-          (city.isNotEmpty || widget.ignoreCityFilter)) {
+          (city.isNotEmpty ||
+              widget.ignoreCityFilter ||
+              widget.searchParams!.hasGeo)) {
         debugPrint(
           '[outputob] search_services empty for $city / $nameImg, fallback to get_ads2_new',
         );
@@ -559,7 +562,8 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
-    if (nameImg.isEmpty || city.isEmpty) {
+    if (nameImg.isEmpty ||
+        (city.isEmpty && !(widget.searchParams?.hasGeo ?? false))) {
       return [];
     }
 
@@ -575,7 +579,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/get_ads2_new.php',
+        path: '${Config.apiPrefix}/get_ads2_new.php',
         queryParameters: queryParameters,
       ),
     );
@@ -796,6 +800,25 @@ class _MyHomePageState extends State<MyHomePage> {
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
+                                            if (truck['is_verified'] == 1 ||
+                                                truck['is_verified'] == true ||
+                                                truck['is_verified']?.toString() == '1')
+                                              const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.verified,
+                                                      color: Colors.blue,
+                                                      size: 16),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'Проверен',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             GestureDetector(
                                               onTap: () {
                                                 final reviewUserId = truck[
@@ -871,9 +894,26 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ],
                                   );
 
-                                  final Widget phoneBlock = ProfileContactRow(
-                                    phone: '${truck['phone'] ?? ''}',
-                                    onChatTap: () => _openChatForTruck(truck),
+                                  final Widget phoneBlock = Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      ProfileContactRow(
+                                        phone: '${truck['phone'] ?? ''}',
+                                        onChatTap: () =>
+                                            _openChatForTruck(truck),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => _reportTruck(truck),
+                                        child: const Text(
+                                          'Пожаловаться',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black45,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
 
                                   if (isNarrow) {
@@ -1059,6 +1099,25 @@ class _MyHomePageState extends State<MyHomePage> {
                                 ],
                               ),
                             ),
+                            if (truck['distance_km'] != null)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Расстояние:',
+                                        style:
+                                            DefaultTextStyle.of(context).style),
+                                    Text(
+                                        '${truck['distance_km']} км',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: blueaccentColor)),
+                                  ],
+                                ),
+                              ),
                             if (truck['vidt'] != null)
                               Padding(
                                 padding:
@@ -1283,6 +1342,28 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future<void> _reportTruck(Map truck) async {
+    final adId = int.tryParse('${truck['id'] ?? ''}') ?? 0;
+    final adBd = bd ?? widget.bd;
+    if (adId <= 0 || adBd <= 0) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SupportCreateScreen(
+          showBottomNav: false,
+          isPerformer: false,
+          initialCategory: 'ad_moderation',
+          initialSubject: 'Жалоба на объявление #$adId',
+          lockCategory: true,
+          contextJson: {
+            'bd': adBd,
+            'ad_id': adId,
+            'side': 'supply',
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(
       scheme: 'tel',
@@ -1324,7 +1405,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),

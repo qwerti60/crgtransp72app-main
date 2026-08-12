@@ -88,6 +88,7 @@ function crg_admin_stats_dashboard(PDO $pdo, array $opts = []): array
         'tariff' => null,
         'subscription_analytics' => [],
         'platform_finances' => [],
+        'funnel' => [],
     ];
 
     if (crg_admin_stats_table_exists($pdo, 'users')) {
@@ -501,6 +502,13 @@ function crg_admin_stats_dashboard(PDO $pdo, array $opts = []): array
         $out['kpi']['deals_count_period'] = (int) $pf['deals_count'];
     }
 
+    $out['funnel'] = crg_admin_stats_funnel(
+        $pdo,
+        $period,
+        $dateFrom !== '' ? $dateFrom : '',
+        $dateTo !== '' ? $dateTo : ''
+    );
+
     return $out;
 }
 
@@ -884,6 +892,123 @@ function crg_admin_stats_platform_finances(
     );
 
     return $out;
+}
+
+/**
+ * Воронка: регистрации → объявления → отклики → сделки → оплата подписки.
+ *
+ * @return array<string, mixed>
+ */
+function crg_admin_stats_funnel(
+    PDO $pdo,
+    string $period,
+    string $dateFrom = '',
+    string $dateTo = ''
+): array {
+    $from = '1970-01-01 00:00:00';
+    $to = date('Y-m-d 23:59:59');
+
+    if ($period === 'custom' && $dateFrom !== '' && $dateTo !== '') {
+        $from = substr($dateFrom, 0, 10) . ' 00:00:00';
+        $to = substr($dateTo, 0, 10) . ' 23:59:59';
+    } elseif ($period === 'day') {
+        $from = date('Y-m-d 00:00:00');
+    } elseif ($period === 'week') {
+        $from = date('Y-m-d 00:00:00', strtotime('-6 days'));
+    } elseif ($period === 'month') {
+        $from = date('Y-m-d 00:00:00', strtotime('-29 days'));
+    } elseif ($period !== 'all') {
+        $from = date('Y-m-d 00:00:00', strtotime('-29 days'));
+    }
+
+    $steps = [
+        ['key' => 'registrations', 'label' => 'Регистрации', 'count' => 0],
+        ['key' => 'first_ad', 'label' => 'Первое объявление/заявка', 'count' => 0],
+        ['key' => 'offers', 'label' => 'Отклики (offer)', 'count' => 0],
+        ['key' => 'deals', 'label' => 'Завершённые сделки', 'count' => 0],
+        ['key' => 'subscription_paid', 'label' => 'Оплата подписки', 'count' => 0],
+    ];
+
+    if (crg_admin_stats_table_exists($pdo, 'users')) {
+        $hasCreated = crg_admin_stats_column_exists($pdo, 'users', 'created_at');
+        if ($hasCreated) {
+            $st = $pdo->prepare('SELECT COUNT(*) FROM users WHERE created_at >= ? AND created_at <= ?');
+            $st->execute([$from, $to]);
+            $steps[0]['count'] = (int) $st->fetchColumn();
+        } else {
+            $steps[0]['count'] = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+        }
+    }
+
+    $adSql = [];
+    foreach (['orders', 'orderst', 'ordersg', 'add_ob_gp', 'add_ob_vidt', 'add_ob_gr'] as $tbl) {
+        if (!crg_admin_stats_table_exists($pdo, $tbl)) {
+            continue;
+        }
+        $dateCol = crg_admin_stats_column_exists($pdo, $tbl, 'created_at') ? 'created_at' : null;
+        if ($dateCol !== null) {
+            $adSql[] = "SELECT DISTINCT iduser AS uid FROM `{$tbl}` WHERE created_at >= " . $pdo->quote($from) . ' AND created_at <= ' . $pdo->quote($to);
+        } else {
+            $adSql[] = "SELECT DISTINCT iduser AS uid FROM `{$tbl}`";
+        }
+    }
+    if ($adSql !== []) {
+        $union = implode(' UNION ', $adSql);
+        $st = $pdo->query("SELECT COUNT(*) FROM ({$union}) t WHERE uid IS NOT NULL AND TRIM(uid) != '' AND uid != '0'");
+        if ($st) {
+            $steps[1]['count'] = (int) $st->fetchColumn();
+        }
+    }
+
+    foreach (['offer_data', 'offer_dataf'] as $tbl) {
+        if (!crg_admin_stats_table_exists($pdo, $tbl)) {
+            continue;
+        }
+        if (crg_admin_stats_column_exists($pdo, $tbl, 'created_at')) {
+            $st = $pdo->prepare("SELECT COUNT(*) FROM `{$tbl}` WHERE created_at >= ? AND created_at <= ?");
+            $st->execute([$from, $to]);
+        } else {
+            $st = $pdo->query("SELECT COUNT(*) FROM `{$tbl}`");
+        }
+        if ($st) {
+            $steps[2]['count'] += (int) $st->fetchColumn();
+        }
+    }
+
+    if (crg_admin_stats_table_exists($pdo, 'ordersglobal')) {
+        $st = $pdo->prepare(
+            "SELECT COUNT(*) FROM ordersglobal WHERE status = 'выполнен'
+             AND end_time >= ? AND end_time <= ?"
+        );
+        $st->execute([$from, $to]);
+        $steps[3]['count'] = (int) $st->fetchColumn();
+    }
+
+    if (crg_admin_stats_table_exists($pdo, 'subscription_payment_log')) {
+        $st = $pdo->prepare(
+            'SELECT COUNT(DISTINCT iduser) FROM subscription_payment_log
+             WHERE paid_at >= ? AND paid_at <= ?'
+        );
+        $st->execute([$from, $to]);
+        $steps[4]['count'] = (int) $st->fetchColumn();
+    }
+
+    $base = max(1, (int) $steps[0]['count']);
+    foreach ($steps as &$step) {
+        $step['pct_of_reg'] = round(100 * ((int) $step['count']) / $base, 1);
+    }
+    unset($step);
+
+    for ($i = 1; $i < count($steps); $i++) {
+        $prev = max(1, (int) $steps[$i - 1]['count']);
+        $steps[$i]['conversion_from_prev_pct'] = round(100 * ((int) $steps[$i]['count']) / $prev, 1);
+    }
+
+    return [
+        'period_from' => $from,
+        'period_to' => $to,
+        'steps' => $steps,
+    ];
 }
 
 function crg_admin_stats_fmt_int(?int $n): string

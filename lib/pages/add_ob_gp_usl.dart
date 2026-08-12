@@ -106,7 +106,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -278,7 +278,7 @@ class _add_ob_gpForm extends State<add_ob_gp_usl> {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-    var uri = Uri.parse('${Config.baseUrl}/api/add_gruz_info.php');
+    var uri = Uri.parse('${Config.apiBase}/add_gruz_info.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)

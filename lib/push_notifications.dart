@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -27,6 +28,7 @@ Future<void> initPushNotifications() async {
   await _localNotifications.initialize(
     initSettings,
     onDidReceiveNotificationResponse: (response) {
+      unawaited(clearAppIconBadge());
       ChatPushHandler.handlePayloadJson(response.payload);
     },
   );
@@ -44,7 +46,28 @@ Future<void> initPushNotifications() async {
   }
 
   FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+  FirebaseMessaging.onMessageOpenedApp.listen((_) {
+    unawaited(clearAppIconBadge());
+  });
   _localNotificationsReady = true;
+
+  // Сбрасываем кружок на иконке, если приложение уже открыто.
+  await clearAppIconBadge();
+}
+
+/// Сброс бейджа на иконке (Android: очистка шторки; iOS: ещё и AppDelegate).
+/// Вызывать при открытии/возврате в приложение и после тапа по push.
+Future<void> clearAppIconBadge() async {
+  try {
+    if (!_localNotificationsReady) {
+      return;
+    }
+    await _localNotifications.cancelAll();
+    // iOS: бейдж ещё сбрасывается в AppDelegate.applicationDidBecomeActive.
+    // Не показываем «пустой» notification — на части устройств это даёт сбой.
+  } catch (e) {
+    debugPrint('clearAppIconBadge: $e');
+  }
 }
 
 Future<void> _showForegroundNotification(RemoteMessage message) async {
@@ -71,10 +94,12 @@ Future<void> _showForegroundNotification(RemoteMessage message) async {
         priority: Priority.high,
         icon: '@drawable/icon',
         tag: message.messageId,
+        number: 0,
       ),
+      // В открытом приложении не копим бейдж на иконке — только баннер.
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
-        presentBadge: true,
+        presentBadge: false,
         presentSound: true,
       ),
     ),

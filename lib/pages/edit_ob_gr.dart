@@ -93,7 +93,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -215,7 +215,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
   Future _fetchVidT() async {
     final response = await http
-        .get(Uri.parse(Config.baseUrl).replace(path: '/api/vidt.php'));
+        .get(Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/vidt.php'));
     //    Uri.parse(Config.baseUrl).replace(path: 'regtest.php'),
 
     if (response.statusCode == 200) {
@@ -309,7 +309,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
 
 
   void uploadData() async {
-    var uri = Uri.parse('${Config.baseUrl}/api/upload_ob_gr.php');
+    var uri = Uri.parse('${Config.apiBase}/upload_ob_gr.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
@@ -509,7 +509,7 @@ class add_ob_vidtForm extends State<edit_ob_gr> {
   Future<List<Map<String, dynamic>>> fetchAds() async {
     // формируем uri
     final uri = Uri.parse(Config.baseUrl).replace(
-      path: '/api/edit_ob_gr_u_v2.php',
+      path: '${Config.apiPrefix}/edit_ob_gr_u_v2.php',
       queryParameters: {
         'id': widget.id.toString(),
         'idusers': widget.id.toString(),

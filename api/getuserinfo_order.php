@@ -4,10 +4,7 @@ ini_set('default_charset', 'UTF-8');
 mb_internal_encoding('UTF-8');
 
 /* --- подключение к БД --- */
-$host     = 'localhost';
-$dbname   = 'u2395188_apps';
-$username = 'u2395188_apps72';
-$password = 'kR3iV2aA6gjU8nC9';
+require __DIR__ . '/load_databd.php';
 
 try {
     $pdo = new PDO(

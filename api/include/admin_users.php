@@ -104,7 +104,7 @@ function crg_admin_user_editable_columns(): array
     return [
         'rollNum', 'statNum', 'firstName', 'lastName', 'middleName', 'city', 'phone', 'email',
         'namefirm', 'innStr', 'ogrnStr', 'kppStr', 'vidt', 'marka', 'godv', 'maxgruz',
-        'dkuzov', 'shkuzov', 'vidk', 'cenahaurs', 'cenasmena', 'cenakm', 'flag',
+        'dkuzov', 'shkuzov', 'vidk',         'cenahaurs', 'cenasmena', 'cenakm', 'flag', 'is_verified',
     ];
 }
 
@@ -284,8 +284,8 @@ function crg_admin_user_insert(PDO $pdo, array $data): array
             continue;
         }
         $val = $data[$col];
-        if ($col === 'flag') {
-            $hasFlag = true;
+        if ($col === 'flag' || $col === 'is_verified') {
+            $hasFlag = $col === 'flag' ? true : $hasFlag;
             $val = (int) $val === 1 ? 1 : 0;
         } elseif (in_array($col, ['rollNum', 'statNum', 'godv', 'dkuzov', 'shkuzov'], true)) {
             $val = $val === '' || $val === null ? null : (int) $val;
@@ -364,7 +364,7 @@ function crg_admin_user_update(PDO $pdo, int $id, array $data)
             continue;
         }
         $val = $data[$col];
-        if ($col === 'flag') {
+        if ($col === 'flag' || $col === 'is_verified') {
             $val = (int) $val === 1 ? 1 : 0;
         } elseif (in_array($col, ['rollNum', 'statNum', 'godv', 'dkuzov', 'shkuzov'], true)) {
             $val = $val === '' || $val === null ? null : (int) $val;

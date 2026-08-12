@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 /**
  * Отзыв заказчика об исполнителе (reviewsisp):

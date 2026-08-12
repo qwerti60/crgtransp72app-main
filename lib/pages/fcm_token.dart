@@ -197,7 +197,7 @@ Future<bool> syncPushFcmTokenToServer({
   try {
     final response = await http
         .post(
-          Uri.parse('${Config.baseUrl}/api/update_fcm_token.php'),
+          Uri.parse('${Config.apiBase}/update_fcm_token.php'),
           body: {
             'token': authToken,
             'fcm_token': fcm,

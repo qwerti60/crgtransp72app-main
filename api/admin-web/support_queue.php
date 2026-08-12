@@ -12,13 +12,21 @@ $statusFilter = trim((string) ($_GET['status'] ?? 'new'));
 if ($statusFilter === '') {
     $statusFilter = 'new';
 }
+$categoryFilter = trim((string) ($_GET['category'] ?? 'all'));
+if ($categoryFilter === '') {
+    $categoryFilter = 'all';
+}
 $perPage = max(10, min(100, (int) ($_GET['per'] ?? 30)));
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $offset = ($page - 1) * $perPage;
 
 $tablesReady = crg_admin_support_tables_ready($pdo);
-$rows = $tablesReady ? crg_admin_support_queue($pdo, $statusFilter, $perPage, $offset) : [];
-$total = $tablesReady ? crg_admin_support_queue_total($pdo, $statusFilter) : 0;
+$rows = $tablesReady
+    ? crg_admin_support_queue($pdo, $statusFilter, $perPage, $offset, $categoryFilter)
+    : [];
+$total = $tablesReady
+    ? crg_admin_support_queue_total($pdo, $statusFilter, $categoryFilter)
+    : 0;
 $pages = max(1, (int) ceil($total / $perPage));
 $statusLabels = crg_admin_support_status_labels();
 $categoryLabels = crg_chat_support_category_labels();
@@ -30,10 +38,16 @@ tp_admin_web_layout_start('Поддержка', 'support', $adminLogin !== '' ? 
 <?php } ?>
 
 <p class="filters">
-    <a class="btn<?= $statusFilter === 'new' ? '' : ' secondary' ?>" href="support_queue.php?status=new">Новые</a>
-    <a class="btn<?= $statusFilter === 'assigned' ? '' : ' secondary' ?>" href="support_queue.php?status=assigned">В работе</a>
-    <a class="btn<?= $statusFilter === 'waiting_user' ? '' : ' secondary' ?>" href="support_queue.php?status=waiting_user">Ждём ответа</a>
-    <a class="btn<?= $statusFilter === 'all' ? '' : ' secondary' ?>" href="support_queue.php?status=all">Все</a>
+    <a class="btn<?= $statusFilter === 'new' ? '' : ' secondary' ?>" href="support_queue.php?status=new&amp;category=<?= urlencode($categoryFilter) ?>">Новые</a>
+    <a class="btn<?= $statusFilter === 'assigned' ? '' : ' secondary' ?>" href="support_queue.php?status=assigned&amp;category=<?= urlencode($categoryFilter) ?>">В работе</a>
+    <a class="btn<?= $statusFilter === 'waiting_user' ? '' : ' secondary' ?>" href="support_queue.php?status=waiting_user&amp;category=<?= urlencode($categoryFilter) ?>">Ждём ответа</a>
+    <a class="btn<?= $statusFilter === 'all' ? '' : ' secondary' ?>" href="support_queue.php?status=all&amp;category=<?= urlencode($categoryFilter) ?>">Все</a>
+</p>
+<p class="filters">
+    <a class="btn<?= $categoryFilter === 'all' ? '' : ' secondary' ?>" href="support_queue.php?status=<?= urlencode($statusFilter) ?>&amp;category=all">Все категории</a>
+    <a class="btn<?= $categoryFilter === 'reports' ? '' : ' secondary' ?>" href="support_queue.php?status=<?= urlencode($statusFilter) ?>&amp;category=reports">Жалобы</a>
+    <a class="btn<?= $categoryFilter === 'deal_dispute' ? '' : ' secondary' ?>" href="support_queue.php?status=<?= urlencode($statusFilter) ?>&amp;category=deal_dispute">Споры</a>
+    <a class="btn<?= $categoryFilter === 'ad_moderation' ? '' : ' secondary' ?>" href="support_queue.php?status=<?= urlencode($statusFilter) ?>&amp;category=ad_moderation">Объявления</a>
 </p>
 
 <p class="meta">Всего: <?= (int) $total ?></p>

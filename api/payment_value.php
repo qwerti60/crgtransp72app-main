@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
 
-include 'databd.php'; // Убедитесь, что здесь правильный путь к файлу
+require __DIR__ . '/load_databd.php'; // Убедитесь, что здесь правильный путь к файлу
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);

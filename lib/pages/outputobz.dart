@@ -8,6 +8,7 @@ import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:crgtransp72app/pages/get_vt_z.dart';
 import 'package:crgtransp72app/pages/chat_thread_screen.dart';
+import 'package:crgtransp72app/pages/support_create_screen.dart';
 import 'package:crgtransp72app/widgets/profile_contact_row.dart';
 import 'package:crgtransp72app/pages/loginpage.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
@@ -235,7 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/deleteoffer.php'),
+        Uri.parse('${Config.apiBase}/deleteoffer.php'),
         body: {
           'iduserp': userId.toString(),
           'iduser': listingId.toString(),
@@ -290,7 +291,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (bd != null && bd! > 0) return;
     try {
       final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/get_cities.php').replace(
+        Uri.parse('${Config.apiBase}/get_cities.php').replace(
           queryParameters: {
             'namex': widget.nameImg,
             'useId': '0',
@@ -319,7 +320,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -343,7 +344,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<bool> checkOfferExists(
       dynamic performerUserId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
+        '${Config.apiBase}/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -355,7 +356,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -436,13 +437,14 @@ class _MyHomePageState extends State<MyHomePage> {
       debugPrint('[outputobz] search_services unavailable, fallback to getads3');
     }
 
-    if (nameImg.isEmpty || city.isEmpty) {
+    if (nameImg.isEmpty ||
+        (city.isEmpty && !(widget.searchParams?.hasGeo ?? false))) {
       return [];
     }
 
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/getads3.php',
+        path: '${Config.apiPrefix}/getads3.php',
         queryParameters: {
           'nameImg': nameImg,
           'city': city, // Преобразуем в строку
@@ -732,9 +734,26 @@ class _MyHomePageState extends State<MyHomePage> {
                                       ],
                                     );
 
-                                    final Widget phoneBlock = ProfileContactRow(
-                                      phone: '${truck['phone'] ?? ''}',
-                                      onChatTap: () => _openChatForTruck(truck),
+                                    final Widget phoneBlock = Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        ProfileContactRow(
+                                          phone: '${truck['phone'] ?? ''}',
+                                          onChatTap: () =>
+                                              _openChatForTruck(truck),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => _reportTruck(truck),
+                                          child: const Text(
+                                            'Пожаловаться',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black45,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     );
 
                                     if (isNarrow) {
@@ -850,6 +869,25 @@ class _MyHomePageState extends State<MyHomePage> {
                                       Text('${truck['city']}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              if (truck['distance_km'] != null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('Расстояние:',
+                                          style: DefaultTextStyle.of(context)
+                                              .style),
+                                      Text(
+                                          '${truck['distance_km']} км',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: blueaccentColor)),
                                     ],
                                   ),
                                 ),
@@ -1227,6 +1265,28 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Future<void> _reportTruck(Map truck) async {
+    final adId = int.tryParse('${truck['id'] ?? ''}') ?? 0;
+    final adBd = _bdForTruck(truck);
+    if (adId <= 0 || adBd <= 0) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SupportCreateScreen(
+          showBottomNav: false,
+          isPerformer: true,
+          initialCategory: 'ad_moderation',
+          initialSubject: 'Жалоба на заявку #$adId',
+          lockCategory: true,
+          contextJson: {
+            'bd': adBd,
+            'ad_id': adId,
+            'side': 'demand',
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(
       scheme: 'tel',
@@ -1268,7 +1328,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),

@@ -1,10 +1,10 @@
 <?php
 
 // Подключение к базе данных
-$host = 'localhost';
-$db   = 'u2395188_apps';
-$user = 'u2395188_apps72';
-$pass = 'kR3iV2aA6gjU8nC9';
+require __DIR__ . '/load_databd.php';
+$user = $username;
+$pass = $password;
+$db = $dbname;
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";

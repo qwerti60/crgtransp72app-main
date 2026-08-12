@@ -77,27 +77,38 @@ tp_admin_web_layout_start('Города', 'cities', $adminLogin !== '' ? $adminL
     <?php } ?>
 </form>
 <p class="meta">Всего городов: <strong><?= (int) $total ?></strong><?php if ($pages > 1) { ?> · страница <?= (int) $page ?> из <?= (int) $pages ?><?php } ?></p>
+<?php $hasGeo = crg_admin_cities_has_geo($pdo); ?>
+<?php if (!$hasGeo) { ?>
+    <p class="warn">Колонки lat/lng отсутствуют. Выполните миграцию <code>sql/migrate_city_geo.sql</code> для геопоиска.</p>
+<?php } ?>
 <table class="data">
     <thead>
         <tr>
             <th>ID</th>
             <th>Название</th>
+            <?php if ($hasGeo) { ?><th class="num">Координаты</th><?php } ?>
             <th class="num">Использований</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
         <?php if (count($rows) === 0 && $listErr === null) { ?>
-            <tr><td colspan="4">Нет записей</td></tr>
+            <tr><td colspan="<?= $hasGeo ? 5 : 4 ?>">Нет записей</td></tr>
         <?php } ?>
         <?php foreach ($rows as $r) {
             $id = (int) ($r['id'] ?? 0);
             $name = (string) ($r['name'] ?? '');
             $usage = crg_admin_city_usage_total($pdo, $name);
+            $latVal = isset($r['lat']) && $r['lat'] !== null && $r['lat'] !== '' ? (string) $r['lat'] : '';
+            $lngVal = isset($r['lng']) && $r['lng'] !== null && $r['lng'] !== '' ? (string) $r['lng'] : '';
+            $coordsLabel = ($latVal !== '' && $lngVal !== '')
+                ? tp_admin_web_h($latVal . ', ' . $lngVal)
+                : '<span class="meta">—</span>';
             ?>
             <tr>
                 <td class="num"><?= $id ?></td>
                 <td><?= tp_admin_web_h($name) ?></td>
+                <?php if ($hasGeo) { ?><td class="num meta"><?= $coordsLabel ?></td><?php } ?>
                 <td class="num"><?= $usage > 0 ? (int) $usage : '<span class="meta">0</span>' ?></td>
                 <td class="row-actions">
                     <a class="btn small" href="city_edit.php?id=<?= $id ?>">Изменить</a>

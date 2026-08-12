@@ -113,7 +113,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
 
       final response = await http
           .post(
-            Uri.parse('${Config.baseUrl}/api/check_order_statusisp2.php'),
+            Uri.parse('${Config.apiBase}/check_order_statusisp2.php'),
             body: {
               'user_id': performerId,
               'order_id': widget.orderId,
@@ -236,7 +236,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
       return;
     }
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -281,7 +281,7 @@ class _OrderExecutionScreenState extends State<OrderExecutionScreenzak> {
     final dio = Dio();
     try {
       final response = await dio.put(
-        '${Config.baseUrl}/api/update_order_status.php',
+        '${Config.apiBase}/update_order_status.php',
         data: {
           'user_id': widget.userId,
           'order_id': widget.orderId,

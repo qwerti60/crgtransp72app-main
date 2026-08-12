@@ -593,16 +593,17 @@ Badge: число ticket со `status = new` (как красная точка �
 
 ---
 
-## 12. Этапы внедрения — статус (4 июля 2026)
+## 12. Этапы внедрения — статус (2 августа 2026)
 
 | Фаза | Содержание | Статус |
 |------|------------|--------|
 | **1. Support MVP** | таблицы, API support + messages, admin `support_*`, FCM, текст | ✓ |
 | **2. Deal chat** | thread по offer/ordersglobal, UI в приложении | ✓ |
 | **3. Улучшения** | фото/документы, polling admin, оценка support | ✓ (MVP) |
-| **4. Модерация P2P** | просмотр deal admin, жалобы, WebSocket | не реализовано |
+| **4. Модерация P2P** | просмотр deal admin, жалобы, WebSocket | жалобы + readonly deal-чат в админке ✓; WebSocket — нет |
 
-Свод сценариев и точек входа: **[app_scenarios_ru.md](./app_scenarios_ru.md) §9**.
+Свод сценариев и точек входа: **[app_scenarios_ru.md](./app_scenarios_ru.md) §9**.  
+Деплой P1: **[deploy_p1_checklist.md](./deploy_p1_checklist.md)**.
 
 ### 12.1. Чеклист фазы 1–3 (Support + Deal)
 
@@ -629,6 +630,21 @@ Badge: число ticket со `status = new` (как красная точка �
 - [x] FCM `chat_message` → открытие thread
 - [x] вложения (изображения, документы)
 - [x] `SupportRatingSheet` после `resolved`
+
+### 12.2. Чеклист фазы 4 (жалобы + deal admin) — P1
+
+**Flutter**
+
+- [x] `ChatApi.createSupportTicket` + `context_json`
+- [x] «Пожаловаться» в deal-чате → `deal_dispute` + thread/ad/order ids
+- [x] «Пожаловаться» с карточки объявления/заявки → `ad_moderation`
+
+**admin-web**
+
+- [x] фильтр очереди «Жалобы» / `deal_dispute` / `ad_moderation`
+- [x] человекочитаемый `context_json` на `support_view.php`
+- [x] `deal_chat_view.php` — readonly сообщения deal-thread
+- [ ] WebSocket / realtime (вне P1)
 
 ---
 

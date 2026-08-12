@@ -109,7 +109,7 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data['error'] != null) {
@@ -284,7 +284,7 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
   }
 
   void uploadData() async {
-    var uri = Uri.parse('${Config.baseUrl}/api/update_gr_info.php');
+    var uri = Uri.parse('${Config.apiBase}/update_gr_info.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
@@ -395,7 +395,7 @@ class _add_ob_gpForm extends State<rdit_ob_gp_usl_g> {
   Future<List<Map<String, dynamic>>> fetchAds() async {
     // формируем uri
     final uri = Uri.parse(Config.baseUrl).replace(
-      path: '/api/edit_ob_gr.php',
+      path: '${Config.apiPrefix}/edit_ob_gr.php',
       queryParameters: {
         'idusers': widget.id.toString(),
       },

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crgtransp72app/pages/ad_boost_screen.dart';
 import 'package:crgtransp72app/pages/changerol_page2.dart';
 import 'package:crgtransp72app/pages/edit_ob_gp1.dart';
 import 'package:crgtransp72app/pages/edit_ob_gr.dart';
@@ -101,42 +102,48 @@ class _MyHomePageState extends State<MyHomePage> {
   String city = '';
   String phone = '';
   String email = '';
+  Future<List>? _adsFuture;
+
   @override
   void initState() {
     bd ??= 1;
     super.initState();
-    getUserData();
-    fetchAds(bd!, idusers);
+    // Сначала userId, потом список — иначе get_adstest?idusers=0 → пусто
+    _adsFuture = _loadAdsForCurrentUser();
+  }
+
+  Future<List> _loadAdsForCurrentUser() async {
+    await getUserData();
+    if (idusers <= 0) {
+      return [];
+    }
+    return fetchAds(bd!, idusers);
   }
 
   Future<void> getUserData() async {
-    final token = await getSecurefcm_token(); // Await the secure token
+    final token = await getSecurefcm_token();
     if (token == null) {
       print("Token is null");
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data['error'] != null) {
         print('Ошибка: ${data['error']}');
       } else {
-        // Обновляем поля класса и UI
+        final parsedId = int.tryParse(data['idusers']?.toString() ?? '') ?? 0;
         setState(() {
-          //userId = data['idusers'];
-          idusers = data['idusers'];
-          firstName = data['firstName'];
-          lastName = data['lastName'];
-          middleName = data['middleName'];
-          city = data['city'];
-          phone = data['phone'];
-          email = data['email'];
-          print('xxxzz ${idusers}');
+          idusers = parsedId;
+          firstName = data['firstName']?.toString() ?? '';
+          lastName = data['lastName']?.toString() ?? '';
+          middleName = data['middleName']?.toString() ?? '';
+          city = data['city']?.toString() ?? '';
+          phone = data['phone']?.toString() ?? '';
+          email = data['email']?.toString() ?? '';
         });
-
-        // Теперь переменные firstName, lastName, middleName доступны для использования в build() методе
       }
     } else {
       print('Ошибка при получении данных пользователя');
@@ -146,7 +153,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, int idusers) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/get_adstest.php',
+        path: '${Config.apiPrefix}/get_adstest.php',
         queryParameters: {
           'idusers': idusers.toString(),
           'bd': bd
@@ -317,7 +324,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             // Оборачиваем в Expanded, если это в Column/Row
             child: FutureBuilder(
-              future: fetchAds(bd!, idusers),
+              future: _adsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
@@ -366,6 +373,33 @@ class _MyHomePageState extends State<MyHomePage> {
                                 mainAxisAlignment: MainAxisAlignment
                                     .end, // Равнение элементов в конце (справа)
                                 children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.vertical_align_top),
+                                    tooltip: 'Поднять в топ',
+                                    onPressed: int.parse(truck['flag'].toString()) == 1
+                                        ? () async {
+                                            final bdVal = bd ?? int.tryParse('${truck['bd'] ?? 1}') ?? 1;
+                                            final title = truck['marka']?.toString() ??
+                                                truck['vidt']?.toString() ??
+                                                'Объявление';
+                                            final ok = await Navigator.push<bool>(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => AdBoostScreen(
+                                                  adId: int.parse('${truck['id']}'),
+                                                  bd: bdVal,
+                                                  adTitle: title,
+                                                ),
+                                              ),
+                                            );
+                                            if (ok == true && mounted) {
+                                              setState(() {
+                                                _adsFuture = fetchAds(bd!, idusers);
+                                              });
+                                            }
+                                          }
+                                        : null,
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.edit),
                                     onPressed: () {
@@ -742,7 +776,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),
@@ -756,16 +790,10 @@ class _MyHomePageState extends State<MyHomePage> {
           backgroundColor: Colors.green,
         ));
 
-        ///initState();
-        setState(() {
-          fetchAds(bd, idusers);
-        });
-
-        // 1. ждём, пока получим новые данные
-        await fetchAds(bd, idusers);
-        // 2. сообщаем фреймворку, что данные изменились
         if (mounted) {
-          setState(() {}); // без async-кода внутри!
+          setState(() {
+            _adsFuture = fetchAds(bd, idusers);
+          });
         }
       } else {
         // Ошибка, можно показать сообщение об ошибке

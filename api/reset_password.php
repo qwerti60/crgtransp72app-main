@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 require_once __DIR__ . '/include/site_config.php';
 
 $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';

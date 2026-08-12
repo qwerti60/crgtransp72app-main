@@ -4,10 +4,7 @@ header("Content-Type: application/json");
 ini_set('default_charset', 'UTF-8');
 mb_internal_encoding("UTF-8");
 
-$host = "localhost";
-$username = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
-$dbname = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
@@ -30,6 +27,8 @@ try {
 
     $stmt = $pdo->prepare("
         SELECT u.idusers, u.fotouser, u.firstName, u.lastName, u.middleName, u.city, u.phone, u.email,
+               u.statNum, u.namefirm, u.innStr, u.kppStr, u.ogrnStr,
+               COALESCE(u.is_verified, 0) AS is_verified,
                COALESCE((
                    SELECT ROUND(AVG(r.rating), 1)
                    FROM reviews r

@@ -11,6 +11,8 @@ class ChatThread {
     this.lastMessageAt,
     this.bd,
     this.adId,
+    this.offerDataId,
+    this.orderGlobalId,
     this.supportTicketId,
     this.ticketStatus,
     this.needsRating = false,
@@ -27,6 +29,8 @@ class ChatThread {
   final String? lastMessageAt;
   final int? bd;
   final int? adId;
+  final int? offerDataId;
+  final int? orderGlobalId;
   final int? supportTicketId;
   final String? ticketStatus;
   final bool needsRating;
@@ -46,6 +50,12 @@ class ChatThread {
       lastMessageAt: json['last_message_at']?.toString(),
       bd: json['bd'] != null ? _int(json['bd']) : null,
       adId: json['ad_id'] != null ? _int(json['ad_id']) : null,
+      offerDataId: json['offer_data_id'] != null
+          ? _int(json['offer_data_id'])
+          : null,
+      orderGlobalId: json['order_global_id'] != null
+          ? _int(json['order_global_id'])
+          : null,
       supportTicketId: json['support_ticket_id'] != null
           ? _int(json['support_ticket_id'])
           : null,

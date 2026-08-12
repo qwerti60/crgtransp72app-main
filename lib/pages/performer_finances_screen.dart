@@ -102,7 +102,7 @@ class _PerformerFinancesScreenState extends State<PerformerFinancesScreen>
         }
       }
 
-      final uri = Uri.parse('${Config.baseUrl}/api/get_performer_finances.php')
+      final uri = Uri.parse('${Config.apiBase}/get_performer_finances.php')
           .replace(queryParameters: params);
       final response = await http.get(uri);
 

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
 $code = isset($_POST['code']) ? trim((string)$_POST['code']) : '';

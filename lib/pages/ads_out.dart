@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 Future<List> fetchAds() async {
   final response = await http
-      .get(Uri.parse(Config.baseUrl).replace(path: '/api/get_ads.php'));
+      .get(Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/get_ads.php'));
   print('Response body: ${response.body}');
 
   if (response.statusCode == 200) {

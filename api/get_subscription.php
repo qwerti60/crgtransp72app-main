@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-$host = 'localhost';
-$dbUser = 'u2395188_apps72';
-$dbPassword = 'kR3iV2aA6gjU8nC9';
-$dbName = 'u2395188_apps';
+require __DIR__ . '/load_databd.php';
+$dbUser = $username;
+$dbPassword = $password;
+$dbName = $dbname;
 
 $userId = isset($_GET['userId']) ? (int)$_GET['userId'] : 0;
 

@@ -18,7 +18,22 @@ function crg_mail_placeholder_passwords(): array
 
 function crg_mail_local_path(): string
 {
-    return dirname(__DIR__) . '/mail.local.php';
+    $root = dirname(__DIR__);
+    $local = $root . '/mail.local.php';
+    if (is_readable($local)) {
+        return $local;
+    }
+
+    // Стенд api_test: взять тот же SMTP, что у боевого /api/
+    $base = basename($root);
+    if ($base !== '' && $base !== 'api' && preg_match('/^api[_-]/i', $base)) {
+        $sibling = dirname($root) . '/api/mail.local.php';
+        if (is_readable($sibling)) {
+            return $sibling;
+        }
+    }
+
+    return $local;
 }
 
 function crg_mail_local_exists(): bool

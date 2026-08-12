@@ -188,6 +188,40 @@ https://domain.ru/admin-web/login.php
 - [ ] Вход в админку, статистика (период, выручка), финансы на карточке исполнителя, модерация объявления
 - [ ] Сменить пароль admin на production-пароль
 
+### 8.1. Дополнение — пакет P1 (гео / жалобы / push / пакеты)
+
+Полный чеклист: **[deploy_p1_checklist.md](./deploy_p1_checklist.md)**.  
+Архив серверных файлов: `./scripts/pack_p1_deploy.sh` → `dist/p1_deploy_YYYYMMDD.zip`.
+
+- [ ] `mysql … < sql/migrate_city_geo.sql`
+- [ ] `mysql … < sql/migrate_subscription_packages.sql`
+- [ ] Залиты файлы из `p1_deploy_*.zip` (без перезаписи `databd.php`)
+- [ ] Cron: `api/cron/subscription_reminders.php`
+- [ ] Smoke: геопоиск, жалобы → deal-чат, пакеты/промо в админке
+- [ ] Сборка Flutter с `geolocator` (отдельно от zip)
+
+### 8.2. Дополнение — пакет P2 (онбординг / поднятие / верификация / шаблоны / в пути / воронка)
+
+Полный чеклист: **[deploy_p2_checklist.md](./deploy_p2_checklist.md)**.  
+Архив серверных файлов: `./scripts/pack_p2_deploy.sh` → `dist/p2_deploy_YYYYMMDD.zip`.
+
+- [ ] P1 уже на prod ([deploy_p1_checklist.md](./deploy_p1_checklist.md))
+- [ ] `mysql … < sql/migrate_p2_features.sql`
+- [ ] Залиты файлы из `p2_deploy_*.zip` (без перезаписи `databd.php`)
+- [ ] Smoke: поднятие, верификация, шаблоны, воронка в stats
+- [ ] Сборка Flutter с экранами P2 (отдельно от zip)
+
+### 8.3. Дополнение — пакет P3 (B2B-счета / автомодерация / экспорт CSV)
+
+Полный чеклист: **[deploy_p3_checklist.md](./deploy_p3_checklist.md)**.  
+Архив серверных файлов: `./scripts/pack_p3_deploy.sh` → `dist/p3_deploy_YYYYMMDD.zip`.
+
+- [ ] P1 и P2 уже на prod ([deploy_p1_checklist.md](./deploy_p1_checklist.md), [deploy_p2_checklist.md](./deploy_p2_checklist.md))
+- [ ] `mysql … < sql/migrate_p3_features.sql`
+- [ ] Залиты файлы из `p3_deploy_*.zip` (без перезаписи `databd.php`)
+- [ ] Smoke: счета B2B, автомодерация, CSV export
+- [ ] Сборка Flutter с кнопкой «Запросить счёт» (отдельно от zip)
+
 ---
 
 *Техническое руководство: `docs/admin_guide.md` · для менеджера: `docs/admin_manager_guide.md`*

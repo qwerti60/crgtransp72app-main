@@ -26,6 +26,68 @@ function crg_admin_city_normalize_name(string $name): string
     return trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
 }
 
+function crg_admin_cities_has_geo(PDO $pdo): bool
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    try {
+        $pdo->query('SELECT lat, lng FROM cities LIMIT 1');
+        $cached = true;
+    } catch (Throwable $e) {
+        $cached = false;
+    }
+
+    return $cached;
+}
+
+/**
+ * @return true|string
+ */
+function crg_admin_city_validate_coords(?string $latRaw, ?string $lngRaw)
+{
+    $latTrim = trim((string) ($latRaw ?? ''));
+    $lngTrim = trim((string) ($lngRaw ?? ''));
+    if ($latTrim === '' && $lngTrim === '') {
+        return true;
+    }
+    if ($latTrim === '' || $lngTrim === '') {
+        return 'Укажите и широту, и долготу, либо очистите оба поля';
+    }
+    if (!is_numeric($latTrim) || !is_numeric($lngTrim)) {
+        return 'Координаты должны быть числами';
+    }
+    $lat = (float) $latTrim;
+    $lng = (float) $lngTrim;
+    if ($lat < -90.0 || $lat > 90.0) {
+        return 'Широта должна быть от -90 до 90';
+    }
+    if ($lng < -180.0 || $lng > 180.0) {
+        return 'Долгота должна быть от -180 до 180';
+    }
+
+    return true;
+}
+
+/**
+ * @return array{0: ?float, 1: ?float}|string
+ */
+function crg_admin_city_parse_coords(?string $latRaw, ?string $lngRaw)
+{
+    $valid = crg_admin_city_validate_coords($latRaw, $lngRaw);
+    if ($valid !== true) {
+        return $valid;
+    }
+    $latTrim = trim((string) ($latRaw ?? ''));
+    $lngTrim = trim((string) ($lngRaw ?? ''));
+    if ($latTrim === '' && $lngTrim === '') {
+        return [null, null];
+    }
+
+    return [round((float) $latTrim, 6), round((float) $lngTrim, 6)];
+}
+
 /**
  * @return array{rows: list<array<string, mixed>>, total: int}|array{error: string}
  */
@@ -49,12 +111,15 @@ function crg_admin_cities_list(PDO $pdo, string $search, int $offset, int $limit
         $params[] = '%' . $search . '%';
     }
 
+    $hasGeo = crg_admin_cities_has_geo($pdo);
+    $select = $hasGeo ? 'id, name, lat, lng' : 'id, name';
+
     try {
         $cntSt = $pdo->prepare('SELECT COUNT(*) AS c FROM cities WHERE ' . $where);
         $cntSt->execute($params);
         $total = (int) ($cntSt->fetch()['c'] ?? 0);
 
-        $sql = 'SELECT id, name FROM cities WHERE ' . $where
+        $sql = 'SELECT ' . $select . ' FROM cities WHERE ' . $where
             . ' ORDER BY name COLLATE utf8mb4_unicode_ci LIMIT '
             . (int) $limit . ' OFFSET ' . (int) $offset;
         $st = $pdo->prepare($sql);
@@ -76,7 +141,8 @@ function crg_admin_city_get(PDO $pdo, int $id): ?array
         return null;
     }
 
-    $st = $pdo->prepare('SELECT id, name FROM cities WHERE id = ? LIMIT 1');
+    $select = crg_admin_cities_has_geo($pdo) ? 'id, name, lat, lng' : 'id, name';
+    $st = $pdo->prepare('SELECT ' . $select . ' FROM cities WHERE id = ? LIMIT 1');
     $st->execute([$id]);
     $row = $st->fetch();
 
@@ -157,7 +223,7 @@ function crg_admin_city_validate_name(string $name)
 /**
  * @return array{ok: true, id: int}|array{ok: false, error: string}
  */
-function crg_admin_city_insert(PDO $pdo, string $name): array
+function crg_admin_city_insert(PDO $pdo, string $name, ?string $latRaw = null, ?string $lngRaw = null): array
 {
     $valid = crg_admin_city_validate_name($name);
     if ($valid !== true) {
@@ -168,9 +234,23 @@ function crg_admin_city_insert(PDO $pdo, string $name): array
         return ['ok' => false, 'error' => 'Город с таким названием уже есть'];
     }
 
+    $coords = [null, null];
+    $hasGeo = crg_admin_cities_has_geo($pdo);
+    if ($hasGeo) {
+        $coords = crg_admin_city_parse_coords($latRaw, $lngRaw);
+        if (is_string($coords)) {
+            return ['ok' => false, 'error' => $coords];
+        }
+    }
+
     try {
-        $st = $pdo->prepare('INSERT INTO cities (name) VALUES (?)');
-        $st->execute([$name]);
+        if ($hasGeo) {
+            $st = $pdo->prepare('INSERT INTO cities (name, lat, lng) VALUES (?, ?, ?)');
+            $st->execute([$name, $coords[0], $coords[1]]);
+        } else {
+            $st = $pdo->prepare('INSERT INTO cities (name) VALUES (?)');
+            $st->execute([$name]);
+        }
 
         return ['ok' => true, 'id' => (int) $pdo->lastInsertId()];
     } catch (Throwable $e) {
@@ -212,8 +292,14 @@ function crg_admin_city_rename_references(PDO $pdo, string $oldName, string $new
 /**
  * @return true|string
  */
-function crg_admin_city_update(PDO $pdo, int $id, string $name, bool $renameReferences)
-{
+function crg_admin_city_update(
+    PDO $pdo,
+    int $id,
+    string $name,
+    bool $renameReferences,
+    ?string $latRaw = null,
+    ?string $lngRaw = null
+) {
     if ($id <= 0) {
         return 'Некорректный id';
     }
@@ -234,6 +320,15 @@ function crg_admin_city_update(PDO $pdo, int $id, string $name, bool $renameRefe
         return 'Город с таким названием уже есть';
     }
 
+    $hasGeo = crg_admin_cities_has_geo($pdo);
+    $coords = [null, null];
+    if ($hasGeo) {
+        $coords = crg_admin_city_parse_coords($latRaw, $lngRaw);
+        if (is_string($coords)) {
+            return $coords;
+        }
+    }
+
     if ($renameReferences && $oldName !== '' && $oldName !== $name) {
         $ren = crg_admin_city_rename_references($pdo, $oldName, $name);
         if ($ren !== true) {
@@ -242,8 +337,13 @@ function crg_admin_city_update(PDO $pdo, int $id, string $name, bool $renameRefe
     }
 
     try {
-        $st = $pdo->prepare('UPDATE cities SET name = ? WHERE id = ?');
-        $st->execute([$name, $id]);
+        if ($hasGeo) {
+            $st = $pdo->prepare('UPDATE cities SET name = ?, lat = ?, lng = ? WHERE id = ?');
+            $st->execute([$name, $coords[0], $coords[1], $id]);
+        } else {
+            $st = $pdo->prepare('UPDATE cities SET name = ? WHERE id = ?');
+            $st->execute([$name, $id]);
+        }
     } catch (Throwable $e) {
         return 'Не удалось сохранить: ' . $e->getMessage();
     }

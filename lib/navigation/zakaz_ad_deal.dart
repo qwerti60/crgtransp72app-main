@@ -26,7 +26,7 @@ Future<ZakazAdDealInfo> fetchZakazAdDeal({
   required int bd,
   required int performerId,
 }) async {
-  final uri = Uri.parse('${Config.baseUrl}/api/check_offer_zakaz.php').replace(
+  final uri = Uri.parse('${Config.apiBase}/check_offer_zakaz.php').replace(
     queryParameters: {
       'iduser': customerId.toString(),
       'truck': adId.toString(),

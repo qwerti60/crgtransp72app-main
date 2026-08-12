@@ -57,7 +57,7 @@ class zprofil_nameForm extends State<zprofil_name> {
   Future<bool?> checkSubscription(int userId) async {
     final response = await http.post(
       Uri.parse(
-          '${Config.baseUrl}/api/check_subscription.php?iduser=$userId'), // Adding userId as a query parameter
+          '${Config.apiBase}/check_subscription.php?iduser=$userId'), // Adding userId as a query parameter
       // Note: Since you are sending the userId in the URL, you do not need to include it in the body again
     );
     if (response.statusCode == 200) {
@@ -114,7 +114,7 @@ class zprofil_nameForm extends State<zprofil_name> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -412,7 +412,7 @@ class _showExitConfirmationDialog {
                   try {
                     final response = await http.post(
                       Uri.parse(Config.baseUrl).replace(
-                          path: '/api/clear_fcm_token.php'), // URL нашего API
+                          path: '${Config.apiPrefix}/clear_fcm_token.php'), // URL нашего API
                       body: {
                         'fcm_token': pushToken,
                       },

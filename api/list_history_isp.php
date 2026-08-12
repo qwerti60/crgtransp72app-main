@@ -2,7 +2,7 @@
 /**
  * История заказов исполнителя: сценарий 1 (offer_data) + сценарий 2 (offer_dataf).
  */
-require_once 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $nameImg = filter_input(INPUT_GET, 'nameImg', FILTER_VALIDATE_INT);
 

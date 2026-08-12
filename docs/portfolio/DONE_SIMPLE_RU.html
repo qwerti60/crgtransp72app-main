@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Что сделано — Грузоперевозки72</title>
+  <style>
+    :root {
+      --ink: #1a1f2e;
+      --muted: #5c6578;
+      --line: #e2e6ef;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --accent: #1e4d8c;
+      --accent-soft: #e8f0fa;
+      --ok: #1b7a4e;
+      --ok-bg: #e8f6ee;
+      --warn: #9a6b00;
+      --warn-bg: #fff8e8;
+      --phase0: #5b4b8a;
+      --phase0-bg: #f0ecf8;
+      --p1: #a12818;
+      --p2: #9a6b00;
+      --p3: #1b7a4e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+    header {
+      background: linear-gradient(135deg, #163a6b 0%, #1e4d8c 55%, #2a6bb0 100%);
+      color: #fff;
+      padding: 2rem 1.5rem;
+      border-radius: 14px;
+      margin-bottom: 1.5rem;
+    }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.6rem; }
+    header p { margin: 0.35rem 0; opacity: 0.92; font-size: 0.95rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 1rem; font-size: 0.88rem; }
+    .meta span { background: rgba(255,255,255,0.14); padding: 0.3rem 0.65rem; border-radius: 999px; }
+    .links {
+      background: #e8f0fa;
+      border-left: 4px solid var(--accent);
+      padding: 0.85rem 1rem;
+      border-radius: 0 10px 10px 0;
+      font-size: 0.92rem;
+      margin: 1.25rem 0;
+    }
+    .links a { color: var(--accent); }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 0.6rem; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--line);
+    }
+    .section-head h2 { margin: 0; font-size: 1.08rem; border: none; padding: 0; }
+    .section-head.p0 { background: var(--phase0-bg); }
+    .section-head.p1-old { background: #ffe8e4; }
+    .section-head.base { background: var(--accent-soft); }
+    .section-head.server { background: var(--ok-bg); }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .badge.p0 { background: var(--phase0); }
+    .badge.p1-old { background: var(--p1); }
+    .badge.base { background: var(--accent); }
+    .badge.server { background: var(--ok); }
+    .badge.p1 { background: var(--p1); }
+    .badge.p2 { background: var(--p2); }
+    .badge.p3 { background: var(--p3); }
+    .badge.done { background: var(--ok); }
+    .item { padding: 0.95rem 1.1rem; border-bottom: 1px solid var(--line); }
+    .item:last-child { border-bottom: none; }
+    .item h3 { margin: 0 0 0.4rem; font-size: 1rem; color: var(--accent); }
+    .item p { margin: 0.35rem 0; }
+    .item ul, .item ol { margin: 0.4rem 0 0.2rem; padding-left: 1.25rem; }
+    .item li { margin: 0.2rem 0; }
+    .now {
+      margin-top: 0.55rem;
+      background: var(--ok-bg);
+      border-left: 3px solid var(--ok);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.92rem;
+    }
+    .note {
+      margin-top: 0.55rem;
+      background: var(--warn-bg);
+      border-left: 3px solid var(--warn);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.92rem;
+    }
+    .pkg {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .pkg-head {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem;
+    }
+    .pkg-head h2 { margin: 0; font-size: 1.1rem; }
+    .date { color: var(--muted); font-size: 0.85rem; }
+    ul.plain { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+    ul.plain li { margin: 0.45rem 0; }
+    .hint { color: var(--muted); font-size: 0.88rem; margin-top: 0.35rem; }
+    h2.block-title {
+      font-size: 1.15rem;
+      margin: 2rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid var(--accent);
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86em;
+      background: #eef1f7;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+    th, td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #eef2f8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    .check {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.65rem;
+      align-items: start;
+      padding: 0.75rem 1.1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .check:last-child { border-bottom: none; }
+    .check.done { background: var(--ok-bg); }
+    .check input[type=checkbox] {
+      width: 1.15rem; height: 1.15rem; margin-top: 0.15rem;
+      accent-color: var(--ok); cursor: pointer;
+    }
+    .check label { cursor: pointer; }
+    .bar {
+      display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+      padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--line); background: #fafbfd;
+    }
+    .btn {
+      border: 1px solid var(--line); background: var(--card);
+      border-radius: 8px; padding: 0.4rem 0.7rem; cursor: pointer; font-size: 0.85rem;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .progress-label { font-weight: 700; color: var(--accent); font-size: 0.9rem; }
+    footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
+    footer a { color: var(--accent); }
+    @media print {
+      body { background: #fff; }
+      header, .section, .pkg { break-inside: avoid; }
+      .btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Что сделано — простыми словами</h1>
+      <p>Мобильное приложение и админка «Грузоперевозки72»</p>
+      <p>Этапы 0–1, базовый продукт и пакеты доработок P1–P3</p>
+      <div class="meta">
+        <span>Этапы 0–1 — 07.2026</span>
+        <span>P1 — 02.08.2026</span>
+        <span>P2 — 03.08.2026</span>
+        <span>P3 — 03.08.2026</span>
+      </div>
+    </header>
+
+    <div class="links">
+      <strong>Ссылки:</strong>
+      <a href="/api/admin-web/manager_guide.php">Руководство менеджера</a> ·
+      <a href="/api/admin-web/guide.php">Техническое</a> ·
+      <a href="feature_proposals_estimate.html">Полная смета</a>
+    </div>
+
+    <!-- Этап 0 -->
+    <section class="section">
+      <div class="section-head p0">
+        <h2>Этап 0 — Надёжность «под капотом»</h2>
+        <span class="badge p0">ЭТАП 0</span>
+      </div>
+      <div class="body">
+        <div class="item">
+          <h3>1. Поиск меньше нагружает сервер</h3>
+          <p>Когда пользователь открывает форму поиска, приложение считает, сколько объявлений в каждом городе и по каждой услуге. Раньше это каждый раз шло тяжёлым запросом в базу.</p>
+          <div class="now"><strong>Сейчас:</strong> цифры запоминаются примерно на 1 минуту. Повторное открытие формы проходит быстрее и легче для сервера.</div>
+        </div>
+        <div class="item">
+          <h3>2. Старые «дыры» в API закрыты</h3>
+          <p>В проекте оставались старые адреса на сервере, которыми приложение уже не пользуется. Через них можно было получать данные по устаревшей логике.</p>
+          <div class="now">
+            <strong>Сейчас:</strong>
+            <ul>
+              <li>старые адреса поиска переводят на новый, правильный поиск;</li>
+              <li>один совсем устаревший адрес отключён;</li>
+              <li>дубликаты в папке <code>api_new</code> помечены как «не использовать».</li>
+            </ul>
+          </div>
+        </div>
+        <div class="item">
+          <h3>3. Быстрая проверка после выкладки</h3>
+          <p>Можно одной командой проверить, что поиск отвечает нормально — и для заказчика, и для исполнителя.</p>
+        </div>
+        <div class="item">
+          <h3>4. База готова к росту</h3>
+          <p>Подготовлен файл с «указателями» (индексами) в базе, чтобы при большом числе объявлений поиск по городу не тормозил.</p>
+          <div class="note"><strong>Важно:</strong> этот SQL нужно один раз выполнить на сервере БД:<br><code>sql/migrate_search_count_indexes.sql</code></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Этап 1 -->
+    <section class="section">
+      <div class="section-head p1-old">
+        <h2>Этап 1 — Доверие и спокойствие клиентов</h2>
+        <span class="badge p1-old">ЭТАП 1</span>
+      </div>
+      <div class="body">
+        <div class="item">
+          <h3>1. Жалобы и просмотр переписки в админке</h3>
+          <p>Если по сделке возник спор, пользователь может нажать <strong>«Пожаловаться»</strong> прямо в чате с другой стороной.</p>
+          <p>Обращение уходит в поддержку. Оператор в админке видит жалобу и может открыть <strong>чат по сделке</strong> (только просмотр, без ответа в этот чат). Ответ пользователю — как обычно, через обращение поддержки.</p>
+        </div>
+        <div class="item">
+          <h3>2. Автоматические уведомления (push)</h3>
+          <p>Пользователь получает уведомление, когда:</p>
+          <ul>
+            <li>пришло новое предложение по заявке/объявлению;</li>
+            <li>заказ приняли к выполнению;</li>
+            <li>заказ отметили выполненным или отменили;</li>
+            <li>подписка исполнителя скоро закончится (за 3 дня) или уже закончилась.</li>
+          </ul>
+          <div class="note">
+            <strong>Важно для подписки:</strong> на сервере нужно:
+            <ol>
+              <li>выполнить SQL <code>sql/migrate_subscription_push_dedupe.sql</code>;</li>
+              <li>поставить ежедневный запуск <code>api/cron/subscription_push.php</code> (как — в <code>api/cron/README.md</code>).</li>
+            </ol>
+          </div>
+        </div>
+        <div class="item">
+          <h3>3. Короткий онбординг для новичков</h3>
+          <p>После первой регистрации при первом входе показываются <strong>3 коротких экрана</strong>:</p>
+          <ul>
+            <li>что сделать с профилем;</li>
+            <li>как разместить объявление/заявку;</li>
+            <li>как устроена сделка (или подписка — для исполнителя).</li>
+          </ul>
+          <p>Можно нажать «Пропустить» и сразу перейти в приложение.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- База -->
+    <section class="section">
+      <div class="section-head base">
+        <h2>Что уже работает в продукте</h2>
+        <span class="badge base">БАЗА</span>
+      </div>
+      <div class="body">
+        <div class="item">
+          <p>Чтобы не путать с новыми доработками — это база, которая уже была:</p>
+          <ul>
+            <li>две роли: заказчик и исполнитель;</li>
+            <li>поиск, объявления, сделки, чаты, поддержка;</li>
+            <li>модерация и статистика в веб-админке;</li>
+            <li>подписка исполнителя и оплата.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <h2 class="block-title">Дополнительные пакеты P1–P3 (смета 07.2026)</h2>
+
+    <section class="pkg">
+      <div class="pkg-head">
+        <span class="badge p1">P1</span>
+        <h2>Старт — быстрый эффект</h2>
+        <span class="badge done">сделано</span>
+        <span class="date">02.08.2026</span>
+      </div>
+      <ul class="plain">
+        <li><strong>Геопоиск «рядом со мной»</strong> — радиус и сортировка по расстоянию в поиске; координаты городов в админке.</li>
+        <li><strong>Жалобы</strong> — кнопка в приложении; очередь в админке «Поддержка»; просмотр переписки по сделке.</li>
+        <li><strong>Push-уведомления</strong> — отклики, этапы сделки; напоминания об окончании подписки (cron).</li>
+        <li><strong>Пакеты подписки</strong> — месяц / квартал / год и промокоды; настройка в админке «Пакеты» и «Промокоды».</li>
+      </ul>
+      <p class="hint">Архив для сервера: <code>dist/p1_deploy_*.zip</code></p>
+    </section>
+
+    <section class="pkg">
+      <div class="pkg-head">
+        <span class="badge p2">P2</span>
+        <h2>Рост — удержание и монетизация</h2>
+        <span class="badge done">сделано</span>
+        <span class="date">03.08.2026</span>
+      </div>
+      <ul class="plain">
+        <li><strong>Онбординг</strong> — три экрана-подсказки после первого входа в приложение.</li>
+        <li><strong>Платное поднятие объявления</strong> — «в топ» на 24 или 72 часа; тарифы в админке «Поднятие».</li>
+        <li><strong>Галочка «Проверен»</strong> — у исполнителя после проверки документов; видна заказчикам в поиске.</li>
+        <li><strong>Шаблоны заявок</strong> — заказчик создаёт новую заявку «как прошлую» одной кнопкой.</li>
+        <li><strong>Статус «В пути» + время прибытия</strong> — исполнитель отмечает в сделке; заказчик получает push.</li>
+        <li><strong>Воронка в статистике</strong> — наглядная цепочка: регистрации → объявления → отклики → сделки → оплаты.</li>
+      </ul>
+      <p class="hint">Архив: <code>dist/p2_deploy_*.zip</code> · нужна сборка Flutter (новые экраны в приложении).</p>
+    </section>
+
+    <section class="pkg">
+      <div class="pkg-head">
+        <span class="badge p3">P3</span>
+        <h2>Масштаб — B2B и операционка</h2>
+        <span class="badge done">сделано</span>
+        <span class="date">03.08.2026</span>
+      </div>
+      <ul class="plain">
+        <li><strong>Счета для юрлиц (B2B)</strong> — исполнитель-организация запрашивает счёт в приложении; менеджер выставляет и отмечает оплату в админке «Счета B2B».</li>
+        <li><strong>Автомодерация объявлений</strong> — стоп-слова, отклонение без фото, дубли в очередь; раздел «Автомодерация».</li>
+        <li><strong>Экспорт CSV</strong> — выгрузка пользователей, оплат подписки и сделок для бухгалтерии.</li>
+      </ul>
+      <p class="hint">Архив: <code>dist/p3_deploy_20260803.zip</code></p>
+    </section>
+
+    <h2 class="block-title">Сводная таблица P1–P3</h2>
+    <table>
+      <thead>
+        <tr><th>№</th><th>Функция</th><th>Пакет</th><th>Где видно</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1.1</td><td>Геопоиск</td><td>P1</td><td>Приложение: поиск · Админка: Города (координаты)</td></tr>
+        <tr><td>1.2</td><td>Жалобы + deal-чат</td><td>P1</td><td>Приложение · Админка: Поддержка</td></tr>
+        <tr><td>1.3</td><td>Push по сделке / подписке</td><td>P1</td><td>Телефон (уведомления)</td></tr>
+        <tr><td>2.1</td><td>Пакеты подписки</td><td>P1</td><td>Приложение: оплата · Админка: Пакеты, Промокоды</td></tr>
+        <tr><td>1.4</td><td>Онбординг</td><td>P2</td><td>Приложение: первый вход</td></tr>
+        <tr><td>2.2</td><td>Поднятие в топ</td><td>P2</td><td>Приложение: Мои объявления · Админка: Поднятие</td></tr>
+        <tr><td>3.1</td><td>Верификация</td><td>P2</td><td>Админка: Пользователи · Поиск в приложении</td></tr>
+        <tr><td>3.2</td><td>Шаблоны заявок</td><td>P2</td><td>Приложение: Мои объявления (заказчик)</td></tr>
+        <tr><td>3.3</td><td>В пути + ETA</td><td>P2</td><td>Приложение: экран сделки</td></tr>
+        <tr><td>4.1</td><td>Воронка</td><td>P2</td><td>Админка: Статистика</td></tr>
+        <tr><td>2.3</td><td>B2B-счета</td><td>P3</td><td>Приложение: запрос счёта · Админка: Счета B2B</td></tr>
+        <tr><td>4.2</td><td>Автомодерация</td><td>P3</td><td>Админка: Автомодерация · при создании объявления</td></tr>
+        <tr><td>4.3</td><td>Экспорт CSV</td><td>P3</td><td>Админка: Экспорт CSV</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="block-title">Не входило в P1–P3</h2>
+    <ul class="plain">
+      <li>Публикация в сторах и длительный QA на всех устройствах заказчика.</li>
+      <li>WebSocket для чатов в реальном времени, полнотекстовый поиск, PDF-счета из 1С.</li>
+      <li>Юридическое сопровождение и контент для маркетинга.</li>
+    </ul>
+
+    <!-- Чеклист сервера -->
+    <section class="section" id="server">
+      <div class="section-head server">
+        <h2>Чеклист для менеджера «сделать на сервере»</h2>
+        <span class="badge server">СЕРВЕР</span>
+      </div>
+      <div class="bar">
+        <span class="progress-label" id="progressLabel">0 / 9</span>
+        <button type="button" class="btn" id="resetBtn">Сбросить галочки</button>
+      </div>
+      <div class="body" id="checklist">
+        <div class="check">
+          <input type="checkbox" id="c1" data-id="c1">
+          <label for="c1">Выложить обновлённые файлы <code>api/</code> (этапы 0–1) + новую сборку приложения</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c2" data-id="c2">
+          <label for="c2">Выполнить <code>sql/migrate_search_count_indexes.sql</code></label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c3" data-id="c3">
+          <label for="c3">Выполнить <code>sql/migrate_subscription_push_dedupe.sql</code></label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c4" data-id="c4">
+          <label for="c4">Настроить ежедневный cron для <code>api/cron/subscription_push.php</code> (или <code>subscription_reminders.php</code> для P1)</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c5" data-id="c5">
+          <label for="c5">Проверить: жалоба из чата → видно в админке → открывается «Чат по сделке»</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c6" data-id="c6">
+          <label for="c6">Проверить: новая регистрация → вход → онбординг на 3 экрана</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c7" data-id="c7">
+          <label for="c7">По очереди: миграции и файлы <strong>P1 → P2 → P3</strong> (не затирать <code>databd.php</code>)</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c8" data-id="c8">
+          <label for="c8">Собрать и выложить <strong>новую версию приложения</strong> в App Store / Google Play</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="c9" data-id="c9">
+          <label for="c9">Пройти smoke-тесты приложения и админки (чеклисты P1–P3 в репозитории <code>docs/</code>)</label>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Файл: <code>api/docs/portfolio/DONE_SIMPLE_RU.html</code> ·
+      обновлено 03.08.2026 ·
+      полная смета: <a href="feature_proposals_estimate.html">feature_proposals_estimate.html</a>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var KEY = 'crg_done_simple_server_checklist_v2';
+      var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input[type=checkbox]'));
+      var label = document.getElementById('progressLabel');
+      var saved = {};
+      try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+
+      function refresh() {
+        var done = 0;
+        boxes.forEach(function (box) {
+          var row = box.closest('.check');
+          if (box.checked) { done++; row.classList.add('done'); }
+          else { row.classList.remove('done'); }
+        });
+        label.textContent = done + ' / ' + boxes.length;
+      }
+
+      boxes.forEach(function (box) {
+        box.checked = !!saved[box.dataset.id];
+        box.addEventListener('change', function () {
+          saved[box.dataset.id] = box.checked;
+          localStorage.setItem(KEY, JSON.stringify(saved));
+          refresh();
+        });
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', function () {
+        if (!confirm('Сбросить все галочки чеклиста сервера?')) return;
+        saved = {};
+        localStorage.setItem(KEY, JSON.stringify(saved));
+        boxes.forEach(function (box) { box.checked = false; });
+        refresh();
+      });
+
+      refresh();
+    })();
+  </script>
+</body>
+</html>

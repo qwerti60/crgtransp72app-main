@@ -18,7 +18,7 @@ Future<bool> _isAuthorizedUser() async {
 
   try {
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'))
         .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) return false;
 

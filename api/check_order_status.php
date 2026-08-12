@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 require_once __DIR__ . '/include/datetime_mysql.php';
 require_once __DIR__ . '/include/performer_order_gate.php';
 

@@ -4,10 +4,10 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
-$host = 'localhost';
-$db = 'u2395188_apps';
-$user = 'u2395188_apps72';
-$pass = 'kR3iV2aA6gjU8nC9';
+require __DIR__ . '/load_databd.php';
+$user = $username;
+$pass = $password;
+$db = $dbname;
 $dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
 
 try {

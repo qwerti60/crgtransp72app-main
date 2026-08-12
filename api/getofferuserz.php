@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $bd = isset($_GET['bd']) ? $_GET['bd'] : '';
 $useId = isset($_GET['useId']) ? $_GET['useId'] : '';

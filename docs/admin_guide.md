@@ -63,10 +63,16 @@ cd api && php -S 127.0.0.1:8080
 | **Объявления исполнителей** | `add_ob_gp`, `add_ob_vidt`, `add_ob_gr` |
 | **Заявки заказчиков** | `orders`, `orderst`, `ordersg` |
 | **Рассылка** | Массовая отправка e-mail и/или FCM push |
-| **Поддержка** *(план)* | Чаты пользователей с оператором — см. [chat_logic_ru.md](../../docs/chat_logic_ru.md) |
-| **Настройки** | Тариф подписки, e-mail и пароль администратора |
+| **Пакеты** | `subscription_packages` — тарифы P1 |
+| **Промокоды** | `promo_codes`, `promo_redemptions` |
+| **Поднятие** | `ad_boost_tariffs`, `ad_boosts` — P2 |
+| **Поддержка** | `support_tickets`, deal-чат readonly — P1 |
+| **Счета B2B** | `subscription_invoice_requests` — P3 |
+| **Автомодерация** | `moderation_stop_words`, `moderation_log` — P3 |
+| **Экспорт CSV** | `admin_export.php` — P3 |
+| **Настройки** | Legacy `subscription_config`, e-mail и пароль администратора |
 
-Красная точка у «Объявления исполнителей» — есть объявления со статусом **На проверке** (`flag = 0`).
+Красная точка: **Объявления исполнителей** (`flag=0`), **Поддержка** (новые тикеты), **Счета B2B** (статусы `requested`/`issued`).
 
 После входа открывается **Статистика** (`stats.php`).
 
@@ -129,6 +135,8 @@ cd api && php -S 127.0.0.1:8080
 **Оплаты по дням:** `crg_admin_stats_payments_by_day()` — GROUP BY `DATE(paid_at)`.
 
 **Последние оплаты:** `crg_admin_stats_recent_payments()` — JOIN `users`, флаг `is_renewal`.
+
+**Воронка (P2):** `crg_admin_stats_funnel()` в `admin_stats.php` — блок на `stats.php`: регистрации → объявления → отклики → сделки → оплаты подписки.
 
 ---
 
@@ -316,6 +324,7 @@ GET-параметры на `user_edit.php?id=…`:
 - фото и документы (BLOB) — клик по превью открывает просмотр;
 - **Предложения заказчиков** (`offer_dataf`) — только для **опубликованных** объявлений;
 - **Отклонение** — e-mail + push в приложение (`fcm_push.php`, `users.fcm_token`, `service_account.json`);
+- **Автомодерация (P3)** — после INSERT в `add_ob_*.php` вызывается `crg_ad_auto_moderate_hook()` → `api/include/ad_auto_moderation.php` (стоп-слова, пустые фото, дубли);
 - **Отзывы об исполнителе** (`reviewsisp`) — по владельцу объявления.
 
 Фильтр `?user=ID` в списке — объявления конкретного пользователя.
@@ -331,6 +340,8 @@ GET-параметры на `user_edit.php?id=…`:
 | ordersg | `ordersg` | 3 |
 
 У заявок нет поля `flag` — публикуются сразу.
+
+**Шаблоны (P2):** `get_customer_ad_templates.php`, `duplicate_customer_ad.php` — Flutter `ad_template_picker_screen.dart`.
 
 **Карточка заявки:**
 
@@ -507,6 +518,38 @@ curl -sS "https://ваш-домен/api/search_services.php?role=customer&nameIm
 
 ---
 
+## 11.8. Пакеты доработок P1–P3 (файлы и миграции)
+
+| Пакет | Миграция | Ключевые admin-web | API / include | Flutter |
+|-------|----------|-------------------|---------------|---------|
+| **P1** | `migrate_city_geo.sql`, `migrate_subscription_packages.sql` | `packages.php`, `promo_codes.php`, `support_queue.php`, `deal_chat_view.php` | `search_services_core.php`, `deal_push.php`, `subscription_packages.php` | геофильтры, `PaymentPage`, жалобы |
+| **P2** | `migrate_p2_features.sql` | `boost_tariffs.php`, `stats.php` (воронка), `user_edit.php` (`is_verified`) | `ad_boost.php`, `apply_ad_boost.php`, шаблоны, `update_order_transit.php` | онбординг, boost, шаблоны, «в пути» |
+| **P3** | `migrate_p3_features.sql` | `invoices.php`, `moderation.php`, `export.php` | `ad_auto_moderation.php`, `subscription_invoices.php`, `admin_export.php` | «Запросить счёт» в `PaymentPage` |
+
+**Деплой:** `./scripts/pack_p1_deploy.sh`, `pack_p2_deploy.sh`, `pack_p3_deploy.sh` → `dist/p*_deploy_*.zip`.  
+**Чеклисты:** [deploy_p1_checklist.md](./deploy_p1_checklist.md), [deploy_p2_checklist.md](./deploy_p2_checklist.md), [deploy_p3_checklist.md](./deploy_p3_checklist.md).  
+**Тестирование:** [testing_guide_ru.md](./testing_guide_ru.md).
+
+### P1 — гео, жалобы, push, пакеты
+
+- Гео: `cities.lat/lng`, параметры `lat`, `lng`, `radius_km`, `sort=distance` в `search_services.php`.
+- Жалобы: `support/create.php` → `support_queue.php`, категории `deal_dispute`, `ad_moderation`.
+- Push сделки: `api/include/deal_push.php`, cron `subscription_reminders.php`.
+- Подписка: `get_subscription_packages.php`, `validate_promo.php`, `update_subscription.php`.
+
+### P2 — онбординг, топ, верификация, шаблоны, в пути, воронка
+
+- `users.is_verified`, `ad_boost_tariffs` / `ad_boosts`, `ordersglobal` + `в_пути`, ETA.
+- Flutter: `onboarding_screen.dart`, `ad_boost_screen.dart`, `OrderExecutionScreen.dart`.
+
+### P3 — B2B, автомодерация, CSV
+
+- `subscription_invoice_requests` — `request_subscription_invoice.php`, `get_subscription_invoices.php`.
+- Автомодерация: хук в `add_ob_gp.php`, `add_ob_vidt.php`, `add_ob_gr.php`.
+- CSV: `export.php?type=users|payments|deals`.
+
+---
+
 ## 12. Установка на сервер
 
 1. Импорт prod-дампа (при необходимости):  
@@ -521,7 +564,14 @@ curl -sS "https://ваш-домен/api/search_services.php?role=customer&nameIm
 3a. Журнал оплат подписки (выручка в статистике, финансы на карточке):  
    `mysql -u USER -p u2395188_apps < sql/migrate_subscription_payment_log.sql`
 
-4. Залить на хост каталоги `api/admin-web/` и `api/include/` (и остальной `api/` без перезаписи `databd.php` с prod-паролями).
+3b. **P1** (если ещё не применено):  
+   `migrate_city_geo.sql`, `migrate_subscription_packages.sql`
+
+3c. **P2:** `migrate_p2_features.sql`
+
+3d. **P3:** `migrate_p3_features.sql`
+
+4. Залить на хост каталоги `api/admin-web/` и `api/include/` (архивы `dist/p1_deploy_*.zip`, `p2_deploy_*.zip`, `p3_deploy_*.zip` или rsync). Не перезаписывать `databd.php`, `service_account.json`.
 
 5. **Первый вход:** войти как `admin`, в **Настройки** указать e-mail и сменить пароль. Альтернатива — SQL:
    ```php
@@ -550,6 +600,9 @@ api/
 │   ├── customer_ads.php, customer_ad_view.php
 │   ├── stats.php
 │   ├── broadcast.php
+│   ├── packages.php, promo_codes.php, boost_tariffs.php
+│   ├── support_queue.php, support_view.php, deal_chat_view.php
+│   ├── invoices.php, moderation.php, export.php
 │   └── settings.php
 ├── search_services.php
 └── include/
@@ -563,6 +616,10 @@ api/
     ├── performer_finances.php
     ├── admin_broadcast.php
     ├── admin_subscriptions.php
+    ├── subscription_packages.php
+    ├── ad_boost.php, ad_auto_moderation.php
+    ├── subscription_invoices.php, admin_export.php
+    ├── admin_support.php, deal_push.php
     ├── admin_reviews.php
     └── search_services_core.php
 ```
@@ -576,6 +633,10 @@ api/
 | `sql/migrate_admin_password_reset.sql` | `admin_password_reset_otp`, колонка `email` |
 | `sql/migrate_admin_users_ads.sql` | Тестовые users/ads, subscriptions, reviews |
 | `sql/migrate_subscription_payment_log.sql` | `subscription_payment_log` — журнал оплат, выручка в stats |
+| `sql/migrate_city_geo.sql` | Координаты городов (P1) |
+| `sql/migrate_subscription_packages.sql` | Пакеты и промокоды (P1) |
+| `sql/migrate_p2_features.sql` | Boost, верификация, ETA, воронка (P2) |
+| `sql/migrate_p3_features.sql` | B2B-счета, автомодерация (P3) |
 
 ---
 
@@ -606,15 +667,19 @@ api/
 
 ---
 
-## 15. Два руководства
+## 15. Связанная документация
 
-| Файл | Страница | Аудитория |
-|------|----------|-----------|
+| Файл | Страница / назначение | Аудитория |
+|------|----------------------|-----------|
 | `docs/admin_manager_guide.md` | `manager_guide.php` | Менеджер: модерация, без SQL и API |
 | `docs/admin_guide.md` | `guide.php` | Разработчик / администратор сервера |
-| `docs/app_scenarios_ru.md` | — | **Свод всех сценариев и промптов заказчика** |
-| `docs/search_logic_ru.md` | — | Алгоритм поиска в приложении (для разработчика) |
-| `docs/deals_logic_ru.md` | — | Сделки, offer_data, ordersglobal |
+| `docs/testing_guide_ru.md` | — | **Как проверить P1–P3** (приложение + админка) |
+| `docs/deploy_p1_checklist.md` | — | Деплой и smoke P1 |
+| `docs/deploy_p2_checklist.md` | — | Деплой и smoke P2 |
+| `docs/deploy_p3_checklist.md` | — | Деплой и smoke P3 |
+| `docs/deploy_admin_host.md` | — | Заливка на хост |
+| `docs/app_scenarios_ru.md` | — | Свод сценариев приложения |
+| `docs/search_logic_ru.md` | — | Алгоритм поиска |
 | `docs/deals_logic_ru.md` | — | Сделки, offer_data, ordersglobal |
 | `docs/chat_logic_ru.md` | — | Чаты и техподдержка |
 

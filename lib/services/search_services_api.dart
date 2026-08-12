@@ -27,7 +27,7 @@ class SearchServicesApi {
     final response = await http
         .get(
           Uri.parse(Config.baseUrl).replace(
-            path: '/api/search_services.php',
+            path: '${Config.apiPrefix}/search_services.php',
             queryParameters: queryParameters,
           ),
         )

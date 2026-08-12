@@ -54,8 +54,8 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: ru.app72.crgtransp72app
-        BUILD_NAME: 6.0.6
-        BUILD_NUMBER: 32
+        BUILD_NAME: 6.0.7
+        BUILD_NUMBER: 33
         # APP_STORE_APPLE_ID — в группе Secret (числовой ID из App Store Connect → App Information)
     scripts:
       - name: Create GoogleService-Info.plist

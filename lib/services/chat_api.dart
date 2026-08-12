@@ -26,7 +26,7 @@ class ChatApi {
   static const _timeout = Duration(seconds: 25);
 
   static Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse('${Config.baseUrl}$path').replace(queryParameters: query);
+    return Config.apiUri(path, query: query);
   }
 
   static Future<String?> _token() => getSecurefcm_token();
@@ -283,12 +283,17 @@ class ChatApi {
     required String subject,
     required String category,
     required String body,
+    Map<String, dynamic>? contextJson,
   }) async {
-    final res = await _post('/api/support/create.php', {
+    final fields = <String, String>{
       'subject': subject,
       'category': category,
       'body': body,
-    });
+    };
+    if (contextJson != null && contextJson.isNotEmpty) {
+      fields['context_json'] = jsonEncode(contextJson);
+    }
+    final res = await _post('/api/support/create.php', fields);
     if (res.success) return res.data;
     return {
       'success': false,

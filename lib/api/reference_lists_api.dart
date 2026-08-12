@@ -18,7 +18,7 @@ class ReferenceListsApi {
   static Future<ReferenceListResult> fetch(String path) async {
     try {
       final response = await http
-          .get(Uri.parse('${Config.baseUrl}$path'))
+          .get(Config.apiUri(path))
           .timeout(kApiTimeout);
       if (response.statusCode == 200) {
         return ReferenceListResult(data: json.decode(response.body) as List);

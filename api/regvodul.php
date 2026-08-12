@@ -1,5 +1,5 @@
 <?
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 // Установка соединения с базой данных
 $conn = new mysqli($host, $username, $password, $dbname);
 

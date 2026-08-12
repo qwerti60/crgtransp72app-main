@@ -1,5 +1,5 @@
 <?
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';
 $bd = isset($_GET['bd']) ? $_GET['bd'] : '';
 // Создаем подключение

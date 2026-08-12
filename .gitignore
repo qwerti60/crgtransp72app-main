@@ -70,6 +70,7 @@ android/KEYSTORE_FOR_CODEMAGIC.b64
 # Backend secrets and user-uploaded files
 /api/databd.php
 /api/databd.local.php
+/api/api_prefix.local.php
 /api/dbconnection.php
-/api/payment-proxy.php
+/api/payment.local.php
 /api/uploads/

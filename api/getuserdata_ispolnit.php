@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-include 'databd.php'; // Предполагается, что в файле 'databd.php' находятся данные для подключения к БД
+require __DIR__ . '/load_databd.php'; // Предполагается, что в файле 'databd.php' находятся данные для подключения к БД
 
 // Создаем соединение с базой данных
 $conn = new mysqli($host, $username, $password, $dbname);

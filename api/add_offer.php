@@ -93,6 +93,17 @@ if ($existingStatus !== false) {
     } catch (Throwable $e) {
         // ignore chat hook errors
     }
+    try {
+        require_once __DIR__ . '/include/deal_push.php';
+        crg_push_deal_event_safe($pdo, (int) $orderOwner, 'offer_received', [
+            'offer_id' => $offerId,
+            'bd' => $bdInt,
+            'ad_id' => $orderId,
+            'from_user_id' => $performerId,
+        ]);
+    } catch (Throwable $e) {
+        // ignore push errors
+    }
 
     echo json_encode(['status' => 'success', 'message' => 'Data added successfully']);
 }

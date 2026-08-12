@@ -378,7 +378,7 @@ add_ob_gr WHERE
 | **2** | Текстовый поиск `q` по about/city/category | готово: в `search_services_core.php` |
 | **3** | «Подобрать исполнителей» / «Найти заявки» под объявление | готово: кнопки в `ads1.dart`, `ads2.dart` |
 | **4** | Единый `search_services.php` + score | готово: MVP (без отдельного search_index) |
-| **5** | Геопоиск, группы tonnage, FULLTEXT | не реализовано |
+| **5** | Геопоиск (lat/lng/radius_km, sort=distance), группы tonnage, FULLTEXT | геопоиск: готово (координаты города); FULLTEXT/tonnage — нет |
 
 ---
 
@@ -386,7 +386,7 @@ add_ob_gr WHERE
 
 | API | Роль в поиске |
 |-----|----------------|
-| `search_services.php` | **единый поиск** (role, q, city, city_to, price_max, sort) |
+| `search_services.php` | **единый поиск** (role, q, city, city_to, price_max, sort, lat/lng/radius_km) |
 | `get_cities.php` | агрегация городов по категории (исполнитель) |
 | `get_citiesisp.php` | города для заказчика |
 | `getads3.php` | выдача заказов для исполнителя (классический режим) |
@@ -411,6 +411,9 @@ add_ob_gr WHERE
 - [x] Счётчики `search_order_counts.php` синхронны с фильтрами выдачи
 - [x] Fallback `search_services` → `get_ads2_new` / `getads3`
 - [x] Dual-role: заказчик не видит свои `add_ob_*`
+- [x] Геопоиск: `cities.lat/lng` (`sql/migrate_city_geo.sql`), params `lat`/`lng`/`radius_km`, `sort=distance`, поле `distance_km`
+- [x] UI «Рядом со мной» + радиус (заказчик / исполнитель), подпись дистанции в выдаче
+- [ ] Группы tonnage в поиске
 
 ---
 

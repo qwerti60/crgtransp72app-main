@@ -4,7 +4,7 @@ header('Content-Type: application/json');
 
 header('Content-Type: application/json; charset=UTF-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

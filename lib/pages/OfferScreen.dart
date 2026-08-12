@@ -69,7 +69,7 @@ class _OfferscreenForm extends State<OfferScreen> {
   Future<void> fetchOfferData(int iduserp, String userId, int bd) async {
     final response = await http.post(
       Uri.parse(
-          '${Config.baseUrl}/api/fetch_offer.php'), // заменить на ваш сервер
+          '${Config.apiBase}/fetch_offer.php'), // заменить на ваш сервер
       body: {'iduserp': '$iduserp', 'userId': '$userId', 'bd': '$bd'},
     );
 
@@ -101,7 +101,7 @@ class _OfferscreenForm extends State<OfferScreen> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -127,7 +127,7 @@ class _OfferscreenForm extends State<OfferScreen> {
   }
 
   void uploadData() async {
-    var uri = Uri.parse('${Config.baseUrl}/api/add_offer.php');
+    var uri = Uri.parse('${Config.apiBase}/add_offer.php');
 
 // Предполагаем, что _images и _imagesDoc - это пути к файлам на устройстве
     var request = http.MultipartRequest('POST', uri)
@@ -165,7 +165,7 @@ class _OfferscreenForm extends State<OfferScreen> {
 
   Future<bool> checkOfferExists(int userId, String truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.apiBase}/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -301,7 +301,7 @@ class _OfferscreenForm extends State<OfferScreen> {
                       // Выполняем HTTP-запрос и отправляем уведомление
                       try {
                         final response1 = await http.post(
-                          Uri.parse('${Config.baseUrl}/api/notification.php'),
+                          Uri.parse('${Config.apiBase}/notification.php'),
                           body: {'iduserp': widget.useridobj.toString()},
                           headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'

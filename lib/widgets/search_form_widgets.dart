@@ -215,6 +215,100 @@ class SearchSortChips extends StatelessWidget {
   }
 }
 
+/// Тогл «Рядом со мной» + чипы радиуса.
+class SearchNearMePanel extends StatelessWidget {
+  final bool enabled;
+  final int radiusKm;
+  final bool loading;
+  final String? statusText;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<int> onRadiusChanged;
+
+  const SearchNearMePanel({
+    super.key,
+    required this.enabled,
+    required this.radiusKm,
+    required this.onEnabledChanged,
+    required this.onRadiusChanged,
+    this.loading = false,
+    this.statusText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Рядом со мной',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+                fontSize: 15,
+              ),
+            ),
+            subtitle: Text(
+              statusText ??
+                  (enabled
+                      ? 'Поиск по радиусу от вашей геопозиции'
+                      : 'Включите, чтобы искать без выбора города'),
+              style: const TextStyle(color: Colors.black38, fontSize: 13),
+            ),
+            value: enabled,
+            activeColor: blueaccentColor,
+            onChanged: loading ? null : onEnabledChanged,
+            secondary: loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.near_me, color: blueaccentColor),
+          ),
+          if (enabled) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Радиус, км',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black38,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: kSearchRadiusOptions.map((km) {
+                  final active = radiusKm == km;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text('$km'),
+                      selected: active,
+                      selectedColor: blueaccentColor.withValues(alpha: 0.25),
+                      labelStyle: TextStyle(
+                        color: active ? blueaccentColor : Colors.black54,
+                        fontWeight:
+                            active ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: loading ? null : (_) => onRadiusChanged(km),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Кнопка «Найти» в стиле приложения.
 class SearchPrimaryButton extends StatelessWidget {
   final VoidCallback onPressed;

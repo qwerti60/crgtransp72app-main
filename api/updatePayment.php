@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-include 'databd.php'; // Убедитесь, что здесь правильный путь к файлу
+require __DIR__ . '/load_databd.php'; // Убедитесь, что здесь правильный путь к файлу
 
 // Получаем POST-данные от клиента
 $idUsers     = isset($_POST['idusers']) ? intval($_POST['idusers']) : null;

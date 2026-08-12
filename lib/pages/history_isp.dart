@@ -102,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -124,7 +124,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -157,7 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int bd, String nameImg) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/list_history_isp.php',
+        path: '${Config.apiPrefix}/list_history_isp.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': userId.toString(),
@@ -809,7 +809,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(widget.bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': widget.bd.toString(),

@@ -34,7 +34,8 @@ try {
         $params[':customer_id'] = $customerId;
     }
 
-    $sql = "SELECT user_id, order_id, user_idok, status, start_time, end_time
+    $sql = "SELECT user_id, order_id, user_idok, status, start_time, end_time,
+                   in_transit_at, eta_at, transit_lat, transit_lng
             FROM ordersglobal
             WHERE user_id = :performer_id AND order_id = :order_id{$customerFilter}
             ORDER BY id DESC
@@ -60,6 +61,10 @@ try {
         'status'     => $row['status'],
         'start_time' => $row['start_time'],
         'end_time'   => $row['end_time'] ?? null,
+        'in_transit_at' => $row['in_transit_at'] ?? null,
+        'eta_at' => $row['eta_at'] ?? null,
+        'transit_lat' => $row['transit_lat'] ?? null,
+        'transit_lng' => $row['transit_lng'] ?? null,
     ], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     http_response_code(500);

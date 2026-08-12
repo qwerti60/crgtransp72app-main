@@ -25,6 +25,7 @@ $pf = $stats['platform_finances'] ?? [];
 $saPeriod = $sa['period'] ?? [];
 $saAll = $sa['all_time'] ?? [];
 $saSnap = $sa['snapshot'] ?? [];
+$funnel = $stats['funnel'] ?? [];
 $periodLabel = (string) (($sa['period_info']['label'] ?? '') ?: ($pf['period_info']['label'] ?? ''));
 
 tp_admin_web_layout_start('Статистика', 'stats', $adminLogin !== '' ? $adminLogin : null);
@@ -84,6 +85,29 @@ tp_admin_web_layout_start('Статистика', 'stats', $adminLogin !== '' ? 
         <span class="meta"><?= tp_admin_web_h($periodLabel) ?></span>
     <?php } ?>
 </form>
+
+<?php if (($funnel['steps'] ?? []) !== []) { ?>
+<div class="stats-section card">
+    <h2>Воронка (P2)</h2>
+    <p class="meta">Регистрации → объявления → отклики → сделки → оплата подписки за выбранный период.</p>
+    <?php
+    $maxFunnel = 1;
+    foreach ($funnel['steps'] as $fs) {
+        $maxFunnel = max($maxFunnel, (int) ($fs['count'] ?? 0));
+    }
+    foreach ($funnel['steps'] as $fs) {
+        $cnt = (int) ($fs['count'] ?? 0);
+        $pct = $maxFunnel > 0 ? round(100 * $cnt / $maxFunnel) : 0;
+        $conv = isset($fs['conversion_from_prev_pct']) ? (float) $fs['conversion_from_prev_pct'] : null;
+        ?>
+        <div class="bar-row">
+            <span class="bar-label"><?= tp_admin_web_h((string) ($fs['label'] ?? '')) ?></span>
+            <span class="bar-track"><span class="bar-fill" style="width:<?= (int) $pct ?>%"></span></span>
+            <span class="bar-num"><?= (int) $cnt ?><?= $conv !== null ? ' (' . tp_admin_web_h((string) $conv) . '%)' : '' ?></span>
+        </div>
+    <?php } ?>
+</div>
+<?php } ?>
 
 <?php if ($pf !== []) { ?>
 <div class="finance-hero">

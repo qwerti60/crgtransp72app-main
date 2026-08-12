@@ -1,8 +1,6 @@
 <?php
-$servername = "localhost";
-$username = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
-$dbname = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
+$servername = $host;
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 

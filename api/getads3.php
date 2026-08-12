@@ -1,5 +1,5 @@
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 require_once __DIR__ . '/include/customer_order_deal.php';
 
 $nameImg = isset($_GET['nameImg']) ? $_GET['nameImg'] : '';

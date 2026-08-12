@@ -32,14 +32,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Timer? _statusTimer;
 
   // --- НАСТРОЙКИ ---
-  static const String proxyUrl = '${Config.baseUrl}/api/payment-proxy.php';
+  static final String proxyUrl = '${Config.apiBase}/payment-proxy.php';
   static const String returnUrl =
       'intent://success#Intent;scheme=myapp;package=com.newunique.crgtransp72app;end';
 
   // Настройки подписки (приходят из БД через API)
   int _subscriptionDays = 30;
   int _subscriptionPriceRub = 300;
+  int _basePriceRub = 300;
+  int _discountRub = 0;
+  int _selectedPackageId = 0;
+  List<Map<String, dynamic>> _packages = [];
+  final _promoController = TextEditingController();
+  String? _promoStatus;
+  bool _promoLoading = false;
   bool _isSubscriptionConfigLoading = false;
+  int statNum = 0;
+  String? _invoiceStatusText;
+  bool _invoiceRequestLoading = false;
 
   bool get _isSubscriptionActive {
     if (_subscriptionEndDate == null) return false;
@@ -176,13 +186,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _isSavingSubscription = true;
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/update_subscription.php'),
+        Uri.parse('${Config.apiBase}/update_subscription.php'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'userId': userId.toString(),
           'orderId': orderId!,
           'days': _subscriptionDays.toString(),
           'amountRub': _subscriptionPriceRub.toString(),
+          if (_selectedPackageId > 0)
+            'packageId': _selectedPackageId.toString(),
+          if (_promoController.text.trim().isNotEmpty)
+            'promoCode': _promoController.text.trim().toUpperCase(),
         },
       );
 
@@ -237,6 +251,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (response['success'] == true || response['success'] == 'true') {
       return true;
     }
+    // Ответ вида {"error":"..."} без errorCode — это тоже ошибка
+    final genericError = response['error']?.toString();
+    if (genericError != null && genericError.isNotEmpty) {
+      return false;
+    }
     final code = response['errorCode']?.toString() ??
         response['ErrorCode']?.toString();
     // Успех: errorCode отсутствует или равен 0
@@ -248,11 +267,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         response['ErrorCode']?.toString();
     final errorMessage = response['errorMessage']?.toString() ??
         response['ErrorMessage']?.toString() ??
+        response['error']?.toString() ??
         'Ошибка банка';
 
     if (!_isBankSuccess(response)) {
       setState(() {
-        statusText = 'Ошибка #$errorCode: $errorMessage';
+        statusText = 'Ошибка #${errorCode ?? '—'}: $errorMessage';
       });
       return;
     }
@@ -263,7 +283,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (formUrl == null || formUrl.toString().isEmpty) {
       setState(() {
         statusText =
-            'Банк не вернул ссылку на оплату (orderId: ${registeredOrderId ?? '—'})';
+            'Банк не вернул ссылку на оплату (orderId: ${registeredOrderId ?? '—'}). Проверьте api_test/payment-proxy.php';
       });
       return;
     }
@@ -381,7 +401,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/cancel_subscription.php'),
+        Uri.parse('${Config.apiBase}/cancel_subscription.php'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'userId': userId.toString(),
@@ -413,7 +433,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          '${Config.baseUrl}/api/get_subscription.php?userId=$userId',
+          '${Config.apiBase}/get_subscription.php?userId=$userId',
         ),
       );
 
@@ -470,7 +490,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -480,8 +500,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         // Обновляем состояние класса и UI
         setState(() {
           userId = data['idusers'];
+          statNum = int.tryParse('${data['statNum'] ?? 0}') ?? 0;
         });
         await _fetchSubscriptionStatus();
+        if (statNum == 1) {
+          await _fetchInvoiceStatus();
+        }
       }
     } else {
       print('Ошибка при получении данных пользователя');
@@ -493,8 +517,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _isSubscriptionConfigLoading = true;
 
     try {
+      final packagesRes = await http.get(
+        Uri.parse('${Config.apiBase}/get_subscription_packages.php'),
+      );
+      if (packagesRes.statusCode == 200) {
+        final data = json.decode(packagesRes.body);
+        if (data['success'] == true && data['packages'] is List) {
+          final list = (data['packages'] as List)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          if (list.isNotEmpty && mounted) {
+            setState(() {
+              _packages = list;
+              _selectPackage(list.first);
+            });
+            return;
+          }
+        }
+      }
+
       final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/get_subscription_config.php'),
+        Uri.parse('${Config.apiBase}/get_subscription_config.php'),
       );
 
       if (response.statusCode != 200) return;
@@ -511,7 +555,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _subscriptionDays = days;
         }
         if (priceRub != null && priceRub > 0) {
+          _basePriceRub = priceRub;
           _subscriptionPriceRub = priceRub;
+          _discountRub = 0;
         }
       });
     } catch (e) {
@@ -521,9 +567,155 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  void _selectPackage(Map<String, dynamic> pkg) {
+    final id = int.tryParse('${pkg['id'] ?? 0}') ?? 0;
+    final days = int.tryParse('${pkg['days'] ?? 0}') ?? 30;
+    final price = int.tryParse('${pkg['price_rub'] ?? 0}') ?? 300;
+    _selectedPackageId = id;
+    _subscriptionDays = days > 0 ? days : 30;
+    _basePriceRub = price > 0 ? price : 300;
+    _subscriptionPriceRub = _basePriceRub;
+    _discountRub = 0;
+    _promoStatus = null;
+  }
+
+  Future<void> _applyPromo() async {
+    final code = _promoController.text.trim();
+    if (code.isEmpty) {
+      setState(() {
+        _discountRub = 0;
+        _subscriptionPriceRub = _basePriceRub;
+        _promoStatus = null;
+      });
+      return;
+    }
+    setState(() {
+      _promoLoading = true;
+      _promoStatus = null;
+    });
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.apiBase}/validate_promo.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'code': code,
+          'package_id': _selectedPackageId,
+          'userId': userId,
+        }),
+      );
+      final data = json.decode(response.body);
+      if (!mounted) return;
+      if (data['success'] == true) {
+        final amount = int.tryParse('${data['amount_rub'] ?? ''}') ?? _basePriceRub;
+        final discount =
+            int.tryParse('${data['discount_rub'] ?? ''}') ?? 0;
+        setState(() {
+          _subscriptionPriceRub = amount;
+          _discountRub = discount;
+          _promoStatus = discount > 0
+              ? 'Скидка $discount ₽ применена'
+              : 'Промокод принят';
+        });
+      } else {
+        setState(() {
+          _subscriptionPriceRub = _basePriceRub;
+          _discountRub = 0;
+          _promoStatus = '${data['error'] ?? 'Промокод недействителен'}';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _promoStatus = 'Не удалось проверить промокод';
+      });
+    } finally {
+      if (mounted) setState(() => _promoLoading = false);
+    }
+  }
+
+  Future<void> _fetchInvoiceStatus() async {
+    final token = await getSecurefcm_token();
+    if (token == null || !mounted) return;
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '${Config.apiBase}/get_subscription_invoices.php?token=$token',
+        ),
+      );
+      if (response.statusCode != 200 || !mounted) return;
+      final data = json.decode(response.body);
+      if (data['success'] != true) return;
+      final active = data['active'];
+      String? statusText;
+      if (active is Map) {
+        final st = '${active['status'] ?? ''}';
+        final num = active['invoice_number'];
+        statusText = switch (st) {
+          'requested' => 'Заявка на счёт принята, ожидайте выставления.',
+          'issued' => num != null && '$num'.isNotEmpty
+              ? 'Счёт №$num выставлен. Оплатите по реквизитам.'
+              : 'Счёт выставлен. Оплатите по реквизитам.',
+          _ => null,
+        };
+      }
+      setState(() => _invoiceStatusText = statusText);
+    } catch (e) {
+      debugPrint('INVOICE STATUS ERROR: $e');
+    }
+  }
+
+  Future<void> _requestInvoice() async {
+    if (!_canPayOrExtend || _selectedPackageId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите пакет подписки')),
+      );
+      return;
+    }
+    final token = await getSecurefcm_token();
+    if (token == null) return;
+    setState(() => _invoiceRequestLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.apiBase}/request_subscription_invoice.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'package_id': _selectedPackageId,
+          'promo_code': _promoController.text.trim(),
+        }),
+      );
+      final data = json.decode(response.body);
+      if (!mounted) return;
+      if (data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${data['message'] ?? 'Заявка на счёт принята'}',
+            ),
+          ),
+        );
+        await _fetchInvoiceStatus();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${data['error'] ?? 'Не удалось создать заявку'}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка сети при запросе счёта')),
+      );
+    } finally {
+      if (mounted) setState(() => _invoiceRequestLoading = false);
+    }
+  }
+
   @override
   void dispose() {
     _statusTimer?.cancel();
+    _promoController.dispose();
     super.dispose();
   }
 
@@ -546,7 +738,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
         backgroundColor: blueaccentColor,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -560,6 +752,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
                       'Подписка на доступ',
@@ -567,20 +760,92 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$_subscriptionDays дней',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
+                    if (_packages.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Выберите пакет',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _packages.map((pkg) {
+                          final id = int.tryParse('${pkg['id'] ?? 0}') ?? 0;
+                          final title = '${pkg['title'] ?? ''}';
+                          final days = pkg['days'] ?? '';
+                          final price = pkg['price_rub'] ?? '';
+                          final selected = id == _selectedPackageId;
+                          return ChoiceChip(
+                            label: Text('$title · $days дн. · $price ₽'),
+                            selected: selected,
+                            onSelected: (_) {
+                              setState(() => _selectPackage(pkg));
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '$_subscriptionDays дней',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                     const SizedBox(height: 12),
+                    if (_discountRub > 0)
+                      Text(
+                        'Без скидки: $_basePriceRub ₽',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     Text(
                       'Стоимость: $_subscriptionPriceRub ₽',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _promoController,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: 'Промокод',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: TextButton(
+                          onPressed: _promoLoading ? null : _applyPromo,
+                          child: _promoLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('OK'),
+                        ),
+                      ),
+                    ),
+                    if (_promoStatus != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _promoStatus!,
+                        style: TextStyle(
+                          color: _discountRub > 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -609,6 +874,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               child: Text(_paymentButtonLabel),
             ),
+            if (statNum == 1) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: (_canPayOrExtend &&
+                        !_invoiceRequestLoading &&
+                        _invoiceStatusText == null)
+                    ? _requestInvoice
+                    : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: _invoiceRequestLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Запросить счёт (юр. лицо)'),
+              ),
+              if (_invoiceStatusText != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _invoiceStatusText!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.blue.shade800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _canCancelSubscription ? _cancelSubscription : null,

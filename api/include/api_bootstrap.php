@@ -29,24 +29,44 @@ function tp_pdo(): PDO
     $root = defined('TP_PUBLIC_ROOT') ? TP_PUBLIC_ROOT : dirname(__DIR__);
     $loader = $root . '/load_databd.php';
     if (is_readable($loader)) {
-        require $loader;
-    } elseif (!isset($host, $username, $password, $dbname)) {
+        require_once $loader;
+    } else {
         $localPath = $root . '/databd.local.php';
         if (is_readable($localPath)) {
-            require $localPath;
+            require_once $localPath;
         } elseif (is_readable($root . '/databd.php')) {
-            require $root . '/databd.php';
+            require_once $root . '/databd.php';
+        }
+        if (isset($host, $username, $password, $dbname)) {
+            $GLOBALS['host'] = (string) $host;
+            $GLOBALS['username'] = (string) $username;
+            $GLOBALS['password'] = (string) $password;
+            $GLOBALS['dbname'] = (string) $dbname;
         }
     }
-    if (!isset($host, $username, $password, $dbname)) {
+
+    try {
+        if (function_exists('crg_db_config')) {
+            $db = crg_db_config();
+        } elseif (isset($GLOBALS['host'], $GLOBALS['username'], $GLOBALS['password'], $GLOBALS['dbname'])) {
+            $db = [
+                'host' => (string) $GLOBALS['host'],
+                'username' => (string) $GLOBALS['username'],
+                'password' => (string) $GLOBALS['password'],
+                'dbname' => (string) $GLOBALS['dbname'],
+            ];
+        } else {
+            throw new RuntimeException('missing');
+        }
+    } catch (Throwable $e) {
         http_response_code(500);
         header('Content-Type: text/plain; charset=utf-8');
         echo "В файле подключения к БД должны быть \$host, \$username, \$password, \$dbname\n";
         exit;
     }
 
-    $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $host, $dbname);
-    $pdo = new PDO($dsn, $username, $password, tp_pdo_driver_options());
+    $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $db['host'], $db['dbname']);
+    $pdo = new PDO($dsn, $db['username'], $db['password'], tp_pdo_driver_options());
 
     return $pdo;
 }

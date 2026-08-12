@@ -65,7 +65,7 @@ class _CityScreenState extends State<CityScreenIsp> {
     try {
       final dio = Dio();
       final response = await dio.get(
-        '${Config.baseUrl}/api/get_citiesisp.php',
+        '${Config.apiBase}/get_citiesisp.php',
         queryParameters: {
           'namex': widget.indexName,
           'useId': userId.toString(),
@@ -119,7 +119,7 @@ class _CityScreenState extends State<CityScreenIsp> {
     }
     try {
       final response = await http
-          .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'))
+          .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'))
           .timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 200) {

@@ -27,7 +27,7 @@ class SubscriptionForm extends State<SubscriptionScreen> {
   Future fetchSubscriptionInfo(int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/get_subscribe_data.php',
+        path: '${Config.apiPrefix}/get_subscribe_data.php',
         queryParameters: {
           'iduser': userId.toString(),
         },
@@ -55,7 +55,7 @@ class SubscriptionForm extends State<SubscriptionScreen> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -292,7 +292,7 @@ String? selectedPaymentType = '';
 String? selectedPaymentType1 = '';
 
 Future<void> renewSubscription(int userID) async {
-  var url = Uri.parse('${Config.baseUrl}/api/subscribe_new.php');
+  var url = Uri.parse('${Config.apiBase}/subscribe_new.php');
   var response = await http.post(url, body: {'iduser': userID.toString()});
 
   if (response.statusCode == 200) {
@@ -330,7 +330,7 @@ Future<void> uploadData({
   required PaymentType selectedPaymentType,
   required PaymentType1 selectedPaymentType1,
 }) async {
-  final uri = Uri.parse('${Config.baseUrl}/api/updatePayment.php');
+  final uri = Uri.parse('${Config.apiBase}/updatePayment.php');
 
   try {
     final response = await http.post(uri, body: {

@@ -89,13 +89,61 @@ function crg_finances_log_subscription_payment(
     string $orderId,
     int $amountRub,
     int $daysAdded,
-    ?string $subscriptionUntil
+    ?string $subscriptionUntil,
+    ?int $packageId = null,
+    ?string $promoCode = null,
+    int $discountRub = 0,
+    string $paymentMethod = 'card'
 ): void {
     if ($userId <= 0 || $orderId === '' || !crg_finances_payment_log_table_exists($pdo)) {
         return;
     }
 
     try {
+        // Расширенные колонки появляются после migrate_subscription_packages.sql
+        try {
+            $st = $pdo->prepare(
+                'INSERT INTO subscription_payment_log
+                 (iduser, order_id, amount_rub, days_added, package_id, promo_code, discount_rub, payment_method, paid_at, subscription_until)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)'
+            );
+            $st->execute([
+                $userId,
+                $orderId,
+                max(0, $amountRub),
+                max(1, $daysAdded),
+                $packageId !== null && $packageId > 0 ? $packageId : null,
+                $promoCode !== null && $promoCode !== '' ? $promoCode : null,
+                max(0, $discountRub),
+                $paymentMethod !== '' ? $paymentMethod : 'card',
+                $subscriptionUntil,
+            ]);
+            return;
+        } catch (Throwable $e) {
+            // fallback без payment_method
+        }
+
+        try {
+            $st = $pdo->prepare(
+                'INSERT INTO subscription_payment_log
+                 (iduser, order_id, amount_rub, days_added, package_id, promo_code, discount_rub, paid_at, subscription_until)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)'
+            );
+            $st->execute([
+                $userId,
+                $orderId,
+                max(0, $amountRub),
+                max(1, $daysAdded),
+                $packageId !== null && $packageId > 0 ? $packageId : null,
+                $promoCode !== null && $promoCode !== '' ? $promoCode : null,
+                max(0, $discountRub),
+                $subscriptionUntil,
+            ]);
+            return;
+        } catch (Throwable $e) {
+            // fallback без новых колонок
+        }
+
         $st = $pdo->prepare(
             'INSERT INTO subscription_payment_log
              (iduser, order_id, amount_rub, days_added, paid_at, subscription_until)
@@ -385,7 +433,8 @@ function crg_finances_fetch_payments_in_range(PDO $pdo, string $dateFrom, string
 
     try {
         $st = $pdo->prepare(
-            'SELECT id, iduser, order_id, amount_rub, days_added, paid_at, subscription_until
+            'SELECT id, iduser, order_id, amount_rub, days_added, paid_at, subscription_until,
+                    COALESCE(payment_method, \'card\') AS payment_method
              FROM subscription_payment_log
              WHERE paid_at >= ? AND paid_at < ?
              ORDER BY paid_at DESC, id DESC

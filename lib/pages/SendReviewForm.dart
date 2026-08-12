@@ -89,7 +89,7 @@ class _SendReviewFormState extends State<SendReviewForm> {
 
     try {
       final response = await Dio().post(
-        '${Config.baseUrl}/api/save_review.php',
+        '${Config.apiBase}/save_review.php',
         data: data,
         options: Options(validateStatus: (code) => code! >= 200 && code < 300),
       );

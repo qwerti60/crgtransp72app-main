@@ -1,9 +1,8 @@
 <?
 // Подключение к базе данных
-$host = "localhost";
-$user = "u2395188_apps72";
-$pass = "kR3iV2aA6gjU8nC9";
-$dbname = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
+$user = $username;
+$pass = $password;
 $charset = 'utf8';
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";

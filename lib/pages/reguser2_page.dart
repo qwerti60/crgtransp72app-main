@@ -297,7 +297,7 @@ class _creguser2_nameForm extends State<creguser2_name> {
                           (rollNum == 3 && statNum == 2)) {
                         final response = await http.post(
                           Uri.parse(Config.baseUrl)
-                              .replace(path: '/api/register1.php'),
+                              .replace(path: '${Config.apiPrefix}/register1.php'),
                           headers: {'Content-Type': 'application/json'},
                           body: json.encode({
                             'rollNum': rollNum,

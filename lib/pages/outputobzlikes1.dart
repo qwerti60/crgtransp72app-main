@@ -111,7 +111,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -133,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> checkOfferExists(String userId, String truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
+        '${Config.apiBase}/check_offer.php?iduser=$userId&truck=$truckId&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -145,7 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -180,7 +180,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //     'http://yourdomain.com/toggle_like.php?idusers=$idUser&id=$id&bd=$bd'));
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/toggle_like.php',
+        path: '${Config.apiPrefix}/toggle_like.php',
         queryParameters: {
           'usersid': userId.toString(),
           'idusers': idUser,
@@ -218,11 +218,9 @@ class _MyHomePageState extends State<MyHomePage> {
       'nameImg': widget.nameImg,
       'bd': widget.base.toString(),
     };
-    const path = '/api/getads_likes_new.php';
-
-    final uri = Uri.parse(Config.baseUrl).replace(
-      path: path,
-      queryParameters: queryParameters,
+    final uri = Config.apiUri(
+      'getads_likes_new.php',
+      query: queryParameters,
     );
     print('[outputobzlikes1] fetchAds url: $uri');
     final response = await http.get(uri);
@@ -669,7 +667,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),

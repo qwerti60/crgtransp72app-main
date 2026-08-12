@@ -1,8 +1,7 @@
 <?
-$host = "localhost";
-$user = "u2395188_apps72";
-$pass = "kR3iV2aA6gjU8nC9";
-$db = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
+$pass = $password;
+$db = $dbname;
 
 // Создаем соединение
 $pdo = new PDO("mysql:host=$host;dbname=$db", $db, $pass);

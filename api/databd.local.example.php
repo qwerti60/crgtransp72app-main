@@ -1,11 +1,17 @@
 <?php
 /**
- * Подключение к БД (скопируйте в databd.local.php или databd.php на сервере).
+ * Тестовый / локальный MySQL.
  *
- * Обязательные переменные:
- *   $host, $username, $password, $dbname
+ * 1) cp api/databd.local.example.php api/databd.local.php
+ * 2) Отредактируйте host / user / password / dbname
+ * 3) Импорт схемы: mysql -u root < sql/local_dev.sql
+ * 4) Запуск API: cd api && php -S 127.0.0.1:8080
+ *    или: ./scripts/local_admin.sh
+ *
+ * Пока существует databd.local.php, весь API (через databd.php) ходит в эту БД,
+ * а не в prod. На сервер databd.local.php не заливать.
  */
-$host = 'localhost';
+$host = '127.0.0.1';
 $username = 'root';
 $password = '';
-$dbname = 'u2395188_apps';
+$dbname = 'crg_local';

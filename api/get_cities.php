@@ -2,7 +2,7 @@
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=UTF-8');
 
-include 'databd.php'; // $host, $username, $password, $dbname
+require __DIR__ . '/load_databd.php'; // $host, $username, $password, $dbname
 $useId = isset($_GET['useId']) ? $_GET['useId'] : '';
 
 $namex = $_GET['namex'] ?? '';

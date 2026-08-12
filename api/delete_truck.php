@@ -1,6 +1,6 @@
 
 <?php
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 // Получаем данные из POST-запроса
 $truckId = intval($_POST['id']);

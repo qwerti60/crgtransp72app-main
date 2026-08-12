@@ -106,6 +106,10 @@ class _ChatListScreenState extends State<ChatListScreen>
       subtitle: thread.type == 'deal' ? thread.title : null,
       promptSupportRating: thread.needsRating,
       supportTicketId: thread.supportTicketId,
+      bd: thread.bd,
+      adId: thread.adId,
+      offerDataId: thread.offerDataId,
+      orderGlobalId: thread.orderGlobalId,
     );
   }
 
@@ -116,6 +120,10 @@ class _ChatListScreenState extends State<ChatListScreen>
     String? subtitle,
     bool promptSupportRating = false,
     int? supportTicketId,
+    int? bd,
+    int? adId,
+    int? offerDataId,
+    int? orderGlobalId,
   }) {
     return Navigator.of(context)
         .push(
@@ -129,6 +137,10 @@ class _ChatListScreenState extends State<ChatListScreen>
           isPerformer: widget.isPerformer,
           promptSupportRating: promptSupportRating,
           supportTicketId: supportTicketId,
+          bd: bd,
+          adId: adId,
+          offerDataId: offerDataId,
+          orderGlobalId: orderGlobalId,
         ),
       ),
     )

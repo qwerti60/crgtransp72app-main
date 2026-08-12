@@ -1,9 +1,8 @@
 <?php
 // Подключение к базе данных
-$host = "localhost";
-$user = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
-$database = "u2395188_apps";
+require __DIR__ . '/load_databd.php';
+$user = $username;
+$database = $dbname;
 
 $conn = new mysqli($host, $user, $password, $database);
 if ($conn->connect_error) {

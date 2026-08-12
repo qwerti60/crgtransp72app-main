@@ -2,7 +2,7 @@
 // Устанавливаем заголовок Content-Type для ответа
 header('Content-Type: application/json');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 
 // Создаем подключение к базе данных

@@ -40,6 +40,13 @@ docs/portfolio/presentation.html
 3. Включите «Фоновая графика»
 4. Ориентация: альбомная или книжная (слайды адаптивные)
 
+## Смета и статус доработок
+
+- [feature_proposals_estimate.html](./feature_proposals_estimate.html) — P1 (**сделано** 02.08.2026), P2 (**сделано** 03.08.2026), P3 (**сделано** 03.08.2026)
+- **[DONE_SIMPLE_RU.html](../../api/docs/portfolio/DONE_SIMPLE_RU.html)** — краткий список «что сделано» (на prod: `/api/docs/portfolio/DONE_SIMPLE_RU.html`)
+- Чеклисты деплоя: [deploy_p1_checklist.md](../deploy_p1_checklist.md), [deploy_p2_checklist.md](../deploy_p2_checklist.md), [deploy_p3_checklist.md](../deploy_p3_checklist.md)
+- **Тестирование:** [testing_guide_ru.md](../testing_guide_ru.md)
+
 ## Кастомизация
 
 Отредактируйте `presentation.html` — все стили внутри файла, без внешних зависимостей.

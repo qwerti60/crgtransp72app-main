@@ -9,7 +9,7 @@ Future<void> sendNotificationV1({
   required String body,
 }) async {
   final response = await http.post(
-    Uri.parse(Config.baseUrl).replace(path: '/api/send_notification.php'),
+    Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/send_notification.php'),
     headers: {'Content-Type': 'application/json; charset=UTF-8'},
     body: jsonEncode({
       'device_token': deviceToken,
@@ -39,7 +39,7 @@ Future<void> notifyUserById({
 
   try {
     final response = await http.post(
-      Uri.parse('${Config.baseUrl}/api/notification.php'),
+      Uri.parse('${Config.apiBase}/notification.php'),
       body: {'iduserp': trimmedId},
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );

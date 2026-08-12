@@ -127,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final response = await http
-        .get(Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'));
+        .get(Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -160,7 +160,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<bool> checkOfferExists(
       dynamic performerUserId, dynamic truckId, int bd) async {
     final response = await http.get(Uri.parse(
-        '${Config.baseUrl}/api/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
+        '${Config.apiBase}/check_offer.php?iduser=${performerUserId.toString()}&truck=${truckId.toString()}&bd=$bd'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body)['exists'];
@@ -206,7 +206,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -267,7 +267,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<List> fetchAds(int userId) async {
     final response = await http.get(
       Uri.parse(Config.baseUrl).replace(
-        path: '/api/getofferusern_new.php',
+        path: '${Config.apiPrefix}/getofferusern_new.php',
         queryParameters: {
           'useId': userId.toString(),
         },
@@ -1134,7 +1134,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                                         var response =
                                                             await http.post(
                                                           Uri.parse(
-                                                              '${Config.baseUrl}/api/deleteoffer.php'), // Здесь укажите ваш API адрес
+                                                              '${Config.apiBase}/deleteoffer.php'), // Здесь укажите ваш API адрес
                                                           body: {
                                                             'iduserp': userId
                                                                 .toString(),
@@ -1359,7 +1359,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(bd); // Url к вашему API
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': bd.toString(),

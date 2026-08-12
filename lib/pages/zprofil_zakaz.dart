@@ -93,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final token = await getSecurefcm_token();
     if (token == null) return 0;
     final response = await http.get(
-      Uri.parse('${Config.baseUrl}/api/getuserinfo.php?token=$token'),
+      Uri.parse('${Config.apiBase}/getuserinfo.php?token=$token'),
     );
     if (response.statusCode != 200) return 0;
     final data = json.decode(response.body);
@@ -220,7 +220,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       final primary = await http.get(
         Uri.parse(Config.baseUrl).replace(
-          path: '/api/get_ads_zakaz_customer.php',
+          path: '${Config.apiPrefix}/get_ads_zakaz_customer.php',
           queryParameters: {
             'useId': uid.toString(),
             'usersid': uid.toString(),
@@ -236,7 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
         final legacy = await http.get(
           Uri.parse(Config.baseUrl).replace(
-            path: '/api/getofferuserz_new.php',
+            path: '${Config.apiPrefix}/getofferuserz_new.php',
             queryParameters: {
               'all': '1',
               'useId': uid.toString(),
@@ -440,7 +440,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     try {
       final response = await http.post(
-        Uri.parse('${Config.baseUrl}/api/delete_offer_zakaz.php'),
+        Uri.parse('${Config.apiBase}/delete_offer_zakaz.php'),
         body: {
           'iduserp': userId.toString(),
           'iduser': listingId.toString(),
@@ -470,7 +470,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> getUserDataAds(idUser) async {
     print(idUser);
     final response = await http.get(
-        Uri.parse('${Config.baseUrl}/api/getuserinfoads.php?idusers=$idUser'));
+        Uri.parse('${Config.apiBase}/getuserinfoads.php?idusers=$idUser'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -1245,7 +1245,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> deleteTruck(int truckId, int rowBd, dynamic context) async {
     try {
       final response = await http.post(
-        Uri.parse(Config.baseUrl).replace(path: '/api/delete_truck.php'),
+        Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/delete_truck.php'),
         body: {
           'id': truckId.toString(),
           'bd': rowBd.toString(),

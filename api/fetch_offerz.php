@@ -1,8 +1,7 @@
 <?php
 // Подключение к базе данных
-$servername = "localhost";
-$username = "u2395188_apps72";
-$password = "kR3iV2aA6gjU8nC9";
+require __DIR__ . '/load_databd.php';
+$servername = $host;
 $dbname = "u2395188_apps"; // замените на имя вашей базы данных
 
 try {

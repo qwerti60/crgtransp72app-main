@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $bd = isset($_GET['bd']) ? (int) $_GET['bd'] : 0;
 $usersid = isset($_GET['usersid']) ? (int) $_GET['usersid'] : 0;

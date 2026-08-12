@@ -100,7 +100,7 @@ function tp_admin_web_require_login_json(): PDO
 }
 
 /**
- * @param 'stats'|'cities'|'vidt'|'vidg'|'gruzchik'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'settings'|'support' $activeNav
+ * @param 'stats'|'cities'|'vidt'|'vidg'|'gruzchik'|'vidkuzov'|'users'|'performer_ads'|'customer_ads'|'broadcast'|'packages'|'promos'|'boost'|'invoices'|'moderation'|'export'|'settings'|'support' $activeNav
  */
 function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string $adminLogin = null): void
 {
@@ -116,11 +116,18 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
         'customer_ads' => ['Заявки заказчиков', 'customer_ads.php?type=orders'],
         'support' => ['Поддержка', 'support_queue.php'],
         'broadcast' => ['Рассылка', 'broadcast.php'],
+        'packages' => ['Пакеты', 'packages.php'],
+        'promos' => ['Промокоды', 'promo_codes.php'],
+        'boost' => ['Поднятие', 'boost_tariffs.php'],
+        'invoices' => ['Счета B2B', 'invoices.php'],
+        'moderation' => ['Автомодерация', 'moderation.php'],
+        'export' => ['Экспорт CSV', 'export.php'],
         'settings' => ['Настройки', 'settings.php'],
     ];
 
     $performerAdsPending = 0;
     $supportNewCount = 0;
+    $invoicePendingCount = 0;
     if ($adminLogin !== null && $adminLogin !== '') {
         tp_admin_web_require_include('admin_ads.php');
         try {
@@ -134,6 +141,12 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
             $supportNewCount = crg_admin_support_new_count(tp_pdo());
         } catch (Throwable $e) {
             $supportNewCount = 0;
+        }
+        tp_admin_web_require_include('subscription_invoices.php');
+        try {
+            $invoicePendingCount = crg_invoice_pending_count(tp_pdo());
+        } catch (Throwable $e) {
+            $invoicePendingCount = 0;
         }
     }
 
@@ -242,6 +255,9 @@ function tp_admin_web_layout_start(string $pageTitle, string $activeNav, ?string
                 <?php } ?>
                 <?php if ($key === 'support' && $supportNewCount > 0) { ?>
                     <span class="nav-dot" title="Новых обращений: <?= (int) $supportNewCount ?>"></span>
+                <?php } ?>
+                <?php if ($key === 'invoices' && $invoicePendingCount > 0) { ?>
+                    <span class="nav-dot" title="Активных счетов: <?= (int) $invoicePendingCount ?>"></span>
                 <?php } ?>
             </a>
         <?php } ?>

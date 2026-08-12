@@ -17,7 +17,7 @@ class ChatMessageContent extends StatelessWidget {
     if (!message.hasAttachment || authToken == null || authToken!.isEmpty) {
       return null;
     }
-    return '${Config.baseUrl}/api/chat/attachment.php'
+    return '${Config.apiBase}/chat/attachment.php'
         '?token=${Uri.encodeComponent(authToken!)}'
         '&message_id=${message.id}';
   }

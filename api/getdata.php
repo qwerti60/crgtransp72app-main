@@ -3,7 +3,7 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-include 'databd.php';
+require __DIR__ . '/load_databd.php';
 
 $dsn = "mysql:host=$host;dbname=$dbname";
 try {

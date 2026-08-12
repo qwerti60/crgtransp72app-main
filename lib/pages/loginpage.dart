@@ -12,6 +12,8 @@ import '../config.dart';
 import '../design/dimension.dart';
 import '../services/avatar_upload_prompt.dart';
 import 'changestatis_page.dart';
+import '../services/onboarding_service.dart';
+import 'onboarding_screen.dart';
 import 'zakaz_screen1.dart';
 import 'zakaz_screen2.dart';
 import 'package:http/http.dart' as http;
@@ -41,7 +43,7 @@ class _LoginState extends State<LoginPage> {
       final response = await http
           .post(
             Uri.parse(Config.baseUrl)
-                .replace(path: '/api/request_password_reset.php'),
+                .replace(path: '${Config.apiPrefix}/request_password_reset.php'),
             body: {'email': email.trim()},
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
           )
@@ -72,7 +74,7 @@ class _LoginState extends State<LoginPage> {
       final response = await http
           .post(
             Uri.parse(Config.baseUrl)
-                .replace(path: '/api/confirm_password_reset.php'),
+                .replace(path: '${Config.apiPrefix}/confirm_password_reset.php'),
             body: {
               'email': email.trim(),
               'code': code.trim(),
@@ -320,7 +322,20 @@ class _LoginState extends State<LoginPage> {
     );
   }
 
-  void _goAfterLogin(BuildContext context, int rollNum) {
+  Future<void> _goAfterLogin(BuildContext context, int rollNum) async {
+    final completed = await OnboardingService.isCompleted();
+    if (!completed && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OnboardingScreen(
+            rollNum: rollNum,
+            onFinished: () => Navigator.pop(context),
+          ),
+        ),
+      );
+    }
+    if (!mounted) return;
     switch (rollNum) {
       case 1:
         Navigator.pushAndRemoveUntil(
@@ -353,7 +368,7 @@ class _LoginState extends State<LoginPage> {
 
       final response = await http
           .post(
-            Uri.parse(Config.baseUrl).replace(path: '/api/autoriz1.php'),
+            Uri.parse(Config.baseUrl).replace(path: '${Config.apiPrefix}/autoriz1.php'),
             body: body,
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
           )
@@ -397,7 +412,7 @@ class _LoginState extends State<LoginPage> {
           isPerformer: isPerformer,
         );
         if (!mounted) return;
-        _goAfterLogin(context, rollNum);
+        await _goAfterLogin(context, rollNum);
       } else {
         _showAuthError(json['message']?.toString() ?? 'Ошибка авторизации');
       }
