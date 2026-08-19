@@ -39,7 +39,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Нам нужен доступ к вашей медиатеке, чтобы вы могли выбрать фотографию для загрузки.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Геолокация нужна для отображения городов и маршрутов при поиске перевозок и оформлении заказов.</string>
+	<string>Геолокация нужна для поиска «рядом со мной», отображения расстояния до объявлений и определения вашего города.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Геолокация нужна для поиска «рядом со мной», отображения расстояния до объявлений и определения вашего города при работе с приложением.</string>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
