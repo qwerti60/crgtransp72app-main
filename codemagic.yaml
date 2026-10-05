@@ -54,8 +54,9 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: ru.app72.crgtransp72app
-        BUILD_NAME: 6.0.8
-        BUILD_NUMBER: 35
+        # Переопределяет pubspec — поднимайте IOS_BUILD_NUMBER перед каждой загрузкой в App Store
+        IOS_BUILD_NAME: "6.0.9"
+        IOS_BUILD_NUMBER: "50"
         # APP_STORE_APPLE_ID — в группе Secret (числовой ID из App Store Connect → App Information)
     scripts:
       - name: Create GoogleService-Info.plist
@@ -66,6 +67,9 @@ workflows:
         script: |
           test -f lib/firebase_options.dart || (echo "ERROR: lib/firebase_options.dart missing in repo (required by main.dart)" && exit 1)
           flutter pub get
+          echo "=== pubspec on branch ==="
+          grep '^version:' pubspec.yaml || true
+          echo "IOS_BUILD_NUMBER=${IOS_BUILD_NUMBER:-not set} IOS_BUILD_NAME=${IOS_BUILD_NAME:-not set}"
       - name: Install CocoaPods dependencies
         script: |
           cd ios
@@ -110,22 +114,8 @@ workflows:
           plutil -p /Users/builder/export_options.plist
       - name: Build iOS IPA
         script: |
-          set -e
-          set -o pipefail
-          if ! flutter build ipa \
-            --release \
-            -t lib/main.dart \
-            --build-name="$BUILD_NAME" \
-            --build-number="$BUILD_NUMBER" \
-            --export-options-plist=/Users/builder/export_options.plist \
-            --verbose 2>&1 | tee /tmp/flutter_build_ipa.log; then
-            echo "=== flutter build ipa failed (last 120 lines) ==="
-            tail -120 /tmp/flutter_build_ipa.log 2>/dev/null || true
-            echo "=== xcodebuild logs ==="
-            ls -la /tmp/xcodebuild_logs/ 2>/dev/null || true
-            tail -150 /tmp/xcodebuild_logs/*.log 2>/dev/null || true
-            exit 1
-          fi
+          chmod +x scripts/codemagic_ios_build.sh
+          scripts/codemagic_ios_build.sh /Users/builder/export_options.plist
       - name: Configure App Store Connect upload
         script: |
           set -e
@@ -134,6 +124,9 @@ workflows:
             echo "ERROR: IPA not found"
             exit 1
           fi
+          BUILT_VER=$(unzip -p "$IPA" "Payload/Runner.app/Info.plist" | plutil -extract CFBundleVersion raw -)
+          BUILT_NAME=$(unzip -p "$IPA" "Payload/Runner.app/Info.plist" | plutil -extract CFBundleShortVersionString raw -)
+          echo "IPA version (pre-upload): $BUILT_NAME ($BUILT_VER)"
           BUILT_ID=$(unzip -p "$IPA" "Payload/Runner.app/Info.plist" | plutil -extract CFBundleIdentifier raw -)
           echo "IPA bundle id: $BUILT_ID (ожидается: $BUNDLE_ID)"
           if [ "$BUILT_ID" != "$BUNDLE_ID" ]; then
