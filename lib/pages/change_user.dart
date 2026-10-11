@@ -135,7 +135,7 @@ class change_userForm extends State<change_user> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Выбор роли',
+          'Добавить объявление',
           style: TextStyle(
             color: whiteprColor,
           ),
@@ -153,7 +153,7 @@ class change_userForm extends State<change_user> {
               width: 189, // ширина изображения
               height: 119, // высота изображения
             ),
-            const Text('Выбор роли',
+            const Text('Добавить объявление',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: blackprColor,

@@ -24,6 +24,7 @@ import '../widgets/profile_rating_row.dart';
 import 'account_deletion.dart';
 import 'ads1.dart';
 import 'change_user.dart';
+import 'changerol_page.dart';
 import 'subscription_screen.dart';
 import 'zakaz_screen2.dart';
 import 'zprofil_ld.dart';
@@ -59,6 +60,14 @@ class zprofil_nameForm extends State<zprofil_name2> {
   void initState() {
     super.initState();
     getUserData();
+  }
+
+  String _profileDisplayName() {
+    final name = '$firstName $lastName'.trim();
+    if (name.isNotEmpty) return name;
+    if (phone.trim().isNotEmpty) return phone.trim();
+    if (email.trim().isNotEmpty) return email.trim();
+    return 'Исполнитель';
   }
 
   Future<void> getUserData() async {
@@ -144,11 +153,11 @@ class zprofil_nameForm extends State<zprofil_name2> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 5.0),
               child: Text(
-                '$firstName $lastName', // Интерполяция используется для вставки значений
+                _profileDisplayName(),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black38,
-                  fontSize: 16.0,
+                  color: TexticonsColor,
+                  fontSize: 18.0,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -162,6 +171,30 @@ class zprofil_nameForm extends State<zprofil_name2> {
                   userId,
                 ),
               ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    fixedSize: const Size(double.infinity, 50),
+                    foregroundColor: whiteprColor,
+                    backgroundColor: blueaccentColor,
+                    shape: const BeveledRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(3)),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const changerol()),
+                    );
+                  },
+                  child: const Text('Добавить объявление'),
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),

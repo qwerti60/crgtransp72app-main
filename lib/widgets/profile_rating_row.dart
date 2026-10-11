@@ -1,3 +1,4 @@
+import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/review_screen.dart';
 import 'package:crgtransp72app/pages/review_screenz.dart';
 import 'package:flutter/material.dart';
@@ -84,14 +85,14 @@ class ProfileRatingRow extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               avgRating.toStringAsFixed(1),
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              style: const TextStyle(fontSize: 14, color: TexticonsColor),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.comment_outlined, size: 16, color: Colors.grey),
+            const Icon(Icons.comment_outlined, size: 16, color: TexticonsColor),
             const SizedBox(width: 2),
             Text(
               '$reviewsCount',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+              style: const TextStyle(fontSize: 14, color: TexticonsColor),
             ),
           ],
         ),

@@ -107,6 +107,14 @@ class zprofil_nameForm extends State<zprofil_name> {
     // Здесь может быть ваша логика перехода на экран оформления/продления подписки
   }
 
+  String _profileDisplayName() {
+    final name = '$firstName $lastName'.trim();
+    if (name.isNotEmpty) return name;
+    if (phone.trim().isNotEmpty) return phone.trim();
+    if (email.trim().isNotEmpty) return email.trim();
+    return 'Заказчик';
+  }
+
   Future<void> getUserData() async {
     final token = await getSecurefcm_token(); // Await the secure token
     if (token == null) {
@@ -185,11 +193,11 @@ class zprofil_nameForm extends State<zprofil_name> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               margin: const EdgeInsets.only(top: 5.0),
               child: Text(
-                '$firstName $lastName', // Интерполяция используется для вставки значений
+                _profileDisplayName(),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black38,
-                  fontSize: 16.0,
+                  color: TexticonsColor,
+                  fontSize: 18.0,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -203,6 +211,37 @@ class zprofil_nameForm extends State<zprofil_name> {
                   userId,
                 ),
               ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              margin: const EdgeInsets.only(top: 20.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    fixedSize: const Size(double.infinity, 50),
+                    foregroundColor: whiteprColor,
+                    backgroundColor: blueaccentColor,
+                    disabledForegroundColor: grayprprColor,
+                    shape: const BeveledRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(3)),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (userId > 0) {
+                      navigateIfNeeded(context, userId);
+                      return;
+                    }
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => MyAppZakazScreen()),
+                      (Route<dynamic> route) => false,
+                    );
+                  },
+                  child: const Text('Стать грузоперевозчиком'),
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               margin: const EdgeInsets.only(top: 20.0),
@@ -349,36 +388,6 @@ class zprofil_nameForm extends State<zprofil_name> {
                 ),
                 onPressed: () => showDeleteAccountDialog(context),
                 child: const Text('Удалить аккаунт'),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              margin: const EdgeInsets.only(top: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    fixedSize: const Size(double.infinity, 50),
-                    foregroundColor: whiteprColor,
-                    backgroundColor: blueaccentColor,
-                    disabledForegroundColor: grayprprColor,
-                    shape: const BeveledRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(3))),
-                  ),
-                  onPressed: () {
-                    if (userId > 0) {
-                      navigateIfNeeded(context, userId);
-                      return;
-                    }
-
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => MyAppZakazScreen()),
-                      (Route<dynamic> route) => false,
-                    );
-                  },
-                  child: const Text('Стать грузоперевозчиком'),
-                ),
               ),
             ),
             // _getScreen(),

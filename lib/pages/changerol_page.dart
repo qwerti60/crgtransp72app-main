@@ -21,7 +21,7 @@ class _changerolForm extends State<changerol> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Выбор роли',
+          'Добавить объявление',
           style: TextStyle(
             color: whiteprColor,
           ),
