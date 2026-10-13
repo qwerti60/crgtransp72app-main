@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:crgtransp72app/design/colors.dart';
 import 'package:crgtransp72app/pages/fcm_token.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher_string.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../design/dimension.dart';
@@ -91,6 +91,30 @@ class _LoginState extends State<LoginPage> {
       return data['message']?.toString() ?? 'Не удалось изменить пароль';
     } catch (_) {
       return 'Нет связи с сервером. Проверьте интернет.';
+    }
+  }
+
+  Future<void> _openMaxGroupInvite() async {
+    final uri = Uri.parse(Config.maxGroupInviteUrl);
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Не удалось открыть ссылку. Установите MAX или откройте ссылку в браузере.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось открыть ${Config.maxGroupInviteUrl}')),
+      );
     }
   }
 
@@ -592,9 +616,7 @@ class _LoginState extends State<LoginPage> {
                 style: ButtonStyle(
                   foregroundColor: MaterialStateProperty.all(Colors.blueAccent),
                 ),
-                onPressed: () {
-                  launchUrlString("https://web.max.ru/-70801283711178");
-                },
+                onPressed: _openMaxGroupInvite,
               ),
             )
           ],

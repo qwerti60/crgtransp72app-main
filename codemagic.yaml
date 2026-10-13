@@ -55,8 +55,8 @@ workflows:
       vars:
         BUNDLE_ID: ru.app72.crgtransp72app
         # Переопределяет pubspec — поднимайте IOS_BUILD_NUMBER перед каждой загрузкой в App Store
-        IOS_BUILD_NAME: "6.0.10"
-        IOS_BUILD_NUMBER: "51"
+        IOS_BUILD_NAME: "6.0.11"
+        IOS_BUILD_NUMBER: "52"
         # APP_STORE_APPLE_ID — в группе Secret (числовой ID из App Store Connect → App Information)
     scripts:
       - name: Create GoogleService-Info.plist

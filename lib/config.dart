@@ -70,6 +70,10 @@ class Config {
   static const String recaptchaSiteKey =
       '6Ldk7NwrAAAAACT-aKjylHZGoKA1JtjnWGHFltzm';
 
+  /// Приглашение в группу мессенджера MAX (экран входа, лендинг).
+  static const String maxGroupInviteUrl =
+      'https://max.ru/join/ahuUnw4OLXYPL3C-HIAd9PlGkg00S7jvaJWoXCTbEeo';
+
   /// Совпадает с полем `city` в ответе `get_cities.php` / `get_citiesisp.php`, когда в разделе ещё нет объявлений.
   static const String emptyCityListPlaceholder =
       'В этом разделе ещё нет городов с объявлениями';
